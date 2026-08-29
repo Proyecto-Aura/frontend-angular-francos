@@ -1,1 +1,40 @@
-<p>auth-form-login works!</p>
+<div class="flex w-full max-w-120 flex-col gap-10 rounded-[25px] bg-white px-7.5 py-12.5 shadow-[0_0_30px_10px_rgba(0,0,0,0.15)]">
+  <div class="flex flex-col gap-2.5">
+    <h1 class="font-heading text-4xl font-extrabold tracking-tight text-black">Iniciar Sesion</h1>
+    <p class="font-body text-[15px] font-medium text-[#616161]">Ingresa tus credenciales para continuar</p>
+  </div>
+
+  <div class="flex flex-col gap-5">
+    <auth-input
+      label="Usuario"
+      placeholder="admin"
+      [(value)]="username"
+    />
+    <auth-input
+      label="Contraseña"
+      placeholder="admin123"
+      type="password"
+      forgotPasswordText="¿Has olvidado tu contraseña?"
+      [(value)]="password"
+      (forgotPasswordClick)="onForgotPassword()"
+    />
+  </div>
+
+  <label class="flex cursor-pointer items-center gap-3">
+    <input
+      type="checkbox"
+      [checked]="rememberSession()"
+      (change)="rememberSession.set($any($event.target).checked)"
+      class="size-5 rounded-md border-[1.25px] border-[#bdbdbd] text-[#d22b2b] focus:ring-[#d22b2b]"
+    />
+    <span class="font-body text-sm font-medium text-[#424242]">Recordar sesión por 30 días</span>
+  </label>
+
+  <button
+    type="button"
+    (click)="onSubmit()"
+    class="font-body flex h-9.5 w-full items-center justify-center rounded-md bg-[#d22b2b] px-5 text-[15px] font-medium text-white hover:bg-[#b91c1c]"
+  >
+    Iniciar Sesion
+  </button>
+</div>

@@ -1,0 +1,45 @@
+<div class="font-body flex w-full flex-col gap-1.5">
+  <div class="flex w-full items-center justify-between">
+    <label class="text-sm font-semibold text-[#424242]">{{ label() }}</label>
+    @if (forgotPasswordText()) {
+      <button
+        type="button"
+        class="text-xs text-[#d22b2b] hover:underline"
+        (click)="forgotPasswordClick.emit()"
+      >
+        {{ forgotPasswordText() }}
+      </button>
+    }
+  </div>
+
+  <div class="flex h-9.5 w-full items-center gap-2 rounded-lg border border-[#bdbdbd] bg-white px-3.5 py-2.5">
+    <input
+      [type]="type() === 'password' && !passwordVisible() ? 'password' : 'text'"
+      [placeholder]="placeholder()"
+      [value]="value()"
+      (input)="value.set($any($event.target).value)"
+      class="h-full w-full text-base text-[#424242] placeholder:text-[#bdbdbd] focus:outline-none"
+    />
+
+    @if (type() === 'password') {
+      <button
+        type="button"
+        class="shrink-0 text-[#9e9e9e] hover:text-[#616161]"
+        (click)="togglePasswordVisible()"
+      >
+        @if (passwordVisible()) {
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z" />
+            <circle cx="12" cy="12" r="3" />
+          </svg>
+        } @else {
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M3 3l18 18" />
+            <path d="M10.6 5.2A11 11 0 0 1 12 5c7 0 11 7 11 7a13.2 13.2 0 0 1-3.4 3.9M6.6 6.6A13.2 13.2 0 0 0 1 12s4 7 11 7a10.6 10.6 0 0 0 5.4-1.5" />
+            <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" />
+          </svg>
+        }
+      </button>
+    }
+  </div>
+</div>
