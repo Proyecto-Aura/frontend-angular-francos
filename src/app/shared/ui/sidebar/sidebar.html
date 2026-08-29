@@ -1,0 +1,35 @@
+<aside
+  class="flex h-screen flex-col bg-red-600 transition-all duration-200"
+  [class.w-20]="collapsed()"
+  [class.w-64]="!collapsed()"
+>
+  <button
+    type="button"
+    class="flex w-full items-center gap-3 px-4 py-4 text-left text-white"
+    (click)="toggle()"
+  >
+    <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white text-sm font-bold text-red-600">
+      <img src="/icons/Francos.svg" alt="Franco's" class="h-10 w-10 shrink-0" />
+    </span>
+    @if (!collapsed()) {
+      <span class="flex flex-col leading-tight">
+        <span class="font-semibold">Franco's</span>
+        <span class="text-[10px] tracking-wide text-red-100 truncate uppercase">Portal Empresa</span>
+      </span>
+    }
+  </button>
+  <nav class="flex flex-col gap-1 px-2">
+    @for (link of links(); track link.path) {
+      <a
+        [routerLink]="link.path"
+        routerLinkActive="bg-white/20"
+        class="flex items-center gap-3 rounded-lg px-3 py-2 truncate text-sm font-medium text-white/70 hover:bg-white/10"
+      >
+        <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/10 text-center text-lg">{{ link.icon ?? '•' }}</span>
+        @if (!collapsed()) {
+          <span>{{ link.label }}</span>
+        }
+      </a>
+    }
+  </nav>
+</aside>

@@ -4,6 +4,14 @@ export const VENTAS_ROUTES: Routes = [
   {
     path: '',
     loadComponent: () => import('../../layouts/module-layout/module-layout').then(c => c.ModuleLayout),
+    data: {
+      sidebarLinks: [
+        { label: 'Dashboard', path: 'dashboard', icon: '' },
+        { label: 'Clientes', path: 'clientes', icon: '' },
+        { label: 'Catalogo', path: 'catalogo', icon: '' },
+        { label: 'Mis Pedidos', path: 'pedidos', icon: '' },
+      ],
+    },
     children: [
       // {
       //   path: 'clientes',
