@@ -13,12 +13,12 @@ export const VENTAS_ROUTES: Routes = [
       ],
     },
     children: [
-      // {
-      //   path: 'clientes',
-      //   loadChildren: () =>
-      //     import('./clientes/clientes.route').
-      //   then(m => m.CLIENTES_ROUTES)
-      // },
+      {
+        path: 'clientes',
+        loadChildren: () =>
+          import('./clientes/clientes.route').
+        then(m => m.CLIENTES_ROUTES)
+      },
       // {
       //   path: 'catalogo',
       //   loadChildren: () =>
@@ -30,10 +30,15 @@ export const VENTAS_ROUTES: Routes = [
       //     import('./pedidos/pedidos.route').
       //   then(m => m.PEDIDOS_ROUTES)
       // },
-      // { path: '',
-      //   redirectTo: 'pedidos',
-      //   pathMatch: 'full'
-      // },
+      {
+        path: '',
+        redirectTo: 'clientes',
+        pathMatch: 'full'
+      },
+      {
+        path: '**',
+        redirectTo: 'clientes',
+      },
     ],
   },
 ];
