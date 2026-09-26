@@ -1,7 +1,8 @@
-import { Component, input, model, output, signal } from '@angular/core';
+import { Component, computed, input, model, output, signal } from '@angular/core';
+import { LucideDynamicIcon, LucideEye, LucideEyeOff, LucideEyeClosed } from '@lucide/angular';
 
 @Component({
-  imports: [],
+  imports: [LucideDynamicIcon],
   selector: 'auth-input',
   templateUrl: './auth-input.html',
 })
@@ -16,7 +17,9 @@ export class AuthInput {
 
   passwordVisible = signal(false);
 
+  eye = computed(() => this.passwordVisible() ? LucideEyeClosed : LucideEye);
+
   togglePasswordVisible() {
-    this.passwordVisible.update(value => !value);
+    this.passwordVisible.update(v => !v);
   }
 }
