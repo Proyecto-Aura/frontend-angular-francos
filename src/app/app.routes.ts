@@ -19,6 +19,12 @@ export const routes: Routes = [
       import('./modules/ventas/ventas.route')
 	      .then(m => m.VENTAS_ROUTES)
   },
+  {
+    path: 'ds-showcase',
+    loadComponent: () =>
+      import('./ds-showcase/ds-showcase')
+        .then(c => c.DsShowcase),
+  },
   // {
   //   path: '',
   //   loadComponent: () => import('./core/layouts/main-layout/main-layout').then(c => c.MainLayout),

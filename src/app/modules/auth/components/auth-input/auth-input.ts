@@ -1,18 +1,21 @@
 import { Component, computed, input, model, output, signal } from '@angular/core';
+import { FormValueControl } from '@angular/forms/signals';
 import { LucideDynamicIcon, LucideEye, LucideEyeOff, LucideEyeClosed } from '@lucide/angular';
+import { Input } from '../../../../shared/ds/input/input';
 
 @Component({
-  imports: [LucideDynamicIcon],
+  imports: [LucideDynamicIcon, Input],
   selector: 'auth-input',
   templateUrl: './auth-input.html',
 })
-export class AuthInput {
+export class AuthInput implements FormValueControl<string> {
   label = input('');
   placeholder = input('');
   type = input<'text' | 'password'>('text');
   forgotPasswordText = input<string | null>(null);
 
   value = model('');
+  isDisabled = input(false);
   forgotPasswordClick = output<void>();
 
   passwordVisible = signal(false);

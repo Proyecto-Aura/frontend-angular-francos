@@ -8,15 +8,16 @@
     }
   </div>
 
-  <div class="flex h-9.5 w-full items-center gap-2 rounded-lg border border-[#bdbdbd] bg-white px-3.5 py-2.5">
-    <input [type]="type() === 'password' && !passwordVisible() ? 'password' : 'text'" [placeholder]="placeholder()"
-      [value]="value()" (input)="value.set($any($event.target).value)"
-      class="h-full w-full text-base text-[#424242] placeholder:text-[#bdbdbd] focus:outline-none" />
-
+  <app-ds-input
+    [type]="type() === 'password' && !passwordVisible() ? 'password' : 'text'"
+    [placeholder]="placeholder()"
+    [(value)]="value"
+    [hasSuffix]="type() === 'password'"
+  >
     @if (type() === 'password') {
-    <button type="button" class="shrink-0 text-[#9e9e9e] hover:text-[#616161]" (click)="togglePasswordVisible()">
-      <svg [lucideIcon]="eye()" [size]="18"></svg>
-    </button>
+      <button suffix type="button" class="pointer-events-auto text-[#9e9e9e] hover:text-[#616161]" (click)="togglePasswordVisible()">
+        <svg [lucideIcon]="eye()" [size]="18"></svg>
+      </button>
     }
-  </div>
+  </app-ds-input>
 </div>

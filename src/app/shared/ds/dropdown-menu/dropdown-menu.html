@@ -1,0 +1,33 @@
+<span class="relative inline-flex">
+  <span (click)="toggle()" class="inline-flex cursor-pointer">
+    <ng-content select="[trigger]" />
+  </span>
+  @if (open()) {
+    <div
+      role="menu"
+      class="absolute top-[calc(100%+6px)] z-[60] min-w-[184px] overflow-hidden rounded-lg border border-border bg-popover p-1 shadow-ds-md"
+      [class.right-0]="align() === 'right'"
+      [class.left-0]="align() === 'left'"
+    >
+      @for (item of items(); track $index) {
+        @if (item.separator) {
+          <div class="my-1 h-px bg-border"></div>
+        } @else {
+          <button
+            type="button"
+            role="menuitem"
+            (mouseenter)="hoverIndex.set($index)"
+            (mouseleave)="hoverIndex.set(-1)"
+            (click)="select(item)"
+            [class]="itemClasses(item, $index)"
+          >
+            @if (item.icon) {
+              <ng-container [ngComponentOutlet]="item.icon" [ngComponentOutletInputs]="{ size: 16 }" />
+            }
+            <span>{{ item.label }}</span>
+          </button>
+        }
+      }
+    </div>
+  }
+</span>

@@ -1,44 +1,49 @@
 import { Component, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
+import { form, required, FormField, FormRoot } from '@angular/forms/signals';
 import { AuthInput } from '../../components/auth-input/auth-input';
-
-// TODO: esto es temporal — reemplazar por una llamada real a AuthSe
-// cuando exista el backend/BD. Usuario y contraseña quedan fijos mientras tanto.
-const STATIC_USERNAME = 'admin';
-const STATIC_PASSWORD = 'admin123';
+import { Button } from '../../../../shared/ds/button/button';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
-  imports: [AuthInput],
+  imports: [AuthInput, Button, FormField, FormRoot],
   selector: 'app-auth-form-login',
   templateUrl: './auth-form-login.html',
   host: { class: 'contents' },
 })
 export class AuthFormLogin {
   private router = inject(Router);
+  private authService = inject(AuthService);
 
-  username = signal('');
-  password = signal('');
   rememberSession = signal(false);
   loginError = signal(false);
 
+  loginModel = signal({ username: '', password: '' });
+
+  loginForm = form(
+    this.loginModel,
+    path => {
+      required(path.username, { message: 'El usuario es obligatorio' });
+      required(path.password, { message: 'La contraseña es obligatoria' });
+    },
+    {
+      submission: {
+        action: async field => {
+          const { username, password } = field().value();
+          try {
+            await firstValueFrom(this.authService.login(username, password));
+            this.loginError.set(false);
+            this.router.navigateByUrl('/home');
+          } catch {
+            this.loginError.set(true);
+          }
+        },
+      },
+    },
+  );
+
   onForgotPassword() {
     // TODO: navegar a la pantalla de recuperar contraseña (auth-reset)
-  }
-
-  handleSubmit(event: Event) {
-    event.preventDefault();
-    this.onSubmit();
-  }
-
-  onSubmit() {
-    const isValid = this.username() === STATIC_USERNAME && this.password() === STATIC_PASSWORD;
-
-    if (!isValid) {
-      this.loginError.set(true);
-      return;
-    }
-
-    this.loginError.set(false);
-    this.router.navigateByUrl('/home');
   }
 }
