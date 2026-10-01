@@ -1,1 +1,210 @@
-<p>listar-clientes works!</p>
+<div class="flex flex-col gap-5 p-(--page-padding)">
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-ds-2xl font-semibold text-foreground">Gestión de clientes</h1>
+      <p class="mt-1 text-ds-base text-muted-foreground">
+        Registro, edición y consulta de la cartera de clientes mayoristas y minoristas.
+      </p>
+    </div>
+  </div>
+
+  <app-ds-filter-bar [hasSearch]="true" [hasActions]="true">
+    <app-ds-input search [(value)]="query" placeholder="Nombre, razón social o documento…" [hasIcon]="true">
+      <span icon><app-ds-icon [img]="LucideSearch" [size]="16" /></span>
+    </app-ds-input>
+
+    <div filters class="w-[160px]">
+      <app-ds-select [(value)]="tipoFiltro" [options]="tipoOptions" placeholder="Tipo" />
+    </div>
+    <div filters class="w-[168px]">
+      <app-ds-select [(value)]="documentoFiltro" [options]="documentoOptions" placeholder="Documento" />
+    </div>
+    <div filters class="w-[160px]">
+      <app-ds-select [(value)]="estadoFiltro" [options]="estadoOptions" placeholder="Estado" />
+    </div>
+
+    <app-ds-button actions size="sm" (clicked)="nuevoCliente()">
+      <span icon><app-ds-icon [img]="LucidePlus" [size]="16" /></span>
+      Nuevo cliente
+    </app-ds-button>
+  </app-ds-filter-bar>
+
+  <app-ds-data-table [columns]="columns()" [rows]="clientesPagina()" empty="No se encontraron clientes" />
+
+  <app-ds-pagination
+    [page]="paginaActual()"
+    [pageCount]="pageCount()"
+    [total]="clientesFiltrados().length"
+    [pageSize]="pageSize"
+    (changed)="page.set($event)"
+  />
+</div>
+
+<ng-template #codigoCell let-c>
+  <span class="font-semibold tabular-nums">{{ c.codigo }}</span>
+</ng-template>
+
+<ng-template #clienteCell let-c>
+  <span class="inline-flex min-w-0 items-center gap-3">
+    <app-ds-avatar [name]="nombreCliente(c)" size="sm" />
+    <app-ds-cell-stack [primary]="nombreCliente(c)" [secondary]="c.correo" />
+  </span>
+</ng-template>
+
+<ng-template #documentoCell let-c>
+  <app-ds-cell-stack [primary]="c.doc" [secondary]="c.tipoDoc" [strong]="false" />
+</ng-template>
+
+<ng-template #tipoCell let-c>
+  <app-ds-badge [tone]="tipoTone(c.tipo)">{{ c.tipo }}</app-ds-badge>
+</ng-template>
+
+<ng-template #estadoCell let-c>
+  <app-ds-badge [tone]="estadoTone(c.estado)" [dot]="true">{{ c.estado }}</app-ds-badge>
+</ng-template>
+
+<ng-template #accionesCell let-c>
+  <span class="inline-flex items-center justify-end gap-1.5">
+    <app-ds-icon-button label="Ver detalle" size="sm" (clicked)="verCliente(c)">
+      <app-ds-icon [img]="LucideEye" [size]="16" />
+    </app-ds-icon-button>
+    <app-ds-icon-button label="Editar cliente" variant="secondary" size="sm" (clicked)="editarCliente(c)">
+      <app-ds-icon [img]="LucidePencil" [size]="16" />
+    </app-ds-icon-button>
+    <app-ds-icon-button label="Eliminar cliente" variant="secondary" size="sm" (clicked)="pedirEliminar(c)">
+      <app-ds-icon [img]="LucideTrash2" [size]="16" />
+    </app-ds-icon-button>
+  </span>
+</ng-template>
+
+<!-- ══════════ Modal: Nuevo / Editar cliente ══════════ -->
+<app-ds-modal
+  [open]="modo() !== null"
+  [title]="modo() === 'editar' ? 'Editar cliente' : 'Nuevo cliente'"
+  [width]="640"
+  [hasFooter]="true"
+  (closed)="cerrarForm()"
+>
+  <div class="flex flex-col gap-4">
+    @if (errores().length) {
+      <div class="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-ds-sm text-destructive">
+        <p class="font-semibold">Revisa estos campos:</p>
+        <ul class="mt-1 list-disc pl-4">
+          @for (e of errores(); track e) {
+            <li>{{ e }}</li>
+          }
+        </ul>
+      </div>
+    }
+
+    <div class="grid grid-cols-2 gap-4">
+      <app-ds-field label="Tipo de documento" [required]="true">
+        <app-ds-select [value]="f().tipoDoc" (valueChange)="onTipoDoc($event)" [options]="documentoOptions" />
+      </app-ds-field>
+      <app-ds-field
+        label="Número de documento"
+        [required]="true"
+        [hint]="f().tipoDoc === 'RUC' ? 'RUC 10 = persona natural · RUC 20 = empresa' : ''"
+      >
+        <app-ds-input [value]="f().doc" (valueChange)="onDoc($event)" placeholder="Número de documento" />
+      </app-ds-field>
+    </div>
+
+    @if (f().persona === 'empresa') {
+      <!-- Datos de Empresa (RUC 20) -->
+      <p class="text-ds-sm font-semibold text-foreground">Datos de empresa</p>
+      <app-ds-field label="Razón social" [required]="true">
+        <app-ds-input [value]="f().razon" (valueChange)="actualizarCampo('razon', $event)" placeholder="Razón social" />
+      </app-ds-field>
+
+      <p class="text-ds-sm font-semibold text-foreground">Datos del contacto</p>
+      <div class="grid grid-cols-2 gap-4">
+        <app-ds-field label="Nombres" [required]="true">
+          <app-ds-input [value]="f().cNombres" (valueChange)="actualizarCampo('cNombres', $event)" placeholder="Nombres" />
+        </app-ds-field>
+        <app-ds-field label="Correo del contacto" [required]="true">
+          <app-ds-input
+            [value]="f().cCorreo"
+            (valueChange)="actualizarCampo('cCorreo', $event)"
+            type="email"
+            placeholder="correo@empresa.com"
+          />
+        </app-ds-field>
+        <app-ds-field label="Apellido paterno" [required]="true">
+          <app-ds-input [value]="f().cPaterno" (valueChange)="actualizarCampo('cPaterno', $event)" placeholder="Apellido paterno" />
+        </app-ds-field>
+        <app-ds-field label="Apellido materno" [required]="true">
+          <app-ds-input [value]="f().cMaterno" (valueChange)="actualizarCampo('cMaterno', $event)" placeholder="Apellido materno" />
+        </app-ds-field>
+      </div>
+    } @else {
+      <!-- Datos personales (DNI / CE / Pasaporte / RUC 10) -->
+      <p class="text-ds-sm font-semibold text-foreground">Datos personales</p>
+      <div class="grid grid-cols-2 gap-4">
+        <app-ds-field label="Nombres" [required]="true">
+          <app-ds-input [value]="f().nombres" (valueChange)="actualizarCampo('nombres', $event)" placeholder="Nombres" />
+        </app-ds-field>
+        <app-ds-field label="Apellidos" [required]="true">
+          <app-ds-input [value]="f().apellidos" (valueChange)="actualizarCampo('apellidos', $event)" placeholder="Apellidos" />
+        </app-ds-field>
+        <app-ds-field label="Fecha de nacimiento" [required]="true">
+          <app-ds-input [value]="f().nacimiento" (valueChange)="actualizarCampo('nacimiento', $event)" type="date" />
+        </app-ds-field>
+        <app-ds-field label="Departamento" [required]="true">
+          <app-ds-input [value]="f().departamento" (valueChange)="actualizarCampo('departamento', $event)" placeholder="Departamento" />
+        </app-ds-field>
+        <app-ds-field label="Provincia" [required]="true">
+          <app-ds-input [value]="f().provincia" (valueChange)="actualizarCampo('provincia', $event)" placeholder="Provincia" />
+        </app-ds-field>
+        <app-ds-field label="Distrito" [required]="true">
+          <app-ds-input [value]="f().distrito" (valueChange)="actualizarCampo('distrito', $event)" placeholder="Distrito" />
+        </app-ds-field>
+      </div>
+      <app-ds-field label="Dirección" [required]="true">
+        <app-ds-input [value]="f().direccion" (valueChange)="actualizarCampo('direccion', $event)" placeholder="Dirección" />
+      </app-ds-field>
+    }
+
+    <p class="text-ds-sm font-semibold text-foreground">Datos comerciales</p>
+    <div class="grid grid-cols-2 gap-4">
+      <app-ds-field label="Tipo de cliente" [required]="true">
+        <app-ds-select [value]="f().tipo" (valueChange)="onTipo($event)" [options]="tipoOptions" />
+      </app-ds-field>
+      <app-ds-field label="Teléfono" [required]="true" hint="9 dígitos">
+        <app-ds-input [value]="f().telefono" (valueChange)="actualizarCampo('telefono', $event)" placeholder="987654321" />
+      </app-ds-field>
+    </div>
+    <app-ds-field [label]="f().persona === 'empresa' ? 'Correo de la empresa' : 'Correo'" [required]="true">
+      <app-ds-input [value]="f().correo" (valueChange)="actualizarCampo('correo', $event)" type="email" placeholder="correo@dominio.com" />
+    </app-ds-field>
+
+    <p class="text-ds-sm text-muted-foreground">
+      El usuario y la contraseña se generan automáticamente y se envían por correo al cliente al guardar.
+    </p>
+  </div>
+
+  <span footer class="flex gap-2">
+    <app-ds-button variant="secondary" (clicked)="cerrarForm()">Cancelar</app-ds-button>
+    <app-ds-button (clicked)="guardar()">{{ modo() === 'editar' ? 'Guardar cambios' : 'Registrar cliente' }}</app-ds-button>
+  </span>
+</app-ds-modal>
+
+<!-- ══════════ Modal: confirmar eliminar (lógico) ══════════ -->
+<app-ds-modal
+  [open]="clienteAEliminar() !== null"
+  title="Eliminar cliente"
+  [width]="480"
+  [hasFooter]="true"
+  (closed)="cancelarEliminar()"
+>
+  @if (clienteAEliminar(); as c) {
+    <p class="text-ds-sm text-muted-foreground">
+      ¿Seguro que deseas eliminar a <strong class="text-foreground">{{ nombreCliente(c) }}</strong
+      >? El cliente dejará de aparecer en nuevos pedidos, pero se mantiene en el historial.
+    </p>
+  }
+  <span footer class="flex gap-2">
+    <app-ds-button variant="secondary" (clicked)="cancelarEliminar()">Cancelar</app-ds-button>
+    <app-ds-button (clicked)="confirmarEliminar()">Eliminar cliente</app-ds-button>
+  </span>
+</app-ds-modal>
