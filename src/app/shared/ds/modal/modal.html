@@ -1,5 +1,6 @@
 @if (open()) {
-  <div role="dialog" aria-modal="true" (click)="onClose()" class="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(33,33,33,0.45)] p-6">
+  <div role="dialog" aria-modal="true" (click)="onClose()" (keydown.escape)="onClose()" class="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(33,33,33,0.45)] p-6">
+    <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -- no es un control interactivo, solo evita que el clic adentro cierre el modal -->
     <div
       (click)="$event.stopPropagation()"
       class="flex max-h-full w-full flex-col overflow-hidden rounded-lg bg-popover text-popover-foreground shadow-ds-lg"

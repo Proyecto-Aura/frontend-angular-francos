@@ -10,7 +10,7 @@ interface ModuleCard {
 
 @Component({
   imports: [HomeCards],
-  selector: 'home-modules',
+  selector: 'app-home-modules',
   templateUrl: './home-modules.html',
 })
 export class HomeModules {

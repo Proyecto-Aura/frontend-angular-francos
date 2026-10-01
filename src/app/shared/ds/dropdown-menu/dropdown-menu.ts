@@ -1,4 +1,4 @@
-import { Component, ElementRef, HostListener, Type, input, signal } from '@angular/core';
+import { Component, ElementRef, HostListener, Type, inject, input, signal } from '@angular/core';
 import { NgComponentOutlet } from '@angular/common';
 
 export interface DropdownMenuItem {
@@ -21,7 +21,7 @@ export class DropdownMenu {
   open = signal(false);
   hoverIndex = signal(-1);
 
-  constructor(private host: ElementRef<HTMLElement>) {}
+  private host = inject(ElementRef<HTMLElement>);
 
   @HostListener('document:mousedown', ['$event'])
   onDocMouseDown(event: MouseEvent) {

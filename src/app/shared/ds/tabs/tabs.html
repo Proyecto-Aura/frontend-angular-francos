@@ -20,7 +20,7 @@
         <ng-container [ngComponentOutlet]="tab.icon" [ngComponentOutletInputs]="{ size: 16 }" />
       }
       {{ tab.label }}
-      @if (tab.count != null) {
+      @if (tab.count !== undefined) {
         <span class="rounded-full border border-border bg-muted px-1.5 text-ds-sm text-muted-foreground">{{ tab.count }}</span>
       }
     </button>

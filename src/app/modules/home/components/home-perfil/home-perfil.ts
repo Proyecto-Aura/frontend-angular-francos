@@ -3,7 +3,7 @@ import { Router } from '@angular/router';
 
 @Component({
   imports: [],
-  selector: 'home-perfil',
+  selector: 'app-home-perfil',
   templateUrl: './home-perfil.html',
   host: { class: 'contents' },
 })

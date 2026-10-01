@@ -11,7 +11,7 @@
 
   <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
     @for (module of modules; track module.title) {
-      <home-cards
+      <app-home-cards
         [icon]="module.icon"
         [title]="module.title"
         [description]="module.description"
