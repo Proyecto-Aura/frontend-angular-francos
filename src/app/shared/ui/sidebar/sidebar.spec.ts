@@ -34,4 +34,48 @@ describe('Sidebar', () => {
 
     expect(fixture.nativeElement.querySelectorAll('a').length).toBe(2);
   });
+
+  it('a link with children renders as a toggle button, not an <a>, and starts collapsed', () => {
+    const fixture = TestBed.createComponent(Sidebar);
+    fixture.componentRef.setInput('links', [
+      { label: 'Catalogo', children: [{ label: 'Productos', path: 'catalogo/productos' }] },
+    ]);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('a')).toBeNull();
+    expect(fixture.nativeElement.querySelector('button[type="button"]')).toBeTruthy();
+    expect(fixture.componentInstance.isExpanded('Catalogo')).toBe(false);
+  });
+
+  it('toggleExpanded() flips expansion per label independently', () => {
+    const fixture = TestBed.createComponent(Sidebar);
+    const component = fixture.componentInstance;
+    fixture.detectChanges();
+
+    component.toggleExpanded('Catalogo');
+    expect(component.isExpanded('Catalogo')).toBe(true);
+    expect(component.isExpanded('Ventas')).toBe(false);
+
+    component.toggleExpanded('Catalogo');
+    expect(component.isExpanded('Catalogo')).toBe(false);
+  });
+
+  it('renders the children links only while expanded', () => {
+    const fixture = TestBed.createComponent(Sidebar);
+    fixture.componentRef.setInput('links', [
+      {
+        label: 'Catalogo',
+        children: [
+          { label: 'Productos', path: 'catalogo/productos' },
+          { label: 'Configuración', path: 'catalogo/configuracion' },
+        ],
+      },
+    ]);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelectorAll('a').length).toBe(0);
+
+    fixture.componentInstance.toggleExpanded('Catalogo');
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelectorAll('a').length).toBe(2);
+  });
 });

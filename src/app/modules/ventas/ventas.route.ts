@@ -8,7 +8,14 @@ export const VENTAS_ROUTES: Routes = [
       sidebarLinks: [
         { label: 'Dashboard', path: 'dashboard', icon: '' },
         { label: 'Clientes', path: 'clientes', icon: '' },
-        { label: 'Catalogo', path: 'catalogo', icon: '' },
+        {
+          label: 'Catalogo',
+          icon: '',
+          children: [
+            { label: 'Productos', path: 'catalogo/productos' },
+            { label: 'Configuración', path: 'catalogo/configuracion' },
+          ],
+        },
         { label: 'Mis Pedidos', path: 'pedidos', icon: '' },
       ],
     },
