@@ -33,7 +33,13 @@
           class="flex items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-medium hover:bg-sidebar-accent-hover"
           [class.bg-sidebar-accent]="isExpanded(link.label)"
         >
-          <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-sidebar-icon-well text-center text-lg">{{ link.icon ?? '•' }}</span>
+          <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-sidebar-icon-well">
+            @if (link.icon) {
+              <ng-container [ngComponentOutlet]="link.icon" [ngComponentOutletInputs]="{ size: 17 }" />
+            } @else {
+              <span class="text-lg">•</span>
+            }
+          </span>
           @if (!collapsed()) {
             <span class="min-w-0 flex-1 truncate">{{ link.label }}</span>
             <svg
@@ -52,9 +58,12 @@
               <a
                 [routerLink]="child.path"
                 routerLinkActive="bg-sidebar-accent"
-                class="flex items-center truncate rounded-lg px-3 py-1.5 text-sm font-normal hover:bg-sidebar-accent-hover"
+                class="flex items-center gap-2.5 truncate rounded-lg px-3 py-1.5 text-sm font-normal hover:bg-sidebar-accent-hover"
               >
-                {{ child.label }}
+                @if (child.icon) {
+                  <ng-container [ngComponentOutlet]="child.icon" [ngComponentOutletInputs]="{ size: 15 }" />
+                }
+                <span class="min-w-0 flex-1 truncate">{{ child.label }}</span>
               </a>
             }
           </div>
@@ -65,7 +74,13 @@
           routerLinkActive="bg-sidebar-accent"
           class="flex items-center gap-3 rounded-lg px-3 py-2 truncate text-sm font-medium hover:bg-sidebar-accent-hover"
         >
-          <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-sidebar-icon-well text-center text-lg">{{ link.icon ?? '•' }}</span>
+          <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-sidebar-icon-well">
+            @if (link.icon) {
+              <ng-container [ngComponentOutlet]="link.icon" [ngComponentOutletInputs]="{ size: 17 }" />
+            } @else {
+              <span class="text-lg">•</span>
+            }
+          </span>
           @if (!collapsed()) {
             <span>{{ link.label }}</span>
           }

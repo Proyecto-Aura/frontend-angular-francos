@@ -1,15 +1,16 @@
-import { Component, input, signal } from '@angular/core';
+import { Component, Type, input, signal } from '@angular/core';
+import { NgComponentOutlet } from '@angular/common';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 
 export interface SidebarLink {
   label: string;
   path?: string;
-  icon?: string;
+  icon?: Type<unknown>;
   children?: SidebarLink[];
 }
 
 @Component({
-  imports: [RouterLink, RouterLinkActive],
+  imports: [RouterLink, RouterLinkActive, NgComponentOutlet],
   selector: 'app-sidebar',
   templateUrl: './sidebar.html',
 })
