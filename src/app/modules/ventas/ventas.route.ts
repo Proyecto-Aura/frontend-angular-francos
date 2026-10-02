@@ -5,6 +5,7 @@ export const VENTAS_ROUTES: Routes = [
     path: '',
     loadComponent: () => import('../../layouts/module-layout/module-layout').then(c => c.ModuleLayout),
     data: {
+      sidebarTitle: 'Gestión de Ventas',
       sidebarLinks: [
         { label: 'Dashboard', path: 'dashboard', icon: '' },
         { label: 'Clientes', path: 'clientes', icon: '' },

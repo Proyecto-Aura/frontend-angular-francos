@@ -19,6 +19,11 @@
       </span>
     }
   </button>
+  @if (sectionLabel() && !collapsed()) {
+    <div class="px-5 pt-4 pb-1 text-[10px] font-semibold tracking-wide text-sidebar-foreground-muted uppercase">
+      {{ sectionLabel() }}
+    </div>
+  }
   <nav class="flex flex-col gap-1 px-2 py-2">
     @for (link of links(); track link.label) {
       @if (link.children?.length) {
