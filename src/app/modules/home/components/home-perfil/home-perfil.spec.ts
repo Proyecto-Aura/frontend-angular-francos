@@ -3,7 +3,7 @@ import { Router } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { HomePerfil } from './home-perfil';
-import { environment } from '../../../../environments/environment';
+import { environment } from '../../../../../environments/environment';
 
 const LOGOUT_URL = `${environment.apiUrl}/auth/logout`;
 
