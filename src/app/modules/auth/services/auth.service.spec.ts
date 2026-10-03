@@ -2,22 +2,17 @@ import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { AuthService } from './auth.service';
+import { environment } from '../../../../environments/environment';
 import { LoginResponseDto } from '../interfaces/usuario-dto.interface';
 
-const TOKEN_KEY = 'francos_token';
+const AUTH_BASE = `${environment.apiUrl}/auth`;
 
 function makeResponse(): LoginResponseDto {
   return {
-    token: 'fake-jwt-token',
-    usuario: {
-      id: 1,
-      email: 'admin@francos.com',
-      username: 'admin',
-      estado: 'activo',
-      persona_id: 10,
-      created_at: '2026-01-01T00:00:00Z',
-      updated_at: '2026-01-01T00:00:00Z',
-    },
+    access_token: 'fake-jwt-token',
+    roles: ['admin'],
+    email_verificado: true,
+    debe_cambiar_contrasena: false,
   };
 }
 
@@ -26,7 +21,6 @@ describe('AuthService', () => {
   let httpMock: HttpTestingController;
 
   beforeEach(() => {
-    localStorage.removeItem(TOKEN_KEY);
     TestBed.configureTestingModule({
       providers: [provideHttpClient(), provideHttpClientTesting()],
     });
@@ -34,55 +28,78 @@ describe('AuthService', () => {
     httpMock = TestBed.inject(HttpTestingController);
   });
 
-  afterEach(() => {
-    httpMock.verify();
-    localStorage.removeItem(TOKEN_KEY);
-  });
+  afterEach(() => httpMock.verify());
 
-  it('starts with no authenticated user', () => {
-    expect(service.usuario()).toBeNull();
+  it('starts with no session', () => {
+    expect(service.session()).toBeNull();
     expect(service.isAuthenticated()).toBe(false);
+    expect(service.accessToken()).toBeNull();
   });
 
-  it('POSTs credentials to /api/auth/login', () => {
+  it('POSTs { identificador, password } to /auth/login with credentials', () => {
     service.login('admin', 'admin123').subscribe();
-    const req = httpMock.expectOne('/api/auth/login');
+    const req = httpMock.expectOne(`${AUTH_BASE}/login`);
     expect(req.request.method).toBe('POST');
-    expect(req.request.body).toEqual({ username: 'admin', password: 'admin123' });
+    expect(req.request.body).toEqual({ identificador: 'admin', password: 'admin123' });
+    expect(req.request.withCredentials).toBe(true);
     req.flush(makeResponse());
   });
 
-  it('on success, stores the token and maps the usuario onto the signal', () => {
+  it('on success, stores the session in memory (not localStorage)', () => {
     service.login('admin', 'admin123').subscribe();
-    httpMock.expectOne('/api/auth/login').flush(makeResponse());
+    httpMock.expectOne(`${AUTH_BASE}/login`).flush(makeResponse());
 
-    expect(localStorage.getItem(TOKEN_KEY)).toBe('fake-jwt-token');
-    expect(service.usuario()).toEqual({ id: 1, email: 'admin@francos.com', username: 'admin', activo: true });
+    expect(service.accessToken()).toBe('fake-jwt-token');
+    expect(service.session()).toEqual({
+      accessToken: 'fake-jwt-token',
+      roles: ['admin'],
+      emailVerificado: true,
+      debeCambiarContrasena: false,
+    });
     expect(service.isAuthenticated()).toBe(true);
+    expect(localStorage.getItem('francos_token')).toBeNull();
   });
 
-  it('on failure, does not store a token or set the usuario', () => {
+  it('on failure, does not set a session', () => {
     service.login('admin', 'wrong').subscribe({ error: () => undefined });
-    httpMock.expectOne('/api/auth/login').flush('Unauthorized', { status: 401, statusText: 'Unauthorized' });
+    httpMock.expectOne(`${AUTH_BASE}/login`).flush({ statusCode: 401, message: 'Credenciales inválidas' }, { status: 401, statusText: 'Unauthorized' });
 
-    expect(localStorage.getItem(TOKEN_KEY)).toBeNull();
-    expect(service.usuario()).toBeNull();
+    expect(service.session()).toBeNull();
   });
 
-  it('logout clears the token and the usuario signal', () => {
+  it('refresh updates the access token and keeps the existing roles/flags', () => {
     service.login('admin', 'admin123').subscribe();
-    httpMock.expectOne('/api/auth/login').flush(makeResponse());
+    httpMock.expectOne(`${AUTH_BASE}/login`).flush(makeResponse());
 
-    service.logout();
+    service.refresh().subscribe();
+    const req = httpMock.expectOne(`${AUTH_BASE}/refresh`);
+    expect(req.request.withCredentials).toBe(true);
+    req.flush({ access_token: 'new-token' });
 
-    expect(localStorage.getItem(TOKEN_KEY)).toBeNull();
-    expect(service.usuario()).toBeNull();
-    expect(service.isAuthenticated()).toBe(false);
+    expect(service.accessToken()).toBe('new-token');
+    expect(service.session()?.roles).toEqual(['admin']);
   });
 
-  it('getToken reads whatever is in localStorage', () => {
-    expect(service.getToken()).toBeNull();
-    localStorage.setItem(TOKEN_KEY, 'manual-token');
-    expect(service.getToken()).toBe('manual-token');
+  it('refresh with no prior session starts a minimal one', () => {
+    service.refresh().subscribe();
+    httpMock.expectOne(`${AUTH_BASE}/refresh`).flush({ access_token: 'new-token' });
+
+    expect(service.session()).toEqual({
+      accessToken: 'new-token',
+      roles: [],
+      emailVerificado: false,
+      debeCambiarContrasena: false,
+    });
+  });
+
+  it('logout clears the session even if the backend call fails', () => {
+    service.login('admin', 'admin123').subscribe();
+    httpMock.expectOne(`${AUTH_BASE}/login`).flush(makeResponse());
+
+    service.logout().subscribe({ error: () => undefined });
+    httpMock.expectOne(`${AUTH_BASE}/logout`).flush('error', { status: 500, statusText: 'Server Error' });
+
+    expect(service.session()).toBeNull();
+    expect(service.isAuthenticated()).toBe(false);
   });
 });
