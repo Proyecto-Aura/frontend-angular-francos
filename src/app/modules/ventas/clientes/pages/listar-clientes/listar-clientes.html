@@ -151,13 +151,23 @@
           <app-ds-input [value]="f().nacimiento" (valueChange)="actualizarCampo('nacimiento', $event)" type="date" />
         </app-ds-field>
         <app-ds-field label="Departamento" [required]="true">
-          <app-ds-input [value]="f().departamento" (valueChange)="actualizarCampo('departamento', $event)" placeholder="Departamento" />
+          <app-ds-select [value]="f().departamento" (valueChange)="onDepartamento($event)" [options]="departamentoOptions" placeholder="Seleccionar" />
         </app-ds-field>
         <app-ds-field label="Provincia" [required]="true">
-          <app-ds-input [value]="f().provincia" (valueChange)="actualizarCampo('provincia', $event)" placeholder="Provincia" />
+          <app-ds-select
+            [value]="f().provincia"
+            (valueChange)="onProvincia($event)"
+            [options]="provinciaOptions()"
+            [placeholder]="f().departamento ? 'Seleccionar' : 'Elige un departamento'"
+          />
         </app-ds-field>
         <app-ds-field label="Distrito" [required]="true">
-          <app-ds-input [value]="f().distrito" (valueChange)="actualizarCampo('distrito', $event)" placeholder="Distrito" />
+          <app-ds-select
+            [value]="f().distrito"
+            (valueChange)="actualizarCampo('distrito', $event)"
+            [options]="distritoOptions()"
+            [placeholder]="f().provincia ? 'Seleccionar' : 'Elige una provincia'"
+          />
         </app-ds-field>
       </div>
       <app-ds-field label="Dirección" [required]="true">

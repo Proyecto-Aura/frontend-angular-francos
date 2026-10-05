@@ -25,6 +25,7 @@ import {
   validarCliente,
 } from '../../interfaces/cliente.interface';
 import { ClienteService } from '../../services/cliente.service';
+import { departamentos, distritosDe, provinciasDe } from '../../interfaces/ubigeo';
 
 const PAGE_SIZE = 8;
 
@@ -174,6 +175,22 @@ export class ListarClientes implements AfterViewInit {
   protected onTipoDoc(tipoDoc: string) {
     const t = tipoDoc as TipoDocumento;
     this.f.update(curr => limpiarPersona({ ...curr, tipoDoc: t }, personaPorDocumento(t, curr.doc)));
+  }
+
+  protected readonly departamentoOptions: SelectOption[] = departamentos().map(d => ({ value: d, label: d }));
+
+  protected provinciaOptions = computed<SelectOption[]>(() => provinciasDe(this.f().departamento).map(p => ({ value: p, label: p })));
+
+  protected distritoOptions = computed<SelectOption[]>(() =>
+    distritosDe(this.f().departamento, this.f().provincia).map(d => ({ value: d, label: d })),
+  );
+
+  protected onDepartamento(valor: string) {
+    this.f.update(curr => ({ ...curr, departamento: valor, provincia: '', distrito: '' }));
+  }
+
+  protected onProvincia(valor: string) {
+    this.f.update(curr => ({ ...curr, provincia: valor, distrito: '' }));
   }
 
   protected onTipo(valor: string) {
