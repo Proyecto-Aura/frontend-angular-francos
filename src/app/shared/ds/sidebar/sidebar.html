@@ -1,0 +1,93 @@
+<nav class="box-border flex h-full w-(--sidebar-width) shrink-0 flex-col text-sidebar-foreground" [style.background]="'var(--sidebar)'">
+  <div class="flex shrink-0 items-center gap-3.5 border-b border-sidebar-border px-6 h-(--sidebar-header-height)">
+    @if (logoSrc()) {
+      <img [src]="logoSrc()" [alt]="product()" class="h-11 w-11 shrink-0 rounded-xl bg-white" />
+    } @else {
+      <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white text-ds-lg font-bold text-primary">F</span>
+    }
+    <span class="min-w-0">
+      <span class="block truncate text-ds-lg leading-tight font-semibold text-sidebar-foreground">{{ product() }}</span>
+      <span class="block truncate text-ds-xs leading-relaxed tracking-[0.08em] text-sidebar-foreground-muted uppercase">{{ subtitle() }}</span>
+    </span>
+  </div>
+
+  <div class="flex-1 overflow-y-auto px-3 py-5">
+    @for (section of sections(); track section.label ?? $index) {
+      <div class="mb-5">
+        @if (section.label) {
+          <div class="px-3 pb-2 text-ds-xs tracking-[0.08em] text-sidebar-foreground-muted uppercase">{{ section.label }}</div>
+        }
+        <div class="flex flex-col gap-1.5">
+          @for (item of section.items; track item.id) {
+            <button
+              type="button"
+              (mouseenter)="hoverId.set(item.id)"
+              (mouseleave)="hoverId.set(null)"
+              (click)="onItemClick(item)"
+              class="flex h-[52px] w-full cursor-pointer items-center gap-3.5 rounded-xl border-none px-2 text-left text-ds-base text-sidebar-foreground transition-[background] duration-[120ms] ease-linear"
+              [class.bg-sidebar-accent]="item.id === activeId() || isExpanded(item.id)"
+              [class.bg-sidebar-accent-hover]="item.id !== activeId() && !isExpanded(item.id) && hoverId() === item.id"
+              [class.bg-transparent]="item.id !== activeId() && !isExpanded(item.id) && hoverId() !== item.id"
+              [class.font-semibold]="item.id === activeId() || isExpanded(item.id)"
+              [class.font-normal]="item.id !== activeId() && !isExpanded(item.id)"
+            >
+              <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sidebar-icon-well">
+                @if (item.icon) {
+                  <ng-container [ngComponentOutlet]="item.icon" [ngComponentOutletInputs]="{ size: 18 }" />
+                }
+              </span>
+              <span class="min-w-0 flex-1 truncate">{{ item.label }}</span>
+              @if (item.badge) {
+                <span class="shrink-0 rounded-full bg-white/20 px-2 text-ds-xs font-semibold text-sidebar-foreground">{{ item.badge }}</span>
+              }
+              @if (item.children?.length) {
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  class="h-4 w-4 shrink-0 text-sidebar-foreground-muted transition-transform duration-[120ms] ease-linear"
+                  [class.rotate-90]="isExpanded(item.id)"
+                >
+                  <polyline points="9 18 15 12 9 6" />
+                </svg>
+              }
+            </button>
+
+            @if (item.children?.length && isExpanded(item.id)) {
+              <div class="mt-1 mb-1 flex flex-col gap-1 pl-[52px]">
+                @for (child of item.children; track child.id) {
+                  <button
+                    type="button"
+                    (mouseenter)="hoverId.set(child.id)"
+                    (mouseleave)="hoverId.set(null)"
+                    (click)="navigate.emit(child.id)"
+                    class="flex h-9 w-full cursor-pointer items-center gap-2.5 rounded-lg border-none px-2 text-left text-ds-sm text-sidebar-foreground transition-[background] duration-[120ms] ease-linear"
+                    [class.bg-sidebar-accent]="child.id === activeId()"
+                    [class.bg-sidebar-accent-hover]="child.id !== activeId() && hoverId() === child.id"
+                    [class.bg-transparent]="child.id !== activeId() && hoverId() !== child.id"
+                    [class.font-semibold]="child.id === activeId()"
+                    [class.font-normal]="child.id !== activeId()"
+                  >
+                    @if (child.icon) {
+                      <ng-container [ngComponentOutlet]="child.icon" [ngComponentOutletInputs]="{ size: 15 }" />
+                    }
+                    <span class="min-w-0 flex-1 truncate">{{ child.label }}</span>
+                  </button>
+                }
+              </div>
+            }
+          }
+        </div>
+      </div>
+    }
+  </div>
+
+  @if (hasFooter()) {
+    <div class="shrink-0 border-t border-sidebar-border p-3">
+      <ng-content select="[footer]" />
+    </div>
+  }
+</nav>

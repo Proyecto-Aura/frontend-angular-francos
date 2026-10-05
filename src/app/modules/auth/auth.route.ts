@@ -14,7 +14,7 @@ export const AUTH_ROUTES: Routes = [
       {
         path: 'register',
         loadComponent: () =>
-          import('./pages/Auth-form-register/auth-form-register')
+          import('./pages/auth-form-register/auth-form-register')
         .then(c => c.AuthFormRegister)
       },
       {

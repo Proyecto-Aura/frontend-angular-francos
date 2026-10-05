@@ -1,3 +1,22 @@
-<p>home-modules works!</p>
-<home-cards/>
+<div class="flex flex-col gap-6">
+  <div class="flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <span class="h-6 w-1 rounded bg-[#dc2626]"></span>
+      <span class="text-2xl font-bold text-[#101828]">Accesos</span>
+    </div>
+    <span class="rounded-2xl bg-white px-4 py-1.5 text-sm font-semibold text-[#101828] shadow-[0_2px_4px_rgba(0,0,0,0.02)]">
+      {{ modules.length }} módulos
+    </span>
+  </div>
 
+  <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+    @for (module of modules; track module.title) {
+      <app-home-cards
+        [icon]="module.icon"
+        [title]="module.title"
+        [description]="module.description"
+        [routerLink]="module.routerLink"
+      />
+    }
+  </div>
+</div>

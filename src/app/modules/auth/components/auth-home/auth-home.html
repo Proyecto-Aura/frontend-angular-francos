@@ -1,1 +1,42 @@
-<p>auth-home works!</p>
+<div
+  class="relative hidden shrink-0 flex-col overflow-hidden lg:flex lg:w-[55%] lg:min-w-105"
+  style="background: linear-gradient(134.15deg, rgb(239, 68, 68) 6.17%, rgb(220, 38, 38) 58.77%, rgb(185, 28, 28) 93.83%);"
+>
+  <!-- círculos decorativos -->
+  <span class="pointer-events-none absolute -top-24 -left-24 size-72 rounded-full bg-white/10 xl:-top-32 xl:-left-32 xl:size-96"></span>
+  <span class="pointer-events-none absolute top-[52%] left-[68%] size-64 rounded-full bg-white/10 xl:size-80"></span>
+  <span class="pointer-events-none absolute top-[36%] left-[33%] size-40 rounded-full bg-white/[.07] xl:size-48"></span>
+  <span class="pointer-events-none absolute top-10 left-[76%] size-24 rounded-full bg-white/6 xl:size-32"></span>
+
+  <!-- logo -->
+  <div class="relative flex items-center gap-3 p-8 lg:p-10 xl:p-12">
+    <div class="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-white shadow-lg lg:size-14">
+      <img src="/icons/Francos.svg" alt="Franco's" class="size-10 object-contain lg:size-12" />
+    </div>
+    <span class="font-body text-2xl font-extrabold tracking-tight text-white lg:text-3xl xl:text-[32px]">Franco's</span>
+  </div>
+
+  <!-- contenido central -->
+  <div class="relative flex flex-1 flex-col justify-center px-8 pb-8 lg:px-10 xl:px-12">
+    <div class="max-w-105 xl:max-w-125">
+      <h1 class="font-heading text-4xl leading-tight font-black tracking-tight text-white lg:text-5xl xl:text-6xl 2xl:text-[64px] 2xl:leading-15">
+        Bienvenido de<br />
+        <span class="text-[#ffe2e2]">vuelta.</span>
+      </h1>
+
+      <div class="mt-8 flex flex-col gap-4 lg:mt-10 xl:mt-13.5">
+        @for (feature of features; track feature.text) {
+          <div class="flex items-center gap-3">
+            <span class="flex size-8 shrink-0 items-center justify-center rounded-[10px] bg-white/15">
+              <img [src]="feature.icon" alt="" class="size-3.75" />
+            </span>
+            <span class="text-sm font-medium text-white/85">{{ feature.text }}</span>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+
+  <!-- footer -->
+  <p class="relative px-8 pb-8 text-xs text-white/40 lg:px-10 xl:px-12 xl:pb-10">© 2026 Franco's · Todos los derechos reservados</p>
+</div>

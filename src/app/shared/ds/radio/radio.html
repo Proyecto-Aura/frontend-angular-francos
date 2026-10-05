@@ -1,0 +1,38 @@
+<label
+  class="inline-flex cursor-pointer gap-2.5"
+  [class.items-start]="!!description()"
+  [class.items-center]="!description()"
+  [class.cursor-not-allowed]="disabled()"
+  [class.opacity-50]="disabled()"
+>
+  <input
+    type="radio"
+    [name]="name()"
+    [value]="value()"
+    [checked]="checked()"
+    [disabled]="disabled()"
+    (change)="changed.emit($event)"
+    class="absolute h-0 w-0 opacity-0"
+  />
+  <span
+    class="box-border inline-flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full bg-input-background transition-[border-color,border-width] duration-[120ms] ease-linear"
+    [class.mt-px]="!!description()"
+    [class.border]="!checked()"
+    [class.border-border]="!checked()"
+    [class.shadow-ds-field]="!checked()"
+    [class.border-2]="checked()"
+    [class.border-primary]="checked()"
+  >
+    @if (checked()) {
+      <span class="h-[10px] w-[10px] rounded-full bg-primary"></span>
+    }
+  </span>
+  @if (label() || description()) {
+    <span>
+      <span class="text-ds-base text-foreground">{{ label() }}</span>
+      @if (description()) {
+        <span class="block text-ds-sm text-muted-foreground">{{ description() }}</span>
+      }
+    </span>
+  }
+</label>

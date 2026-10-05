@@ -1,0 +1,14 @@
+<div class="flex items-end gap-2.5" [style.height.px]="height()">
+  @for (d of data(); track d.label) {
+    <div class="flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-1.5">
+      <span class="text-ds-xs whitespace-nowrap text-muted-foreground">{{ formatted(d.value) }}</span>
+      <div
+        class="w-full min-h-[3px] max-w-[38px] rounded-t-sm"
+        [style.height.%]="barHeightPct(d.value)"
+        [style.background]="'var(' + colorVar() + ')'"
+        [style.opacity]="d.faded ? 0.35 : 1"
+      ></div>
+      <span class="text-ds-sm whitespace-nowrap text-muted-foreground">{{ d.label }}</span>
+    </div>
+  }
+</div>

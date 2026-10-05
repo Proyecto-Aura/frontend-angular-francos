@@ -1,0 +1,42 @@
+<div class="flex flex-wrap items-center justify-between gap-4">
+  <span class="text-ds-base text-muted-foreground">{{ summary() }}</span>
+  <div class="flex items-center gap-2">
+    <button
+      type="button"
+      [disabled]="page() <= 1"
+      (click)="goTo(page() - 1)"
+      class="inline-flex h-10 min-w-10 cursor-pointer items-center justify-center rounded-lg border border-border bg-card px-3 font-sans text-ds-base text-foreground transition-[background,border-color] duration-[120ms] ease-linear enabled:hover:bg-muted disabled:cursor-not-allowed disabled:text-muted-foreground disabled:opacity-60"
+    >
+      Anterior
+    </button>
+    @for (p of pageList(); track $index) {
+      @if (p === '…') {
+        <span class="min-w-[28px] text-center text-muted-foreground">…</span>
+      } @else {
+        <button
+          type="button"
+          (click)="goTo(p)"
+          class="inline-flex h-10 min-w-10 cursor-pointer items-center justify-center rounded-lg border px-3 font-sans text-ds-base transition-[background,border-color] duration-[120ms] ease-linear"
+          [class.bg-primary]="p === page()"
+          [class.border-primary]="p === page()"
+          [class.text-primary-foreground]="p === page()"
+          [class.font-medium]="p === page()"
+          [class.bg-card]="p !== page()"
+          [class.border-border]="p !== page()"
+          [class.text-foreground]="p !== page()"
+          [class.hover:bg-muted]="p !== page()"
+        >
+          {{ p }}
+        </button>
+      }
+    }
+    <button
+      type="button"
+      [disabled]="page() >= pageCount()"
+      (click)="goTo(page() + 1)"
+      class="inline-flex h-10 min-w-10 cursor-pointer items-center justify-center rounded-lg border border-border bg-card px-3 font-sans text-ds-base text-foreground transition-[background,border-color] duration-[120ms] ease-linear enabled:hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
+    >
+      Siguiente
+    </button>
+  </div>
+</div>

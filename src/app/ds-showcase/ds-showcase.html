@@ -1,0 +1,221 @@
+<div class="min-h-screen bg-background text-foreground">
+  <header class="border-b border-border bg-card px-(--page-padding) py-6">
+    <h1 class="text-ds-2xl font-medium text-foreground">Catálogo de componentes</h1>
+    <p class="mt-1 text-ds-sm text-muted-foreground">Franco's Portal Empresarial · design system · ejemplo de uso de los 25 componentes</p>
+  </header>
+
+  <main class="flex flex-col gap-10 p-(--page-padding)">
+    <!-- CORE -->
+    <section class="flex flex-col gap-4">
+      <h2 class="text-ds-xl font-medium text-foreground">Core</h2>
+
+      <app-ds-card title="Botones" subtitle="Variantes, tamaños y estados">
+        <div class="flex flex-wrap items-center gap-3">
+          <app-ds-button variant="primary">Guardar</app-ds-button>
+          <app-ds-button variant="secondary">Cancelar</app-ds-button>
+          <app-ds-button variant="ghost">Ver detalle</app-ds-button>
+          <app-ds-button variant="destructive">Eliminar</app-ds-button>
+          <app-ds-button variant="link">Ver todos</app-ds-button>
+        </div>
+        <div class="mt-4 flex flex-wrap items-center gap-3">
+          <app-ds-button size="sm">Pequeño</app-ds-button>
+          <app-ds-button size="md">Mediano</app-ds-button>
+          <app-ds-button size="lg">Grande</app-ds-button>
+          <app-ds-button [disabled]="true">Deshabilitado</app-ds-button>
+          <app-ds-button>
+            <span icon><app-ds-icon [img]="LucidePlus" [size]="16" /></span>
+            Nuevo pedido
+          </app-ds-button>
+        </div>
+        <div class="mt-4 flex flex-wrap items-center gap-3">
+          <app-ds-icon-button label="Editar"><app-ds-icon [img]="LucidePencil" [size]="16" /></app-ds-icon-button>
+          <app-ds-icon-button label="Eliminar" variant="secondary"><app-ds-icon [img]="LucideTrash2" [size]="16" /></app-ds-icon-button>
+          <app-ds-icon-button label="Más opciones" [disabled]="true"><app-ds-icon [img]="LucideSettings" [size]="16" /></app-ds-icon-button>
+        </div>
+      </app-ds-card>
+
+      <app-ds-card title="Badges" subtitle="Los seis tonos semánticos">
+        <div class="flex flex-wrap items-center gap-3">
+          @for (b of badgeTones; track b.tone) {
+            <app-ds-badge [tone]="b.tone" [dot]="true">{{ b.label }}</app-ds-badge>
+          }
+        </div>
+      </app-ds-card>
+
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <app-ds-card title="Card con acciones" subtitle="240 registros · actualizado hace 2 h" [hasActions]="true" [hasFooter]="true">
+          <span actions>
+            <app-ds-icon-button label="Descargar"><app-ds-icon [img]="LucideDownload" [size]="16" /></app-ds-icon-button>
+          </span>
+          <p class="text-ds-base text-foreground">Contenido de ejemplo dentro de una tarjeta con encabezado, cuerpo y pie.</p>
+          <span footer>
+            <app-ds-button variant="secondary" size="sm">Cancelar</app-ds-button>
+            <app-ds-button size="sm">Guardar</app-ds-button>
+          </span>
+        </app-ds-card>
+
+        <app-ds-card title="Avatares e iconos">
+          <div class="flex flex-wrap items-center gap-4">
+            <app-ds-avatar name="Ana Torres" size="sm" />
+            <app-ds-avatar name="Luis Ramírez" size="md" />
+            <app-ds-avatar name="Franco's" size="lg" />
+            <app-ds-icon [img]="LucideUsers" [size]="20" />
+            <app-ds-icon [img]="LucideBarChart3" [size]="20" />
+            <app-ds-icon [img]="LucideBell" [size]="20" />
+          </div>
+        </app-ds-card>
+      </div>
+    </section>
+
+    <!-- FORMS -->
+    <section class="flex flex-col gap-4">
+      <h2 class="text-ds-xl font-medium text-foreground">Forms</h2>
+
+      <app-ds-card title="Campos de formulario">
+        <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
+          <app-ds-field label="Nombre del cliente" hint="Los campos con * son obligatorios" [required]="true">
+            <app-ds-input [(value)]="inputValue" placeholder="Comercial Andina S.A.C." />
+          </app-ds-field>
+
+          <app-ds-field label="RUC" error="El RUC debe tener 11 dígitos">
+            <app-ds-input placeholder="20548712345" [invalid]="true" />
+          </app-ds-field>
+
+          <app-ds-field label="Ciudad">
+            <app-ds-select [(value)]="selectValue" [options]="selectOptions" placeholder="Selecciona una ciudad" />
+          </app-ds-field>
+
+          <app-ds-field label="Campo deshabilitado">
+            <app-ds-input placeholder="No editable" [disabled]="true" />
+          </app-ds-field>
+
+          <app-ds-field label="Observaciones" hint="Visible solo para el equipo interno" class="md:col-span-2">
+            <app-ds-textarea [(value)]="textareaValue" placeholder="Escribe una observación…" />
+          </app-ds-field>
+        </div>
+
+        <div class="mt-6 flex flex-wrap items-center gap-8">
+          <app-ds-checkbox [(checked)]="checkboxChecked" label="Recordar cliente" description="Guarda estos datos para el próximo pedido" />
+          <app-ds-switch [(checked)]="switchChecked" label="Notificaciones activas" />
+          <div class="flex items-center gap-4">
+            <app-ds-radio name="periodo" value="mensual" [checked]="radioValue() === 'mensual'" (changed)="radioValue.set('mensual')" label="Mensual" />
+            <app-ds-radio name="periodo" value="anual" [checked]="radioValue() === 'anual'" (changed)="radioValue.set('anual')" label="Anual" />
+          </div>
+        </div>
+      </app-ds-card>
+    </section>
+
+    <!-- DATA -->
+    <section class="flex flex-col gap-4">
+      <h2 class="text-ds-xl font-medium text-foreground">Data</h2>
+
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+        @for (kpi of kpis; track kpi.label) {
+          <app-ds-kpi-card [label]="kpi.label" [value]="kpi.value" [delta]="kpi.delta" [deltaTone]="kpi.tone" [caption]="kpi.caption" [hasIcon]="true">
+            <span icon><app-ds-icon [img]="LucideBarChart3" [size]="16" /></span>
+          </app-ds-kpi-card>
+        }
+      </div>
+
+      <app-ds-card title="Ventas por mes" subtitle="En miles de soles">
+        <app-ds-bar-chart [data]="chartData" [height]="180" />
+      </app-ds-card>
+
+      <app-ds-card title="Pedidos" [padded]="false">
+        <app-ds-filter-bar [hasSearch]="true" [hasActions]="true" class="p-4">
+          <span search>
+            <app-ds-input placeholder="Buscar pedido…" [hasIcon]="true">
+              <span icon><app-ds-icon [img]="LucideSearch" [size]="16" /></span>
+            </app-ds-input>
+          </span>
+          <span actions>
+            <app-ds-button size="sm">
+              <span icon><app-ds-icon [img]="LucidePlus" [size]="16" /></span>
+              Nuevo pedido
+            </app-ds-button>
+          </span>
+        </app-ds-filter-bar>
+
+        <app-ds-data-table [columns]="columns()" [rows]="rows" />
+
+        <div class="border-t border-border p-4">
+          <app-ds-pagination [page]="page()" [pageCount]="8" [total]="76" [pageSize]="10" (changed)="page.set($event)" />
+        </div>
+      </app-ds-card>
+
+      <ng-template #clienteCell let-row>
+        <app-ds-cell-stack [primary]="row.cliente" [secondary]="row.ruc" />
+      </ng-template>
+
+      <ng-template #estadoCell let-row>
+        <app-ds-badge [tone]="estadoTone(row.estado)" [dot]="true">{{ row.estado }}</app-ds-badge>
+      </ng-template>
+    </section>
+
+    <!-- NAVIGATION -->
+    <section class="flex flex-col gap-4">
+      <h2 class="text-ds-xl font-medium text-foreground">Navigation</h2>
+
+      <app-ds-card title="Breadcrumb y tabs">
+        <app-ds-breadcrumb [items]="breadcrumb" />
+        <div class="mt-4">
+          <app-ds-tabs [tabs]="tabs" [activeId]="activeTab()" (changed)="activeTab.set($event)" />
+        </div>
+      </app-ds-card>
+
+      <div class="overflow-hidden rounded-lg border border-border shadow-ds-xs">
+        <div class="flex h-105">
+          <app-ds-sidebar [sections]="sidebarSections" [activeId]="activeSidebarId()" (navigate)="activeSidebarId.set($event)" />
+          <div class="flex flex-1 flex-col">
+            <app-ds-topbar title="Pedidos" [hasBreadcrumb]="true" [hasActions]="true" [hasUser]="true">
+              <span breadcrumb><app-ds-breadcrumb [items]="breadcrumb" /></span>
+              <span actions>
+                <app-ds-icon-button label="Notificaciones"><app-ds-icon [img]="LucideBell" [size]="16" /></app-ds-icon-button>
+              </span>
+              <span user><app-ds-avatar name="Ana Torres" size="sm" /></span>
+            </app-ds-topbar>
+            <div class="flex-1 bg-background p-6 text-ds-sm text-muted-foreground">Contenido del módulo</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- OVERLAY -->
+    <section class="flex flex-col gap-4">
+      <h2 class="text-ds-xl font-medium text-foreground">Overlay</h2>
+
+      <app-ds-card title="Modal, tooltip y menú">
+        <div class="flex flex-wrap items-center gap-6">
+          <app-ds-button (clicked)="modalOpen.set(true)">Abrir modal</app-ds-button>
+
+          <app-ds-tooltip label="Exportar como Excel">
+            <app-ds-icon-button label="Exportar"><app-ds-icon [img]="LucideDownload" [size]="16" /></app-ds-icon-button>
+          </app-ds-tooltip>
+
+          <app-ds-dropdown-menu [items]="dropdownItems">
+            <span trigger>
+              <app-ds-icon-button label="Más opciones"><app-ds-icon [img]="LucideSettings" [size]="16" /></app-ds-icon-button>
+            </span>
+          </app-ds-dropdown-menu>
+        </div>
+      </app-ds-card>
+
+      <app-ds-modal
+        [open]="modalOpen()"
+        title="Registrar pago"
+        description="PED-1042 · Comercial Andina S.A.C."
+        [hasFooter]="true"
+        hint="Los campos con * son obligatorios"
+        (closed)="modalOpen.set(false)"
+      >
+        <app-ds-field label="Monto a registrar" [required]="true">
+          <app-ds-input placeholder="S/ 0.00" />
+        </app-ds-field>
+        <span footer>
+          <app-ds-button variant="secondary" (clicked)="modalOpen.set(false)">Cancelar</app-ds-button>
+          <app-ds-button (clicked)="modalOpen.set(false)">Registrar pago</app-ds-button>
+        </span>
+      </app-ds-modal>
+    </section>
+  </main>
+</div>
