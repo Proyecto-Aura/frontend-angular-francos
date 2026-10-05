@@ -12,6 +12,7 @@ export class ModuleLayout {
   private route = inject(ActivatedRoute);
 
   links = (this.route.snapshot.data['sidebarLinks'] as SidebarLink[]) ?? [];
+  sectionLabel = (this.route.snapshot.data['sidebarTitle'] as string) ?? null;
 
   // TODO: reemplazar por los datos reales del usuario autenticado (AuthService)
   userName = 'Andres Chavarri Centeno';

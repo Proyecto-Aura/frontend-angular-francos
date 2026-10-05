@@ -7,7 +7,7 @@ interface Feature {
 
 @Component({
   imports: [],
-  selector: 'auth-home',
+  selector: 'app-auth-home',
   templateUrl: './auth-home.html',
   host: { class: 'contents' },
 })

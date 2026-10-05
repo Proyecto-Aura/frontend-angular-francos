@@ -6,7 +6,7 @@
 
   <div class="flex flex-col gap-5">
     <div class="flex flex-col gap-1">
-      <auth-input
+      <app-auth-input
         label="Usuario"
         placeholder="admin"
         [formField]="loginForm.username"
@@ -19,7 +19,7 @@
     </div>
 
     <div class="flex flex-col gap-1">
-      <auth-input
+      <app-auth-input
         label="Contraseña"
         placeholder="admin123"
         type="password"
@@ -36,7 +36,7 @@
   </div>
 
   @if (loginError()) {
-    <p class="-mt-4 text-sm font-medium text-[#d22b2b]">Usuario o contraseña incorrectos.</p>
+    <p class="-mt-4 text-sm font-medium text-[#d22b2b]">{{ loginError() }}</p>
   }
 
   <label class="flex cursor-pointer items-center gap-3">

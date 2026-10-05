@@ -209,10 +209,10 @@ export class DsShowcase implements AfterViewInit {
   activeSidebarId = signal('ventas');
 
   dropdownItems: DropdownMenuItem[] = [
-    { label: 'Editar', icon: LucidePencil, onSelect: () => {} },
-    { label: 'Exportar', icon: LucideDownload, onSelect: () => {} },
+    { label: 'Editar', icon: LucidePencil, onSelect: () => undefined },
+    { label: 'Exportar', icon: LucideDownload, onSelect: () => undefined },
     { separator: true },
-    { label: 'Eliminar', icon: LucideTrash2, destructive: true, onSelect: () => {} },
+    { label: 'Eliminar', icon: LucideTrash2, destructive: true, onSelect: () => undefined },
   ];
 
   page = signal(1);
