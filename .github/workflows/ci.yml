@@ -60,6 +60,9 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: Formato (prettier)
+        run: npx prettier --check .
+
   test-unit:
     name: test-unit
     needs: build
