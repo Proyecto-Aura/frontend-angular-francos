@@ -15,7 +15,8 @@ const SIZES: Record<ButtonSize, string> = {
 const VARIANTS: Record<ButtonVariant, string> = {
   primary: 'bg-primary text-primary-foreground enabled:hover:bg-primary-hover',
   secondary: 'bg-card text-foreground border-border enabled:hover:bg-muted',
-  ghost: 'bg-transparent text-foreground enabled:hover:bg-accent enabled:hover:text-accent-foreground',
+  ghost:
+    'bg-transparent text-foreground enabled:hover:bg-accent enabled:hover:text-accent-foreground',
   destructive: 'bg-destructive text-destructive-foreground enabled:hover:bg-[#CE322F]',
   link: 'bg-transparent text-primary !h-auto !p-0 enabled:hover:underline',
 };
@@ -36,7 +37,12 @@ export class Button {
 
   classes = computed(() => {
     const v = this.variant();
-    return [BASE, v === 'link' ? '' : SIZES[this.size()], VARIANTS[v], this.fullWidth() ? 'w-full' : '']
+    return [
+      BASE,
+      v === 'link' ? '' : SIZES[this.size()],
+      VARIANTS[v],
+      this.fullWidth() ? 'w-full' : '',
+    ]
       .filter(Boolean)
       .join(' ');
   });

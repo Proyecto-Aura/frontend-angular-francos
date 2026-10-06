@@ -25,7 +25,11 @@ describe('DsSidebar', () => {
     const emitted: string[] = [];
     component.navigate.subscribe((id) => emitted.push(id));
 
-    const parent: DsSidebarItem = { id: 'catalogo', label: 'Catálogo', children: [{ id: 'productos', label: 'Productos' }] };
+    const parent: DsSidebarItem = {
+      id: 'catalogo',
+      label: 'Catálogo',
+      children: [{ id: 'productos', label: 'Productos' }],
+    };
     component.onItemClick(parent);
 
     expect(component.isExpanded('catalogo')).toBe(true);

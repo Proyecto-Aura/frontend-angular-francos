@@ -25,7 +25,10 @@ describe('BarChart', () => {
 
   it('barHeightPct computes a percentage relative to max', () => {
     const fixture = create();
-    fixture.componentRef.setInput('data', [{ label: 'A', value: 50 }, { label: 'B', value: 100 }]);
+    fixture.componentRef.setInput('data', [
+      { label: 'A', value: 50 },
+      { label: 'B', value: 100 },
+    ]);
     fixture.detectChanges();
     expect(fixture.componentInstance.barHeightPct(50)).toBe(50);
   });

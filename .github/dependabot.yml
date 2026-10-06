@@ -11,7 +11,7 @@ updates:
       prefix: ci
     groups:
       actions:
-        patterns: ["*"]
+        patterns: ['*']
 
   # 2. Dependencias npm
   - package-ecosystem: npm
@@ -24,12 +24,12 @@ updates:
       prefix: chore
     groups:
       angular:
-        patterns: ["@angular/*"]
+        patterns: ['@angular/*']
       linting:
-        patterns: ["eslint", "@eslint/*", "angular-eslint", "typescript-eslint"]
+        patterns: ['eslint', '@eslint/*', 'angular-eslint', 'typescript-eslint']
       produccion:
         dependency-type: production
-        update-types: ["minor", "patch"]
+        update-types: ['minor', 'patch']
       desarrollo:
         dependency-type: development
-        update-types: ["minor", "patch"]
+        update-types: ['minor', 'patch']

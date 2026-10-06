@@ -9,18 +9,24 @@
     class="flex w-full items-center gap-3 border-b border-sidebar-border px-4 py-4 text-left"
     (click)="toggle()"
   >
-    <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white text-sm font-bold text-primary">
+    <span
+      class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white text-sm font-bold text-primary"
+    >
       <img src="/icons/Francos.svg" alt="Franco's" class="h-10 w-10 shrink-0" />
     </span>
     @if (!collapsed()) {
       <span class="flex flex-col leading-tight">
         <span class="font-semibold">Franco's</span>
-        <span class="text-[10px] tracking-wide text-sidebar-foreground-muted truncate uppercase">Portal Empresa</span>
+        <span class="text-[10px] tracking-wide text-sidebar-foreground-muted truncate uppercase"
+          >Portal Empresa</span
+        >
       </span>
     }
   </button>
   @if (sectionLabel() && !collapsed()) {
-    <div class="px-5 pt-4 pb-1 text-[10px] font-semibold tracking-wide truncate text-sidebar-foreground-muted uppercase">
+    <div
+      class="px-5 pt-4 pb-1 text-[10px] font-semibold tracking-wide truncate text-sidebar-foreground-muted uppercase"
+    >
       {{ sectionLabel() }}
     </div>
   }
@@ -33,9 +39,14 @@
           class="flex items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-medium hover:bg-sidebar-accent-hover"
           [class.bg-sidebar-accent]="isExpanded(link.label)"
         >
-          <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-sidebar-icon-well">
+          <span
+            class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-sidebar-icon-well"
+          >
             @if (link.icon) {
-              <ng-container [ngComponentOutlet]="link.icon" [ngComponentOutletInputs]="{ size: 17 }" />
+              <ng-container
+                [ngComponentOutlet]="link.icon"
+                [ngComponentOutletInputs]="{ size: 17 }"
+              />
             } @else {
               <span class="text-lg">•</span>
             }
@@ -43,8 +54,12 @@
           @if (!collapsed()) {
             <span class="min-w-0 flex-1 truncate">{{ link.label }}</span>
             <svg
-              viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-              stroke-linecap="round" stroke-linejoin="round"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
               class="h-4 w-4 shrink-0 transition-transform duration-200"
               [class.rotate-90]="isExpanded(link.label)"
             >
@@ -61,7 +76,10 @@
                 class="flex items-center gap-2.5 truncate rounded-lg px-3 py-2.5 text-xs font-normal hover:bg-sidebar-accent-hover"
               >
                 @if (child.icon) {
-                  <ng-container [ngComponentOutlet]="child.icon" [ngComponentOutletInputs]="{ size: 15 }" />
+                  <ng-container
+                    [ngComponentOutlet]="child.icon"
+                    [ngComponentOutletInputs]="{ size: 15 }"
+                  />
                 }
                 <span class="min-w-0 flex-1 truncate">{{ child.label }}</span>
               </a>
@@ -74,9 +92,14 @@
           routerLinkActive="bg-sidebar-accent"
           class="flex items-center gap-3 rounded-lg px-3 py-2 truncate text-sm font-medium hover:bg-sidebar-accent-hover"
         >
-          <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-sidebar-icon-well">
+          <span
+            class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-sidebar-icon-well"
+          >
             @if (link.icon) {
-              <ng-container [ngComponentOutlet]="link.icon" [ngComponentOutletInputs]="{ size: 17 }" />
+              <ng-container
+                [ngComponentOutlet]="link.icon"
+                [ngComponentOutletInputs]="{ size: 17 }"
+              />
             } @else {
               <span class="text-lg">•</span>
             }

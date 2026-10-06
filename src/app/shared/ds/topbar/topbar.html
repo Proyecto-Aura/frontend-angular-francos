@@ -1,4 +1,6 @@
-<header class="box-border flex shrink-0 items-center gap-4 border-b border-border bg-card px-(--page-padding) h-(--topbar-height)">
+<header
+  class="box-border flex shrink-0 items-center gap-4 border-b border-border bg-card px-(--page-padding) h-(--topbar-height)"
+>
   @if (hasUser() && userPlacement() === 'left') {
     <div class="mr-1 flex items-center gap-2.5 border-r border-border pr-2">
       <ng-content select="[user]" />
@@ -11,7 +13,11 @@
         <ng-content select="[breadcrumb]" />
       }
       @if (title()) {
-        <h2 class="overflow-hidden text-ds-xl font-medium text-ellipsis whitespace-nowrap text-foreground">{{ title() }}</h2>
+        <h2
+          class="overflow-hidden text-ds-xl font-medium text-ellipsis whitespace-nowrap text-foreground"
+        >
+          {{ title() }}
+        </h2>
       }
     </div>
   }

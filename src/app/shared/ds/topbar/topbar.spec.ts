@@ -13,6 +13,6 @@ describe('Topbar', () => {
     const fixture = TestBed.createComponent(Topbar);
     fixture.componentRef.setInput('title', 'Dashboard');
     fixture.detectChanges();
-    expect((fixture.nativeElement.textContent as string)).toContain('Dashboard');
+    expect(fixture.nativeElement.textContent as string).toContain('Dashboard');
   });
 });

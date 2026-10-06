@@ -4,8 +4,7 @@ export const CLIENTES_ROUTES: Routes = [
   {
     path: 'listar-cliente',
     loadComponent: () =>
-      import('../clientes/pages/listar-clientes/listar-clientes')
-        .then(c => c.ListarClientes),
+      import('../clientes/pages/listar-clientes/listar-clientes').then((c) => c.ListarClientes),
   },
   {
     path: '**',

@@ -62,7 +62,12 @@ describe('AuthService', () => {
 
   it('on failure, does not set a session', () => {
     service.login('admin', 'wrong').subscribe({ error: () => undefined });
-    httpMock.expectOne(`${AUTH_BASE}/login`).flush({ statusCode: 401, message: 'Credenciales inválidas' }, { status: 401, statusText: 'Unauthorized' });
+    httpMock
+      .expectOne(`${AUTH_BASE}/login`)
+      .flush(
+        { statusCode: 401, message: 'Credenciales inválidas' },
+        { status: 401, statusText: 'Unauthorized' },
+      );
 
     expect(service.session()).toBeNull();
   });
@@ -97,7 +102,9 @@ describe('AuthService', () => {
     httpMock.expectOne(`${AUTH_BASE}/login`).flush(makeResponse());
 
     service.logout().subscribe({ error: () => undefined });
-    httpMock.expectOne(`${AUTH_BASE}/logout`).flush('error', { status: 500, statusText: 'Server Error' });
+    httpMock
+      .expectOne(`${AUTH_BASE}/logout`)
+      .flush('error', { status: 500, statusText: 'Server Error' });
 
     expect(service.session()).toBeNull();
     expect(service.isAuthenticated()).toBe(false);
