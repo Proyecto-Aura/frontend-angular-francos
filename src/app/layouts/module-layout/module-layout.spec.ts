@@ -6,10 +6,7 @@ import { SidebarLink } from '../../shared/ui/sidebar/sidebar';
 describe('ModuleLayout', () => {
   function createWithData(data: { sidebarLinks?: SidebarLink[]; sidebarTitle?: string }) {
     TestBed.configureTestingModule({
-      providers: [
-        provideRouter([]),
-        { provide: ActivatedRoute, useValue: { snapshot: { data } } },
-      ],
+      providers: [provideRouter([]), { provide: ActivatedRoute, useValue: { snapshot: { data } } }],
     });
     const fixture = TestBed.createComponent(ModuleLayout);
     fixture.detectChanges();

@@ -14,7 +14,11 @@ describe('HomePerfil', () => {
   beforeEach(() => {
     router = { navigateByUrl: vi.fn() };
     TestBed.configureTestingModule({
-      providers: [provideHttpClient(), provideHttpClientTesting(), { provide: Router, useValue: router }],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: Router, useValue: router },
+      ],
     });
     httpMock = TestBed.inject(HttpTestingController);
   });

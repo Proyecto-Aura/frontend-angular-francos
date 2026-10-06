@@ -39,7 +39,7 @@ describe('Sidebar', () => {
     const fixture = TestBed.createComponent(Sidebar);
     fixture.componentRef.setInput('sectionLabel', 'Gestión de Ventas');
     fixture.detectChanges();
-    expect((fixture.nativeElement.textContent as string)).toContain('Gestión de Ventas');
+    expect(fixture.nativeElement.textContent as string).toContain('Gestión de Ventas');
   });
 
   it('hides the sectionLabel when the sidebar is collapsed', () => {
@@ -47,7 +47,7 @@ describe('Sidebar', () => {
     fixture.componentRef.setInput('sectionLabel', 'Gestión de Ventas');
     fixture.componentInstance.toggle();
     fixture.detectChanges();
-    expect((fixture.nativeElement.textContent as string)).not.toContain('Gestión de Ventas');
+    expect(fixture.nativeElement.textContent as string).not.toContain('Gestión de Ventas');
   });
 
   it('a link with children renders as a toggle button, not an <a>, and starts collapsed', () => {

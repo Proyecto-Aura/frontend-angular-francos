@@ -1,13 +1,26 @@
-<nav class="box-border flex h-full w-(--sidebar-width) shrink-0 flex-col text-sidebar-foreground" [style.background]="'var(--sidebar)'">
-  <div class="flex shrink-0 items-center gap-3.5 border-b border-sidebar-border px-6 h-(--sidebar-header-height)">
+<nav
+  class="box-border flex h-full w-(--sidebar-width) shrink-0 flex-col text-sidebar-foreground"
+  [style.background]="'var(--sidebar)'"
+>
+  <div
+    class="flex shrink-0 items-center gap-3.5 border-b border-sidebar-border px-6 h-(--sidebar-header-height)"
+  >
     @if (logoSrc()) {
       <img [src]="logoSrc()" [alt]="product()" class="h-11 w-11 shrink-0 rounded-xl bg-white" />
     } @else {
-      <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white text-ds-lg font-bold text-primary">F</span>
+      <span
+        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white text-ds-lg font-bold text-primary"
+        >F</span
+      >
     }
     <span class="min-w-0">
-      <span class="block truncate text-ds-lg leading-tight font-semibold text-sidebar-foreground">{{ product() }}</span>
-      <span class="block truncate text-ds-xs leading-relaxed tracking-[0.08em] text-sidebar-foreground-muted uppercase">{{ subtitle() }}</span>
+      <span class="block truncate text-ds-lg leading-tight font-semibold text-sidebar-foreground">{{
+        product()
+      }}</span>
+      <span
+        class="block truncate text-ds-xs leading-relaxed tracking-[0.08em] text-sidebar-foreground-muted uppercase"
+        >{{ subtitle() }}</span
+      >
     </span>
   </div>
 
@@ -15,7 +28,11 @@
     @for (section of sections(); track section.label ?? $index) {
       <div class="mb-5">
         @if (section.label) {
-          <div class="px-3 pb-2 text-ds-xs tracking-[0.08em] text-sidebar-foreground-muted uppercase">{{ section.label }}</div>
+          <div
+            class="px-3 pb-2 text-ds-xs tracking-[0.08em] text-sidebar-foreground-muted uppercase"
+          >
+            {{ section.label }}
+          </div>
         }
         <div class="flex flex-col gap-1.5">
           @for (item of section.items; track item.id) {
@@ -26,19 +43,31 @@
               (click)="onItemClick(item)"
               class="flex h-[52px] w-full cursor-pointer items-center gap-3.5 rounded-xl border-none px-2 text-left text-ds-base text-sidebar-foreground transition-[background] duration-[120ms] ease-linear"
               [class.bg-sidebar-accent]="item.id === activeId() || isExpanded(item.id)"
-              [class.bg-sidebar-accent-hover]="item.id !== activeId() && !isExpanded(item.id) && hoverId() === item.id"
-              [class.bg-transparent]="item.id !== activeId() && !isExpanded(item.id) && hoverId() !== item.id"
+              [class.bg-sidebar-accent-hover]="
+                item.id !== activeId() && !isExpanded(item.id) && hoverId() === item.id
+              "
+              [class.bg-transparent]="
+                item.id !== activeId() && !isExpanded(item.id) && hoverId() !== item.id
+              "
               [class.font-semibold]="item.id === activeId() || isExpanded(item.id)"
               [class.font-normal]="item.id !== activeId() && !isExpanded(item.id)"
             >
-              <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sidebar-icon-well">
+              <span
+                class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sidebar-icon-well"
+              >
                 @if (item.icon) {
-                  <ng-container [ngComponentOutlet]="item.icon" [ngComponentOutletInputs]="{ size: 18 }" />
+                  <ng-container
+                    [ngComponentOutlet]="item.icon"
+                    [ngComponentOutletInputs]="{ size: 18 }"
+                  />
                 }
               </span>
               <span class="min-w-0 flex-1 truncate">{{ item.label }}</span>
               @if (item.badge) {
-                <span class="shrink-0 rounded-full bg-white/20 px-2 text-ds-xs font-semibold text-sidebar-foreground">{{ item.badge }}</span>
+                <span
+                  class="shrink-0 rounded-full bg-white/20 px-2 text-ds-xs font-semibold text-sidebar-foreground"
+                  >{{ item.badge }}</span
+                >
               }
               @if (item.children?.length) {
                 <svg
@@ -66,13 +95,18 @@
                     (click)="navigate.emit(child.id)"
                     class="flex h-9 w-full cursor-pointer items-center gap-2.5 rounded-lg border-none px-2 text-left text-ds-sm text-sidebar-foreground transition-[background] duration-[120ms] ease-linear"
                     [class.bg-sidebar-accent]="child.id === activeId()"
-                    [class.bg-sidebar-accent-hover]="child.id !== activeId() && hoverId() === child.id"
+                    [class.bg-sidebar-accent-hover]="
+                      child.id !== activeId() && hoverId() === child.id
+                    "
                     [class.bg-transparent]="child.id !== activeId() && hoverId() !== child.id"
                     [class.font-semibold]="child.id === activeId()"
                     [class.font-normal]="child.id !== activeId()"
                   >
                     @if (child.icon) {
-                      <ng-container [ngComponentOutlet]="child.icon" [ngComponentOutletInputs]="{ size: 15 }" />
+                      <ng-container
+                        [ngComponentOutlet]="child.icon"
+                        [ngComponentOutletInputs]="{ size: 15 }"
+                      />
                     }
                     <span class="min-w-0 flex-1 truncate">{{ child.label }}</span>
                   </button>

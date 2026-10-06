@@ -4,7 +4,10 @@ import { Tabs } from './tabs';
 describe('Tabs', () => {
   it('renders one button per tab and emits changed on click', () => {
     const fixture = TestBed.createComponent(Tabs);
-    fixture.componentRef.setInput('tabs', [{ id: 'a', label: 'A' }, { id: 'b', label: 'B' }]);
+    fixture.componentRef.setInput('tabs', [
+      { id: 'a', label: 'A' },
+      { id: 'b', label: 'B' },
+    ]);
     fixture.detectChanges();
 
     const emitted: string[] = [];
@@ -19,7 +22,10 @@ describe('Tabs', () => {
 
   it('renders the count badge only when count is defined, including when it is 0', () => {
     const fixture = TestBed.createComponent(Tabs);
-    fixture.componentRef.setInput('tabs', [{ id: 'a', label: 'A', count: 0 }, { id: 'b', label: 'B' }]);
+    fixture.componentRef.setInput('tabs', [
+      { id: 'a', label: 'A', count: 0 },
+      { id: 'b', label: 'B' },
+    ]);
     fixture.detectChanges();
 
     const badges = fixture.nativeElement.querySelectorAll('button[role="tab"] span');

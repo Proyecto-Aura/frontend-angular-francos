@@ -14,7 +14,8 @@ import {
 export const VENTAS_ROUTES: Routes = [
   {
     path: '',
-    loadComponent: () => import('../../layouts/module-layout/module-layout').then(c => c.ModuleLayout),
+    loadComponent: () =>
+      import('../../layouts/module-layout/module-layout').then((c) => c.ModuleLayout),
     data: {
       sidebarTitle: 'Gestión de Ventas',
       sidebarLinks: [
@@ -25,7 +26,11 @@ export const VENTAS_ROUTES: Routes = [
           icon: LucidePackage,
           children: [
             { label: 'Gestión de productos', path: 'catalogo/productos', icon: LucideList },
-            { label: 'Configuración del catálogo', path: 'catalogo/configuracion', icon: LucideSettings },
+            {
+              label: 'Configuración del catálogo',
+              path: 'catalogo/configuracion',
+              icon: LucideSettings,
+            },
           ],
         },
         {
@@ -41,9 +46,7 @@ export const VENTAS_ROUTES: Routes = [
     children: [
       {
         path: 'clientes',
-        loadChildren: () =>
-          import('./clientes/clientes.route').
-        then(m => m.CLIENTES_ROUTES)
+        loadChildren: () => import('./clientes/clientes.route').then((m) => m.CLIENTES_ROUTES),
       },
       // {
       //   path: 'catalogo',
@@ -59,7 +62,7 @@ export const VENTAS_ROUTES: Routes = [
       {
         path: '',
         redirectTo: 'clientes',
-        pathMatch: 'full'
+        pathMatch: 'full',
       },
       {
         path: '**',

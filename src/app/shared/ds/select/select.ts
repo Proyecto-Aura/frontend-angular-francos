@@ -33,14 +33,24 @@ export class Select {
     const disabled = this.disabled();
     return [
       'w-full box-border appearance-none font-sans text-ds-base outline-none transition-[border-color,box-shadow,background] duration-[120ms] ease-linear rounded-field pr-[38px]',
-      disabled ? 'bg-muted text-muted-foreground cursor-not-allowed' : invalid ? 'bg-[rgba(210,43,43,0.04)] text-foreground cursor-pointer' : 'bg-input-background text-foreground cursor-pointer',
-      invalid ? 'border border-destructive' : focused ? 'border border-primary' : 'border border-border',
+      disabled
+        ? 'bg-muted text-muted-foreground cursor-not-allowed'
+        : invalid
+          ? 'bg-[rgba(210,43,43,0.04)] text-foreground cursor-pointer'
+          : 'bg-input-background text-foreground cursor-pointer',
+      invalid
+        ? 'border border-destructive'
+        : focused
+          ? 'border border-primary'
+          : 'border border-border',
       focused ? 'shadow-[var(--shadow-focus)]' : 'shadow-ds-field',
       this.hasIcon() ? 'pl-[42px]' : 'pl-[14px]',
     ].join(' ');
   });
 
-  iconColorClass = computed(() => (this.invalid() ? 'text-destructive' : this.focused() ? 'text-primary' : 'text-muted-foreground'));
+  iconColorClass = computed(() =>
+    this.invalid() ? 'text-destructive' : this.focused() ? 'text-primary' : 'text-muted-foreground',
+  );
 
   onChange(event: Event) {
     this.value.set((event.target as HTMLSelectElement).value);

@@ -22,7 +22,7 @@ export class Sidebar {
   expandedLabels = signal<Set<string>>(new Set());
 
   toggle() {
-    this.collapsed.update(value => !value);
+    this.collapsed.update((value) => !value);
   }
 
   isExpanded(label: string): boolean {
@@ -30,7 +30,7 @@ export class Sidebar {
   }
 
   toggleExpanded(label: string): void {
-    this.expandedLabels.update(current => {
+    this.expandedLabels.update((current) => {
       const next = new Set(current);
       if (next.has(label)) next.delete(label);
       else next.add(label);

@@ -26,9 +26,9 @@ export class AuthService {
 
   login(identificador: string, password: string) {
     const body: LoginRequestDto = { identificador, password };
-    return this.http.post<LoginResponseDto>(`${AUTH_BASE}/login`, body, { withCredentials: true }).pipe(
-      tap(response => this.session.set(this.toSession(response))),
-    );
+    return this.http
+      .post<LoginResponseDto>(`${AUTH_BASE}/login`, body, { withCredentials: true })
+      .pipe(tap((response) => this.session.set(this.toSession(response))));
   }
 
   // Pensado para llamarse al arrancar la app (via el interceptor o un APP_INITIALIZER
@@ -37,26 +37,28 @@ export class AuthService {
   // Nota: el backend solo devuelve access_token nuevo aca, no roles/flags — si ya
   // habia una sesion en memoria se conservan sus roles/flags viejos.
   refresh() {
-    return this.http.post<{ access_token: string }>(`${AUTH_BASE}/refresh`, null, { withCredentials: true }).pipe(
-      tap(response => {
-        const current = this.session();
-        this.session.set({
-          accessToken: response.access_token,
-          roles: current?.roles ?? [],
-          emailVerificado: current?.emailVerificado ?? false,
-          debeCambiarContrasena: current?.debeCambiarContrasena ?? false,
-        });
-      }),
-    );
+    return this.http
+      .post<{ access_token: string }>(`${AUTH_BASE}/refresh`, null, { withCredentials: true })
+      .pipe(
+        tap((response) => {
+          const current = this.session();
+          this.session.set({
+            accessToken: response.access_token,
+            roles: current?.roles ?? [],
+            emailVerificado: current?.emailVerificado ?? false,
+            debeCambiarContrasena: current?.debeCambiarContrasena ?? false,
+          });
+        }),
+      );
   }
 
   logout() {
     // Limpiamos la sesion del front pase lo que pase con la llamada al backend
     // (si el logout ahi falla, igual no tiene sentido dejar al usuario con una
     // sesion "activa" en el front que ya no puede usar).
-    return this.http.post(`${AUTH_BASE}/logout`, null, { withCredentials: true }).pipe(
-      finalize(() => this.session.set(null)),
-    );
+    return this.http
+      .post(`${AUTH_BASE}/logout`, null, { withCredentials: true })
+      .pipe(finalize(() => this.session.set(null)));
   }
 
   private toSession(response: LoginResponseDto): AuthSession {

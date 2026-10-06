@@ -22,8 +22,16 @@ export class Textarea {
     const disabled = this.disabled();
     return [
       'w-full box-border font-sans text-ds-base leading-normal outline-none transition-[border-color,box-shadow,background] duration-[120ms] ease-linear rounded-field px-[14px] py-[12px] resize-y',
-      disabled ? 'bg-muted text-muted-foreground' : invalid ? 'bg-[rgba(210,43,43,0.04)] text-foreground' : 'bg-input-background text-foreground',
-      invalid ? 'border border-destructive' : focused ? 'border border-primary' : 'border border-border',
+      disabled
+        ? 'bg-muted text-muted-foreground'
+        : invalid
+          ? 'bg-[rgba(210,43,43,0.04)] text-foreground'
+          : 'bg-input-background text-foreground',
+      invalid
+        ? 'border border-destructive'
+        : focused
+          ? 'border border-primary'
+          : 'border border-border',
       focused ? 'shadow-[var(--shadow-focus)]' : 'shadow-ds-field',
     ].join(' ');
   });
