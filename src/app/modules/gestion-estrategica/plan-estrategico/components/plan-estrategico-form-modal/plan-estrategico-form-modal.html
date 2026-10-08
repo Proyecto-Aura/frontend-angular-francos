@@ -1,0 +1,97 @@
+<app-ds-modal
+  [open]="open()"
+  [title]="titulo()"
+  [description]="descripcionModal()"
+  [hasFooter]="true"
+  [width]="480"
+  (closed)="cerrar()"
+>
+  <div class="flex flex-col gap-4">
+    @if (plan(); as planActual) {
+      <app-ds-field
+        label="Código"
+        hint="Generado automáticamente"
+        htmlFor="plan-estrategico-codigo"
+      >
+        <app-ds-input id="plan-estrategico-codigo" [value]="planActual.codigo" [disabled]="true" />
+      </app-ds-field>
+    }
+
+    <app-ds-field
+      label="Nombre"
+      htmlFor="plan-estrategico-nombre"
+      [required]="true"
+      [error]="errorDe('nombre')"
+    >
+      <app-ds-input
+        id="plan-estrategico-nombre"
+        [(value)]="nombre"
+        placeholder="Ej. Plan estratégico 2027 - 2029"
+        [invalid]="!!errores().nombre"
+      />
+    </app-ds-field>
+
+    <app-ds-field label="Descripción" htmlFor="plan-estrategico-descripcion">
+      <app-ds-textarea
+        id="plan-estrategico-descripcion"
+        [(value)]="descripcion"
+        [rows]="3"
+        placeholder="Objetivo general del plan"
+      />
+    </app-ds-field>
+
+    <div class="grid grid-cols-2 gap-4">
+      <app-ds-field
+        label="Año inicio"
+        htmlFor="plan-estrategico-anio-inicio"
+        [required]="true"
+        [error]="errorDe('anioInicio')"
+      >
+        <app-ds-select
+          id="plan-estrategico-anio-inicio"
+          [(value)]="anioInicio"
+          [options]="opcionesAnioInicio"
+          placeholder="Selecciona un año"
+          [invalid]="!!errores().anioInicio"
+        />
+      </app-ds-field>
+
+      <app-ds-field
+        label="Año fin"
+        htmlFor="plan-estrategico-anio-fin"
+        [required]="true"
+        [error]="errorDe('anioFin')"
+      >
+        <app-ds-select
+          id="plan-estrategico-anio-fin"
+          [(value)]="anioFin"
+          [options]="opcionesAnioFin()"
+          placeholder="Selecciona un año"
+          [invalid]="!!errores().anioFin"
+        />
+      </app-ds-field>
+    </div>
+
+    @if (muestraSolapamiento()) {
+      <div
+        class="flex items-start gap-2.5 rounded-lg bg-warning/10 px-3.5 py-3 text-ds-sm text-warning"
+      >
+        <app-ds-icon class="mt-0.5 shrink-0" [img]="LucideTriangleAlert" [size]="16" />
+        <span>El rango de años se solapa con otro plan existente.</span>
+      </div>
+    }
+
+    @if (errorGeneral()) {
+      <div class="rounded-lg bg-destructive/10 px-3.5 py-3 text-ds-sm text-destructive">
+        {{ errorGeneral() }}
+      </div>
+    }
+  </div>
+
+  <span footer class="flex gap-2">
+    <app-ds-button variant="secondary" (clicked)="cerrar()">Cancelar</app-ds-button>
+    <app-ds-button variant="primary" [disabled]="guardando()" (clicked)="guardar()">
+      {{ guardando() ? 'Guardando…' : 'Guardar' }}
+    </app-ds-button>
+  </span>
+</app-ds-modal>

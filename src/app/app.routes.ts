@@ -23,6 +23,13 @@ export const routes: Routes = [
 	      .then(m => m.VENTAS_ROUTES)
   },
   {
+    path: 'gestion-estrategica',
+    canActivate: [authGuard],
+    loadChildren: () =>
+      import('./modules/gestion-estrategica/gestion-estrategica.route')
+        .then(m => m.GESTION_ESTRATEGICA_ROUTES),
+  },
+  {
     path: 'ds-showcase',
     loadComponent: () =>
       import('./ds-showcase/ds-showcase')
