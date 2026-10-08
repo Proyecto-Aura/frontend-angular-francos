@@ -4,23 +4,17 @@ import { authGuard } from './core/guards/auth.guard';
 export const routes: Routes = [
   {
     path: 'auth',
-    loadChildren: () =>
-      import('./modules/auth/auth.route')
-        .then(c => c.AUTH_ROUTES),
+    loadChildren: () => import('./modules/auth/auth.route').then((c) => c.AUTH_ROUTES),
   },
   {
     path: 'home',
     canActivate: [authGuard],
-    loadComponent: () =>
-      import('./modules/home/pages/home')
-        .then(c => c.Home),
+    loadComponent: () => import('./modules/home/pages/home').then((c) => c.Home),
   },
   {
     path: 'ventas',
     canActivate: [authGuard],
-    loadChildren: () =>
-      import('./modules/ventas/ventas.route')
-	      .then(m => m.VENTAS_ROUTES)
+    loadChildren: () => import('./modules/ventas/ventas.route').then((m) => m.VENTAS_ROUTES),
   },
   {
     path: 'gestion-estrategica',
@@ -31,9 +25,7 @@ export const routes: Routes = [
   },
   {
     path: 'ds-showcase',
-    loadComponent: () =>
-      import('./ds-showcase/ds-showcase')
-        .then(c => c.DsShowcase),
+    loadComponent: () => import('./ds-showcase/ds-showcase').then((c) => c.DsShowcase),
   },
   // {
   //   path: '',
@@ -51,6 +43,6 @@ export const routes: Routes = [
   // },
   {
     path: '**',
-    redirectTo: 'auth'
+    redirectTo: 'auth',
   },
 ];

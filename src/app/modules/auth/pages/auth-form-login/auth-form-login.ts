@@ -26,13 +26,13 @@ export class AuthFormLogin {
 
   loginForm = form(
     this.loginModel,
-    path => {
+    (path) => {
       required(path.username, { message: 'El usuario es obligatorio' });
       required(path.password, { message: 'La contraseña es obligatoria' });
     },
     {
       submission: {
-        action: async field => {
+        action: async (field) => {
           const { username, password } = field().value();
           try {
             await firstValueFrom(this.authService.login(username, password));

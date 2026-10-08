@@ -23,9 +23,9 @@ export class AuthInput implements FormValueControl<string> {
 
   passwordVisible = signal(false);
 
-  eye = computed(() => this.passwordVisible() ? LucideEyeClosed : LucideEye);
+  eye = computed(() => (this.passwordVisible() ? LucideEyeClosed : LucideEye));
 
   togglePasswordVisible() {
-    this.passwordVisible.update(v => !v);
+    this.passwordVisible.update((v) => !v);
   }
 }
