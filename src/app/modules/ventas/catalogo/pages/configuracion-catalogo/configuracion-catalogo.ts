@@ -6,7 +6,6 @@ import {
   LucidePencil,
   LucidePlus,
   LucideRotateCcw,
-  LucideRuler,
   LucideTags,
   LucideTriangleAlert,
 } from '@lucide/angular';
@@ -23,20 +22,12 @@ import { Modal } from '../../../../../shared/ds/modal/modal';
 import { Select, SelectOption } from '../../../../../shared/ds/select/select';
 import { DsTab, Tabs } from '../../../../../shared/ds/tabs/tabs';
 import { Textarea } from '../../../../../shared/ds/textarea/textarea';
-import {
-  CfgFormModel,
-  CfgTab,
-  RegistroCfg,
-  UnidadCfg,
-  nf,
-} from '../../interfaces/producto.interface';
+import { CfgFormModel, CfgTab, RegistroCfg, nf } from '../../interfaces/producto.interface';
 import { AvisoBanner } from '../../components/aviso-banner/aviso-banner';
 import { CatalogoService } from '../../services/catalogo.service';
 
-type Registro = RegistroCfg | UnidadCfg;
-
 interface RowCtx {
-  $implicit: Registro;
+  $implicit: RegistroCfg;
   index: number;
 }
 
@@ -66,14 +57,6 @@ const TABS: TabInfo[] = [
     placeholderNombre: 'Ej. Caja 900 g',
     accion: 'Agregar presentación',
   },
-  {
-    id: 'unidades',
-    label: 'Unidades de venta',
-    singular: 'unidad de venta',
-    placeholderBuscar: 'Nombre de unidad…',
-    placeholderNombre: 'Ej. Caja',
-    accion: 'Agregar unidad de venta',
-  },
 ];
 
 @Component({
@@ -100,7 +83,6 @@ export class ConfiguracionCatalogo {
 
   @ViewChild('nombreCell', { static: true }) nombreCellTpl!: TemplateRef<RowCtx>;
   @ViewChild('descripcionCell', { static: true }) descripcionCellTpl!: TemplateRef<RowCtx>;
-  @ViewChild('abrevCell', { static: true }) abrevCellTpl!: TemplateRef<RowCtx>;
   @ViewChild('usosCell', { static: true }) usosCellTpl!: TemplateRef<RowCtx>;
   @ViewChild('estadoCell', { static: true }) estadoCellTpl!: TemplateRef<RowCtx>;
   @ViewChild('accionesCell', { static: true }) accionesCellTpl!: TemplateRef<RowCtx>;
@@ -127,14 +109,11 @@ export class ConfiguracionCatalogo {
 
   protected tabActual = computed(() => TABS.find((t) => t.id === this.tab()) ?? TABS[0]);
 
-  protected todas = computed<Registro[]>(() => {
+  protected todas = computed<RegistroCfg[]>(() => {
     // Lee los signals para que el computed se actualice con cada cambio.
-    const tab = this.tab();
-    return tab === 'categorias'
+    return this.tab() === 'categorias'
       ? this.catalogoService.categoriasCfg()
-      : tab === 'presentaciones'
-        ? this.catalogoService.presentacionesCfg()
-        : this.catalogoService.unidadesCfg();
+      : this.catalogoService.presentacionesCfg();
   });
 
   protected filas = computed(() => {
@@ -149,7 +128,6 @@ export class ConfiguracionCatalogo {
     const iconos: Record<CfgTab, Type<unknown>> = {
       categorias: LucideTags as Type<unknown>,
       presentaciones: LucideBox as Type<unknown>,
-      unidades: LucideRuler as Type<unknown>,
     };
     return TABS.map((t) => ({
       id: t.id,
@@ -162,9 +140,7 @@ export class ConfiguracionCatalogo {
   protected conteo(tab: CfgTab): number {
     return tab === 'categorias'
       ? this.catalogoService.categoriasCfg().length
-      : tab === 'presentaciones'
-        ? this.catalogoService.presentacionesCfg().length
-        : this.catalogoService.unidadesCfg().length;
+      : this.catalogoService.presentacionesCfg().length;
   }
 
   protected subtitulo = computed(
@@ -194,33 +170,21 @@ export class ConfiguracionCatalogo {
       cellTemplate: this.accionesCellTpl,
     };
     const nombre: DsColumn = { key: 'nombre', header: 'Nombre', cellTemplate: this.nombreCellTpl };
-    return this.tab() === 'unidades'
-      ? [
-          nombre,
-          { key: 'abrev', header: 'Abreviatura', width: '160px', cellTemplate: this.abrevCellTpl },
-          usos,
-          estado,
-          acciones,
-        ]
-      : [
-          nombre,
-          { key: 'descripcion', header: 'Descripción', cellTemplate: this.descripcionCellTpl },
-          usos,
-          estado,
-          acciones,
-        ];
+    return [
+      nombre,
+      { key: 'descripcion', header: 'Descripción', cellTemplate: this.descripcionCellTpl },
+      usos,
+      estado,
+      acciones,
+    ];
   });
 
-  protected usosDe(reg: Registro): number {
+  protected usosDe(reg: RegistroCfg): number {
     return this.catalogoService.usosDe(this.tab(), reg);
   }
 
-  protected abrevDe(reg: Registro): string {
-    return (reg as UnidadCfg).abrev;
-  }
-
-  protected descripcionDe(reg: Registro): string {
-    return (reg as RegistroCfg).descripcion;
+  protected descripcionDe(reg: RegistroCfg): string {
+    return reg.descripcion;
   }
 
   protected cambiarTab(id: string) {
@@ -231,23 +195,19 @@ export class ConfiguracionCatalogo {
   // --- Alta / edición ---
   protected modo = signal<'nuevo' | 'editar' | null>(null);
   protected selId = signal<number | null>(null);
-  protected cf = signal<CfgFormModel>({ nombre: '', descripcion: '', abrev: '' });
+  protected cf = signal<CfgFormModel>({ nombre: '', descripcion: '' });
   protected errores = signal<string[]>([]);
 
   protected nuevo() {
     this.selId.set(null);
-    this.cf.set({ nombre: '', descripcion: '', abrev: '' });
+    this.cf.set({ nombre: '', descripcion: '' });
     this.errores.set([]);
     this.modo.set('nuevo');
   }
 
-  protected editar(reg: Registro) {
+  protected editar(reg: RegistroCfg) {
     this.selId.set(reg.id);
-    this.cf.set({
-      nombre: reg.nombre,
-      descripcion: this.tab() === 'unidades' ? '' : this.descripcionDe(reg),
-      abrev: this.tab() === 'unidades' ? this.abrevDe(reg) : '',
-    });
+    this.cf.set({ nombre: reg.nombre, descripcion: reg.descripcion });
     this.errores.set([]);
     this.modo.set('editar');
   }
@@ -289,7 +249,7 @@ export class ConfiguracionCatalogo {
       : 'El registro se desactiva y deja de aparecer en nuevos productos. Puede reactivarse en cualquier momento.';
   });
 
-  protected pedirDesactivar(reg: Registro) {
+  protected pedirDesactivar(reg: RegistroCfg) {
     this.confirmaId.set(reg.id);
   }
 
@@ -297,7 +257,7 @@ export class ConfiguracionCatalogo {
     this.confirmaId.set(null);
   }
 
-  protected alternar(reg: Registro) {
+  protected alternar(reg: RegistroCfg) {
     this.aviso.set(this.catalogoService.alternarCfg(this.tab(), reg.id));
     this.confirmaId.set(null);
   }

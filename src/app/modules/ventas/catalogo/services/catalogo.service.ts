@@ -6,7 +6,6 @@ import {
   ProductoFormModel,
   RegistroCfg,
   UNIDAD,
-  UnidadCfg,
   aFilas,
   presentacionDesdeForm,
   skuDe,
@@ -189,7 +188,7 @@ const MOCK_PRODUCTOS: Producto[] = [
   },
 ];
 
-// Catálogos de configuración del diseño (CATEGORIAS_BASE / PRESENTACIONES_CFG / UNIDADES_CFG).
+// Catálogos de configuración del diseño (CATEGORIAS_BASE / PRESENTACIONES_CFG).
 const MOCK_CATEGORIAS: RegistroCfg[] = [
   {
     id: 1,
@@ -251,20 +250,9 @@ const MOCK_PRESENTACIONES: RegistroCfg[] = [
   },
 ];
 
-const MOCK_UNIDADES: UnidadCfg[] = [
-  { id: 1, nombre: 'Unidad', abrev: 'unid', estado: 'Activo' },
-  { id: 2, nombre: 'Caja', abrev: 'caja', estado: 'Activo' },
-  { id: 3, nombre: 'Pack', abrev: 'pack', estado: 'Activo' },
-  { id: 4, nombre: 'Bolsa', abrev: 'bol', estado: 'Activo' },
-  { id: 5, nombre: 'Kilogramo', abrev: 'kg', estado: 'Activo' },
-  { id: 6, nombre: 'Litro', abrev: 'L', estado: 'Activo' },
-  { id: 7, nombre: 'Docena', abrev: 'doc', estado: 'Inactivo' },
-];
-
 const ETIQUETA: Record<CfgTab, string> = {
   categorias: 'Categoría',
   presentaciones: 'Presentación',
-  unidades: 'Unidad de venta',
 };
 
 @Injectable({ providedIn: 'root' })
@@ -272,7 +260,6 @@ export class CatalogoService {
   productos = signal<Producto[]>(MOCK_PRODUCTOS);
   categoriasCfg = signal<RegistroCfg[]>(MOCK_CATEGORIAS);
   presentacionesCfg = signal<RegistroCfg[]>(MOCK_PRESENTACIONES);
-  unidadesCfg = signal<UnidadCfg[]>(MOCK_UNIDADES);
 
   filas = computed(() => aFilas(this.productos()));
   /** Nombres de categoría para el filtro del listado. */
@@ -342,43 +329,30 @@ export class CatalogoService {
       : `Presentación ${sku} reactivada.`;
   }
 
-  // ───────────── Configuración (categorías / presentaciones / unidades) ─────────────
+  // ───────────── Configuración (categorías / presentaciones) ─────────────
 
-  lista(tab: CfgTab): (RegistroCfg | UnidadCfg)[] {
-    return tab === 'categorias'
-      ? this.categoriasCfg()
-      : tab === 'presentaciones'
-        ? this.presentacionesCfg()
-        : this.unidadesCfg();
+  lista(tab: CfgTab): RegistroCfg[] {
+    return tab === 'categorias' ? this.categoriasCfg() : this.presentacionesCfg();
   }
 
   /** Cantidad de productos/presentaciones que usan el registro (columna "Productos asociados"). */
-  usosDe(tab: CfgTab, reg: RegistroCfg | UnidadCfg): number {
+  usosDe(tab: CfgTab, reg: RegistroCfg): number {
     const prods = this.productos();
     if (tab === 'categorias') {
       return prods
         .filter((p) => p.categoria === reg.nombre)
         .reduce((a, p) => a + p.presentaciones.length, 0);
     }
-    if (tab === 'presentaciones') {
-      return prods.reduce(
-        (a, p) => a + p.presentaciones.filter((pr) => pr.nombre === reg.nombre).length,
-        0,
-      );
-    }
-    return (reg as UnidadCfg).abrev === UNIDAD
-      ? prods.reduce((a, p) => a + p.presentaciones.length, 0)
-      : 0;
+    return prods.reduce(
+      (a, p) => a + p.presentaciones.filter((pr) => pr.nombre === reg.nombre).length,
+      0,
+    );
   }
 
   validarCfg(tab: CfgTab, selId: number | null, cf: CfgFormModel): string[] {
     const e: string[] = [];
     if (!cf.nombre) e.push('nombre');
-    if (tab === 'unidades') {
-      if (!cf.abrev) e.push('abreviatura');
-    } else if (!cf.descripcion) {
-      e.push('descripción');
-    }
+    if (!cf.descripcion) e.push('descripción');
     const dup = this.lista(tab).some(
       (x) => x.nombre.toLowerCase() === cf.nombre.toLowerCase() && x.id !== selId,
     );
@@ -389,46 +363,30 @@ export class CatalogoService {
   /** Alta (selId = null) o edición. Devuelve el aviso. Renombrar una categoría actualiza sus productos. */
   guardarCfg(tab: CfgTab, selId: number | null, cf: CfgFormModel): string {
     const etiqueta = ETIQUETA[tab];
-    if (tab === 'unidades') {
-      this.unidadesCfg.update((l) =>
-        selId === null
-          ? [
-              ...l,
-              {
-                id: Math.max(0, ...l.map((x) => x.id)) + 1,
-                nombre: cf.nombre,
-                abrev: cf.abrev,
-                estado: 'Activo',
-              },
-            ]
-          : l.map((x) => (x.id === selId ? { ...x, nombre: cf.nombre, abrev: cf.abrev } : x)),
-      );
-    } else {
-      const signalLista = tab === 'categorias' ? this.categoriasCfg : this.presentacionesCfg;
-      if (tab === 'categorias' && selId !== null) {
-        const anterior = signalLista().find((x) => x.id === selId)?.nombre;
-        if (anterior && anterior !== cf.nombre) {
-          this.productos.update((l) =>
-            l.map((p) => (p.categoria === anterior ? { ...p, categoria: cf.nombre } : p)),
-          );
-        }
+    const signalLista = tab === 'categorias' ? this.categoriasCfg : this.presentacionesCfg;
+    if (tab === 'categorias' && selId !== null) {
+      const anterior = signalLista().find((x) => x.id === selId)?.nombre;
+      if (anterior && anterior !== cf.nombre) {
+        this.productos.update((l) =>
+          l.map((p) => (p.categoria === anterior ? { ...p, categoria: cf.nombre } : p)),
+        );
       }
-      signalLista.update((l) =>
-        selId === null
-          ? [
-              ...l,
-              {
-                id: Math.max(0, ...l.map((x) => x.id)) + 1,
-                nombre: cf.nombre,
-                descripcion: cf.descripcion,
-                estado: 'Activo',
-              },
-            ]
-          : l.map((x) =>
-              x.id === selId ? { ...x, nombre: cf.nombre, descripcion: cf.descripcion } : x,
-            ),
-      );
     }
+    signalLista.update((l) =>
+      selId === null
+        ? [
+            ...l,
+            {
+              id: Math.max(0, ...l.map((x) => x.id)) + 1,
+              nombre: cf.nombre,
+              descripcion: cf.descripcion,
+              estado: 'Activo',
+            },
+          ]
+        : l.map((x) =>
+            x.id === selId ? { ...x, nombre: cf.nombre, descripcion: cf.descripcion } : x,
+          ),
+    );
     return selId === null
       ? `${etiqueta} ${cf.nombre} registrada · disponible en los selectores de producto.`
       : `${etiqueta} ${cf.nombre} actualizada.`;
@@ -440,11 +398,10 @@ export class CatalogoService {
     const reg = this.lista(tab).find((x) => x.id === id);
     if (!reg) return '';
     const nuevo = reg.estado === 'Activo' ? 'Inactivo' : 'Activo';
-    const aplicar = <T extends { id: number; estado: 'Activo' | 'Inactivo' }>(l: T[]): T[] =>
+    const aplicar = (l: RegistroCfg[]): RegistroCfg[] =>
       l.map((x) => (x.id === id ? { ...x, estado: nuevo } : x));
     if (tab === 'categorias') this.categoriasCfg.update(aplicar);
-    else if (tab === 'presentaciones') this.presentacionesCfg.update(aplicar);
-    else this.unidadesCfg.update(aplicar);
+    else this.presentacionesCfg.update(aplicar);
     return reg.estado === 'Activo'
       ? `${etiqueta} ${reg.nombre} desactivada · ya no aparece en nuevos registros y se mantiene en los productos existentes.`
       : `${etiqueta} ${reg.nombre} reactivada.`;

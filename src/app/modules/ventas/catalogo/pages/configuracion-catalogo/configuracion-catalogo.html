@@ -2,7 +2,7 @@
   <div>
     <h1 class="text-ds-2xl font-semibold text-foreground">Configuración del catálogo</h1>
     <p class="mt-1 text-ds-base text-muted-foreground">
-      Categorías, presentaciones y unidades de venta que alimentan los selectores de producto.
+      Categorías y presentaciones que alimentan los selectores de producto.
     </p>
   </div>
 
@@ -41,10 +41,6 @@
 
 <ng-template #descripcionCell let-r>
   <span class="text-muted-foreground">{{ descripcionDe(r) }}</span>
-</ng-template>
-
-<ng-template #abrevCell let-r>
-  <span class="tabular-nums text-muted-foreground">{{ abrevDe(r) }}</span>
 </ng-template>
 
 <ng-template #usosCell let-r>
@@ -108,28 +104,14 @@
         [placeholder]="tabActual().placeholderNombre"
       />
     </app-ds-field>
-    @if (tab() === 'unidades') {
-      <app-ds-field
-        label="Abreviatura"
-        [required]="true"
-        hint="Se muestra junto a las cantidades, por ejemplo 24 unid."
-      >
-        <app-ds-input
-          [value]="cf().abrev"
-          (valueChange)="setCampo('abrev', $event)"
-          placeholder="Ej. caja"
-        />
-      </app-ds-field>
-    } @else {
-      <app-ds-field label="Descripción" [required]="true">
-        <app-ds-textarea
-          [rows]="2"
-          placeholder="Descripción breve del registro"
-          [value]="cf().descripcion"
-          (valueChange)="setCampo('descripcion', $event)"
-        />
-      </app-ds-field>
-    }
+    <app-ds-field label="Descripción" [required]="true">
+      <app-ds-textarea
+        [rows]="2"
+        placeholder="Descripción breve del registro"
+        [value]="cf().descripcion"
+        (valueChange)="setCampo('descripcion', $event)"
+      />
+    </app-ds-field>
   </div>
   <span footer class="flex gap-2">
     <app-ds-button variant="secondary" (clicked)="cerrarForm()">Cancelar</app-ds-button>

@@ -97,22 +97,16 @@ describe('CatalogoService', () => {
 
   describe('configuración: validarCfg', () => {
     it('requires name and description for categories', () => {
-      expect(
-        service.validarCfg('categorias', null, { nombre: '', descripcion: '', abrev: '' }),
-      ).toEqual(['nombre', 'descripción']);
-    });
-
-    it('requires name and abbreviation for units', () => {
-      expect(
-        service.validarCfg('unidades', null, { nombre: '', descripcion: '', abrev: '' }),
-      ).toEqual(['nombre', 'abreviatura']);
+      expect(service.validarCfg('categorias', null, { nombre: '', descripcion: '' })).toEqual([
+        'nombre',
+        'descripción',
+      ]);
     });
 
     it('rejects a duplicated name ignoring case', () => {
       const errores = service.validarCfg('categorias', null, {
         nombre: 'chifles',
         descripcion: 'x',
-        abrev: '',
       });
 
       expect(errores).toEqual(['el nombre ya está registrado']);
@@ -122,7 +116,6 @@ describe('CatalogoService', () => {
       const errores = service.validarCfg('categorias', 1, {
         nombre: 'Chifles',
         descripcion: 'x',
-        abrev: '',
       });
 
       expect(errores).toEqual([]);
@@ -134,7 +127,6 @@ describe('CatalogoService', () => {
       const aviso = service.guardarCfg('categorias', null, {
         nombre: 'Panadería',
         descripcion: 'Productos de panadería.',
-        abrev: '',
       });
 
       expect(service.categoriasCfg()).toHaveLength(8);
@@ -149,29 +141,10 @@ describe('CatalogoService', () => {
       );
     });
 
-    it('adds a unit of sale', () => {
-      const aviso = service.guardarCfg('unidades', null, {
-        nombre: 'Galón',
-        descripcion: '',
-        abrev: 'gal',
-      });
-
-      expect(service.unidadesCfg()[7]).toEqual({
-        id: 8,
-        nombre: 'Galón',
-        abrev: 'gal',
-        estado: 'Activo',
-      });
-      expect(aviso).toBe(
-        'Unidad de venta Galón registrada · disponible en los selectores de producto.',
-      );
-    });
-
     it('renames a category in the products that use it', () => {
       const aviso = service.guardarCfg('categorias', 1, {
         nombre: 'Chifles y más',
         descripcion: 'Nueva descripción.',
-        abrev: '',
       });
 
       expect(service.categoriasCfg()[0].nombre).toBe('Chifles y más');
@@ -184,7 +157,6 @@ describe('CatalogoService', () => {
       service.guardarCfg('presentaciones', 8, {
         nombre: 'Display x30',
         descripcion: 'Display de 30.',
-        abrev: '',
       });
 
       const edited = service.presentacionesCfg().find((x) => x.id === 8);
@@ -203,11 +175,11 @@ describe('CatalogoService', () => {
       );
     });
 
-    it('reactivates an inactive unit', () => {
-      const aviso = service.alternarCfg('unidades', 7);
+    it('reactivates an inactive presentation', () => {
+      const aviso = service.alternarCfg('presentaciones', 8);
 
-      expect(service.unidadesCfg().find((x) => x.id === 7)?.estado).toBe('Activo');
-      expect(aviso).toBe('Unidad de venta Docena reactivada.');
+      expect(service.presentacionesCfg().find((x) => x.id === 8)?.estado).toBe('Activo');
+      expect(aviso).toBe('Presentación Display x24 reactivada.');
     });
 
     it('returns an empty notice when the record does not exist', () => {
@@ -227,21 +199,12 @@ describe('CatalogoService', () => {
 
       expect(service.usosDe('presentaciones', bolsa100)).toBe(2);
     });
-
-    it('counts every presentation for the default unit and none for the others', () => {
-      const unid = service.unidadesCfg()[0];
-      const caja = service.unidadesCfg()[1];
-
-      expect(service.usosDe('unidades', unid)).toBe(9);
-      expect(service.usosDe('unidades', caja)).toBe(0);
-    });
   });
 
   describe('lista', () => {
     it('returns the list that matches the tab', () => {
       expect(service.lista('categorias')).toBe(service.categoriasCfg());
       expect(service.lista('presentaciones')).toBe(service.presentacionesCfg());
-      expect(service.lista('unidades')).toBe(service.unidadesCfg());
     });
   });
 });

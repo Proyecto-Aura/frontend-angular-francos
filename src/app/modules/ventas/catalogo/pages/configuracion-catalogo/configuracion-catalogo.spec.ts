@@ -2,11 +2,9 @@ import { Signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { DsColumn } from '../../../../../shared/ds/data-table/data-table';
 import { DsTab } from '../../../../../shared/ds/tabs/tabs';
-import { CfgFormModel, CfgTab, RegistroCfg, UnidadCfg } from '../../interfaces/producto.interface';
+import { CfgFormModel, CfgTab, RegistroCfg } from '../../interfaces/producto.interface';
 import { CatalogoService } from '../../services/catalogo.service';
 import { ConfiguracionCatalogo } from './configuracion-catalogo';
-
-type Registro = RegistroCfg | UnidadCfg;
 
 // Los miembros del componente son `protected`: el spec los consulta mediante esta vista tipada.
 interface ConfiguracionCatalogoApi {
@@ -14,8 +12,8 @@ interface ConfiguracionCatalogoApi {
   query: { set(v: string): void };
   estadoFiltro: { set(v: string): void };
   aviso: Signal<string>;
-  filas: Signal<Registro[]>;
-  todas: Signal<Registro[]>;
+  filas: Signal<RegistroCfg[]>;
+  todas: Signal<RegistroCfg[]>;
   subtitulo: Signal<string>;
   tabsDs: Signal<DsTab[]>;
   columns: Signal<DsColumn[]>;
@@ -26,13 +24,13 @@ interface ConfiguracionCatalogoApi {
   textoConfirma: Signal<string>;
   cambiarTab(id: string): void;
   nuevo(): void;
-  editar(reg: Registro): void;
+  editar(reg: RegistroCfg): void;
   cerrarForm(): void;
   setCampo(campo: keyof CfgFormModel, valor: string): void;
   guardar(): void;
-  pedirDesactivar(reg: Registro): void;
+  pedirDesactivar(reg: RegistroCfg): void;
   cancelarDesactivar(): void;
-  alternar(reg: Registro): void;
+  alternar(reg: RegistroCfg): void;
 }
 
 describe('ConfiguracionCatalogo', () => {
@@ -57,7 +55,7 @@ describe('ConfiguracionCatalogo', () => {
   });
 
   it('shows the record count of each tab', () => {
-    expect(page.tabsDs().map((t) => t.count)).toEqual([7, 8, 7]);
+    expect(page.tabsDs().map((t) => t.count)).toEqual([7, 8]);
   });
 
   it('switches tab and shows its records', () => {
@@ -67,24 +65,13 @@ describe('ConfiguracionCatalogo', () => {
     expect(page.todas()).toHaveLength(8);
   });
 
-  it('uses the abbreviation column only for units of sale', () => {
-    expect(page.columns().map((c) => c.key)).toEqual([
-      'nombre',
-      'descripcion',
-      'usos',
-      'estado',
-      'acciones',
-    ]);
+  it('shows name, description, associated products, state and actions in every tab', () => {
+    const esperadas = ['nombre', 'descripcion', 'usos', 'estado', 'acciones'];
+    expect(page.columns().map((c) => c.key)).toEqual(esperadas);
 
-    page.cambiarTab('unidades');
+    page.cambiarTab('presentaciones');
 
-    expect(page.columns().map((c) => c.key)).toEqual([
-      'nombre',
-      'abrev',
-      'usos',
-      'estado',
-      'acciones',
-    ]);
+    expect(page.columns().map((c) => c.key)).toEqual(esperadas);
   });
 
   it('filters by name and by state', () => {
@@ -101,17 +88,16 @@ describe('ConfiguracionCatalogo', () => {
     page.nuevo();
 
     expect(page.modo()).toBe('nuevo');
-    expect(page.cf()).toEqual({ nombre: '', descripcion: '', abrev: '' });
+    expect(page.cf()).toEqual({ nombre: '', descripcion: '' });
   });
 
-  it('loads the abbreviation when editing a unit of sale', () => {
-    page.cambiarTab('unidades');
-    const caja = service.unidadesCfg()[1];
+  it('loads the record data when editing', () => {
+    const chifles = service.categoriasCfg()[0];
 
-    page.editar(caja);
+    page.editar(chifles);
 
     expect(page.modo()).toBe('editar');
-    expect(page.cf()).toEqual({ nombre: 'Caja', descripcion: '', abrev: 'caja' });
+    expect(page.cf()).toEqual({ nombre: 'Chifles', descripcion: chifles.descripcion });
   });
 
   it('does not save an invalid record and lists what is missing', () => {
@@ -180,7 +166,7 @@ describe('ConfiguracionCatalogo', () => {
   it('drops a pending confirmation when changing tab', () => {
     page.pedirDesactivar(service.categoriasCfg()[0]);
 
-    page.cambiarTab('unidades');
+    page.cambiarTab('presentaciones');
 
     expect(page.confirmaId()).toBeNull();
   });

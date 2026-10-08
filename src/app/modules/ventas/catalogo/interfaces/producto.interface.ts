@@ -229,9 +229,9 @@ export const pesoImagen = (nombre: string): string => `${140 + ((nombre.length *
 
 // ───────────────────────── Configuración del catálogo ─────────────────────────
 
-export type CfgTab = 'categorias' | 'presentaciones' | 'unidades';
+export type CfgTab = 'categorias' | 'presentaciones';
 
-/** Categoría o presentación (ambas tienen nombre + descripción). */
+/** Categoría o presentación de la configuración (ambas tienen nombre + descripción). */
 export interface RegistroCfg {
   id: number;
   nombre: string;
@@ -239,16 +239,8 @@ export interface RegistroCfg {
   estado: EstadoPresentacion;
 }
 
-export interface UnidadCfg {
-  id: number;
-  nombre: string;
-  abrev: string;
-  estado: EstadoPresentacion;
-}
-
-/** Campos editables en el modal de configuración (los de la pestaña activa). */
+/** Campos editables en el modal de configuración. */
 export interface CfgFormModel {
   nombre: string;
   descripcion: string;
-  abrev: string;
 }
