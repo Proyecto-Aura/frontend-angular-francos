@@ -1,0 +1,59 @@
+<app-ds-modal
+  [open]="fila() !== null"
+  [title]="fila()?.nombre ?? ''"
+  [width]="720"
+  [hasFooter]="true"
+  (closed)="closed.emit()"
+>
+  @if (fila(); as f) {
+    <div class="grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] items-start gap-5">
+      <!-- TODO(backend): reemplazar el placeholder por la foto real (campo imagen) -->
+      <div
+        class="relative flex h-[240px] items-center justify-center overflow-hidden rounded-lg border border-border bg-muted text-muted-foreground"
+      >
+        <app-ds-icon [img]="LucidePackage" [size]="48" />
+        <div class="pointer-events-none absolute left-2.5 top-2.5 flex flex-wrap gap-1.5">
+          @if (f.destacado) {
+            <app-ds-badge tone="warning">Destacado</app-ds-badge>
+          }
+          @if (f.promo; as promo) {
+            <app-ds-badge tone="info">Promo -{{ promo.pct }}%</app-ds-badge>
+          }
+        </div>
+      </div>
+
+      <div class="grid min-w-0 gap-4">
+        <div class="flex flex-wrap items-center gap-2">
+          <app-ds-badge [tone]="f.estado === 'Activo' ? 'success' : 'neutral'" [dot]="true">{{
+            f.estado
+          }}</app-ds-badge>
+          <app-ds-badge [tone]="dispTone()" [dot]="true">{{ dispLabel() }}</app-ds-badge>
+        </div>
+        <div class="grid grid-cols-[repeat(auto-fit,minmax(130px,1fr))] gap-x-5 gap-y-4">
+          @for (c of campos(); track c.label) {
+            <div class="min-w-0">
+              <div class="text-ds-sm text-muted-foreground">{{ c.label }}</div>
+              <div class="mt-1 font-medium text-foreground">{{ c.value }}</div>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  }
+
+  <span footer class="flex gap-2">
+    <app-ds-button variant="secondary" (clicked)="closed.emit()">Cerrar</app-ds-button>
+    @if (fila(); as f) {
+      <app-ds-button variant="secondary" (clicked)="alternarEstado.emit(f)">
+        <span icon
+          ><app-ds-icon [img]="f.estado === 'Activo' ? LucideBan : LucideRotateCcw" [size]="16"
+        /></span>
+        {{ f.estado === 'Activo' ? 'Desactivar' : 'Reactivar' }}
+      </app-ds-button>
+      <app-ds-button (clicked)="editar.emit(f)">
+        <span icon><app-ds-icon [img]="LucidePencil" [size]="16" /></span>
+        Editar producto
+      </app-ds-button>
+    }
+  </span>
+</app-ds-modal>
