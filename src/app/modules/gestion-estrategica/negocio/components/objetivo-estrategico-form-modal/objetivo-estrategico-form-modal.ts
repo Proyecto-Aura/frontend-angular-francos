@@ -10,7 +10,7 @@ import {
   signal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { LucideCheck, LucidePlus } from '@lucide/angular';
+import { LucideCheck, LucidePlus, LucideSearch } from '@lucide/angular';
 import { finalize } from 'rxjs';
 import { Button } from '../../../../../shared/ds/button/button';
 import { Checkbox } from '../../../../../shared/ds/checkbox/checkbox';
@@ -53,12 +53,14 @@ export class ObjetivoEstrategicoFormModal {
 
   readonly LucideCheck = LucideCheck;
   readonly LucidePlus = LucidePlus;
+  readonly LucideSearch = LucideSearch;
 
   readonly nombre = signal('');
   readonly descripcion = signal('');
   readonly responsable = signal('');
   readonly perspectivaId = signal<number | null>(null);
   readonly relacionesDestinoIds = signal<number[]>([]);
+  readonly busquedaRelacion = signal('');
   readonly errores = signal<ObjetivoEstrategicoFormErrores>({});
   readonly errorRelaciones = signal<string | null>(null);
   readonly errorGeneral = signal<string | null>(null);
@@ -75,6 +77,21 @@ export class ObjetivoEstrategicoFormModal {
     const objetivoId = this.objetivo()?.id;
     return this.objetivosDelPlan().filter((objetivo) => objetivo.id !== objetivoId);
   });
+  readonly objetivosRelacionablesFiltrados = computed(() => {
+    const busqueda = this.normalizarTexto(this.busquedaRelacion().trim());
+    if (!busqueda) return this.objetivosRelacionables();
+
+    return this.objetivosRelacionables().filter(
+      (objetivo) =>
+        this.normalizarTexto(objetivo.nombre).includes(busqueda) ||
+        this.normalizarTexto(objetivo.perspectivaNombre).includes(busqueda),
+    );
+  });
+  readonly sinResultadosRelacion = computed(
+    () =>
+      this.busquedaRelacion().trim().length > 0 &&
+      this.objetivosRelacionablesFiltrados().length === 0,
+  );
 
   constructor() {
     effect(() => {
@@ -167,6 +184,13 @@ export class ObjetivoEstrategicoFormModal {
     return `${base} bg-muted-foreground`;
   }
 
+  claseTextoPerspectiva(orden: number): string {
+    if (orden === 1) return 'text-success';
+    if (orden === 2) return 'text-info';
+    if (orden === 3) return 'text-warning';
+    return 'text-muted-foreground';
+  }
+
   private inicializarFormulario(): void {
     const objetivo = this.objetivo();
     this.nombre.set(objetivo?.nombre ?? '');
@@ -174,6 +198,7 @@ export class ObjetivoEstrategicoFormModal {
     this.responsable.set(objetivo?.responsable ?? '');
     this.perspectivaId.set(objetivo?.perspectivaId ?? this.perspectivaInicialId());
     this.relacionesDestinoIds.set([...(objetivo?.relacionesDestinoIds ?? [])]);
+    this.busquedaRelacion.set('');
     this.errores.set({});
     this.errorRelaciones.set(null);
     this.errorGeneral.set(null);
@@ -188,6 +213,13 @@ export class ObjetivoEstrategicoFormModal {
       perspectivaId: this.perspectivaId(),
       relacionesDestinoIds: this.relacionesDestinoIds(),
     };
+  }
+
+  private normalizarTexto(texto: string): string {
+    return texto
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase();
   }
 
   private manejarError(error: unknown): void {

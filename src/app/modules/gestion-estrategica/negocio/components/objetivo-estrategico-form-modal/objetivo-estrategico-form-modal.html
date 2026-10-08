@@ -77,16 +77,59 @@
       />
     </app-ds-field>
 
-    <app-ds-field label="Relación causa-efecto (mapa estratégico)" [error]="errorRelaciones()">
+    <app-ds-field
+      label="Influye en (mapa estratégico)"
+      hint="La flecha va de este objetivo hacia los seleccionados"
+      [error]="errorRelaciones()"
+    >
       @if (objetivosRelacionables().length > 0) {
-        <div class="flex max-h-45 flex-col gap-2 overflow-y-auto">
-          @for (objetivoRelacionable of objetivosRelacionables(); track objetivoRelacionable.id) {
-            <app-ds-checkbox
-              [checked]="estaRelacionada(objetivoRelacionable.id)"
-              [label]="objetivoRelacionable.codigo + ' · ' + objetivoRelacionable.nombre"
-              (checkedChange)="cambiarRelacion(objetivoRelacionable.id, $event)"
+        <div class="overflow-hidden rounded-(--radius-field) border border-border bg-card">
+          <div
+            class="flex h-11 items-center gap-2.5 border-b border-border bg-muted px-3.5 text-muted-foreground"
+          >
+            <app-ds-icon [img]="LucideSearch" [size]="16" />
+            <input
+              #buscadorRelacion
+              type="text"
+              class="min-w-0 flex-1 border-none bg-transparent text-ds-base text-foreground outline-none placeholder:text-muted-foreground"
+              placeholder="Buscar objetivo"
+              aria-label="Buscar objetivo"
+              [value]="busquedaRelacion()"
+              (input)="busquedaRelacion.set(buscadorRelacion.value)"
             />
-          }
+          </div>
+
+          <div class="max-h-50 overflow-y-auto">
+            @for (
+              objetivoRelacionable of objetivosRelacionablesFiltrados();
+              track objetivoRelacionable.id
+            ) {
+              <div
+                class="flex min-h-11 items-center gap-3 border-b border-border px-3.5 py-2 last:border-b-0 hover:bg-accent"
+                [class.bg-accent]="estaRelacionada(objetivoRelacionable.id)"
+              >
+                <app-ds-checkbox
+                  class="min-w-0 flex-1"
+                  [checked]="estaRelacionada(objetivoRelacionable.id)"
+                  [label]="objetivoRelacionable.nombre"
+                  (checkedChange)="cambiarRelacion(objetivoRelacionable.id, $event)"
+                />
+                <span
+                  class="flex shrink-0 items-center gap-2 text-ds-sm"
+                  [class]="claseTextoPerspectiva(objetivoRelacionable.perspectivaOrden)"
+                >
+                  <span
+                    [class]="clasePuntoPerspectiva(objetivoRelacionable.perspectivaOrden)"
+                  ></span>
+                  {{ objetivoRelacionable.perspectivaNombre }}
+                </span>
+              </div>
+            }
+
+            @if (sinResultadosRelacion()) {
+              <div class="px-3.5 py-3.5 text-ds-sm text-muted-foreground">Sin resultados</div>
+            }
+          </div>
         </div>
       } @else {
         <div

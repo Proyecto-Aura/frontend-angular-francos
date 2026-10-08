@@ -101,7 +101,17 @@
     }
 
     <ng-template #objetivoCell let-objetivo>
-      <app-ds-cell-stack [primary]="objetivo.nombre" [secondary]="objetivo.codigo" />
+      <div class="w-120 max-w-120 leading-[1.35]">
+        <span class="block truncate font-semibold text-foreground" [title]="objetivo.nombre">
+          {{ objetivo.nombre }}
+        </span>
+        <span
+          class="mt-[3px] block truncate text-ds-sm text-muted-foreground"
+          [title]="objetivo.codigo"
+        >
+          {{ objetivo.codigo }}
+        </span>
+      </div>
     </ng-template>
 
     <ng-template #perspectivaCell let-objetivo>
@@ -111,7 +121,9 @@
     </ng-template>
 
     <ng-template #responsableCell let-objetivo>
-      <span class="text-muted-foreground">{{ objetivo.responsable }}</span>
+      <span class="block w-36 truncate text-muted-foreground" [title]="objetivo.responsable">
+        {{ objetivo.responsable }}
+      </span>
     </ng-template>
 
     <ng-template #estadoCell let-objetivo>

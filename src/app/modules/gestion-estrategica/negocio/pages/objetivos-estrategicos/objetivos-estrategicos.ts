@@ -24,7 +24,6 @@ import { finalize } from 'rxjs';
 import { Badge, BadgeTone } from '../../../../../shared/ds/badge/badge';
 import { Button } from '../../../../../shared/ds/button/button';
 import { Card } from '../../../../../shared/ds/card/card';
-import { CellStack } from '../../../../../shared/ds/cell-stack/cell-stack';
 import { DataTable, DsColumn } from '../../../../../shared/ds/data-table/data-table';
 import { Icon } from '../../../../../shared/ds/icon/icon';
 import { IconButton } from '../../../../../shared/ds/icon-button/icon-button';
@@ -46,7 +45,6 @@ import { ObjetivoEstrategicoService } from '../../services/objetivo-estrategico.
     Badge,
     Button,
     Card,
-    CellStack,
     DataTable,
     Icon,
     IconButton,
