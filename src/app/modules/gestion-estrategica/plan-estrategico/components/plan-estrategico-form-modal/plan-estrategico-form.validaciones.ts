@@ -1,15 +1,10 @@
-import {
-  PlanEstrategico,
-  PlanEstrategicoForm,
-} from '../../interfaces/plan-estrategico.interface';
+import { PlanEstrategico, PlanEstrategicoForm } from '../../interfaces/plan-estrategico.interface';
 
 export type PlanEstrategicoFormErrores = Partial<
   Record<'nombre' | 'anioInicio' | 'anioFin', string>
 >;
 
-export function validarPlanForm(
-  form: PlanEstrategicoForm,
-): PlanEstrategicoFormErrores {
+export function validarPlanForm(form: PlanEstrategicoForm): PlanEstrategicoFormErrores {
   const errores: PlanEstrategicoFormErrores = {};
   const nombre = form.nombre.trim();
 
@@ -34,10 +29,6 @@ export function validarPlanForm(
   return errores;
 }
 
-export function seSolapa(
-  anioInicio: number,
-  anioFin: number,
-  planes: PlanEstrategico[],
-): boolean {
-  return planes.some(plan => anioInicio <= plan.anioFin && anioFin >= plan.anioInicio);
+export function seSolapa(anioInicio: number, anioFin: number, planes: PlanEstrategico[]): boolean {
+  return planes.some((plan) => anioInicio <= plan.anioFin && anioFin >= plan.anioInicio);
 }

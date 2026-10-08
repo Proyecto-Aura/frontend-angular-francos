@@ -1,9 +1,5 @@
 import { Routes } from '@angular/router';
-import {
-  LucideBriefcase,
-  LucideMonitor,
-  LucideTarget,
-} from '@lucide/angular';
+import { LucideBriefcase, LucideMonitor, LucideTarget } from '@lucide/angular';
 
 // Nota: label/icon/path hoy estan fijos aca a mano. Cuando exista el backend,
 // esta estructura (y que opciones ve cada usuario) deberia venir de la BD segun su rol.
@@ -11,8 +7,7 @@ export const GESTION_ESTRATEGICA_ROUTES: Routes = [
   {
     path: '',
     loadComponent: () =>
-      import('../../layouts/module-layout/module-layout')
-        .then(c => c.ModuleLayout),
+      import('../../layouts/module-layout/module-layout').then((c) => c.ModuleLayout),
     data: {
       sidebarTitle: 'Gestión estratégica',
       sidebarLinks: [
@@ -25,20 +20,17 @@ export const GESTION_ESTRATEGICA_ROUTES: Routes = [
       {
         path: 'plan-estrategico',
         loadComponent: () =>
-          import('./plan-estrategico/pages/plan-estrategico-home/plan-estrategico-home')
-            .then(c => c.PlanEstrategicoHome),
+          import('./plan-estrategico/pages/plan-estrategico-home/plan-estrategico-home').then(
+            (c) => c.PlanEstrategicoHome,
+          ),
       },
       {
         path: 'negocio',
-        loadChildren: () =>
-          import('./negocio/negocio.route')
-            .then(m => m.NEGOCIO_ROUTES),
+        loadChildren: () => import('./negocio/negocio.route').then((m) => m.NEGOCIO_ROUTES),
       },
       {
         path: 'ti',
-        loadChildren: () =>
-          import('./ti/ti.route')
-            .then(m => m.TI_ROUTES),
+        loadChildren: () => import('./ti/ti.route').then((m) => m.TI_ROUTES),
       },
       {
         path: '',

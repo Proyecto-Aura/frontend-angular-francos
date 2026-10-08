@@ -70,10 +70,9 @@ describe('PlanEstrategicoEliminarModal', () => {
     const message = 'Solo se puede eliminar un plan en estado Borrador';
 
     fixture.componentInstance.eliminar();
-    httpMock.expectOne(`${PLANES_BASE}/1`).flush(
-      { statusCode: 409, message },
-      { status: 409, statusText: 'Conflict' },
-    );
+    httpMock
+      .expectOne(`${PLANES_BASE}/1`)
+      .flush({ statusCode: 409, message }, { status: 409, statusText: 'Conflict' });
 
     expect(fixture.componentInstance.errorGeneral()).toBe(message);
   });
@@ -82,10 +81,9 @@ describe('PlanEstrategicoEliminarModal', () => {
     const fixture = create();
 
     fixture.componentInstance.eliminar();
-    httpMock.expectOne(`${PLANES_BASE}/1`).flush(
-      { statusCode: 403, message: 'Forbidden' },
-      { status: 403, statusText: 'Forbidden' },
-    );
+    httpMock
+      .expectOne(`${PLANES_BASE}/1`)
+      .flush({ statusCode: 403, message: 'Forbidden' }, { status: 403, statusText: 'Forbidden' });
 
     expect(fixture.componentInstance.errorGeneral()).toBe(
       'No tiene permisos para eliminar planes estratégicos.',
@@ -96,10 +94,12 @@ describe('PlanEstrategicoEliminarModal', () => {
     const fixture = create();
 
     fixture.componentInstance.eliminar();
-    httpMock.expectOne(`${PLANES_BASE}/1`).flush(
-      { statusCode: 500, message: 'Error interno' },
-      { status: 500, statusText: 'Server Error' },
-    );
+    httpMock
+      .expectOne(`${PLANES_BASE}/1`)
+      .flush(
+        { statusCode: 500, message: 'Error interno' },
+        { status: 500, statusText: 'Server Error' },
+      );
 
     expect(fixture.componentInstance.errorGeneral()).toBe(
       'No se pudo eliminar el plan. Intente nuevamente.',

@@ -3,10 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { environment } from '../../../../../../environments/environment';
 import { PlanEstrategicoDto } from '../../interfaces/plan-estrategico-dto.interface';
-import {
-  EstadoPlanCodigo,
-  PlanEstrategico,
-} from '../../interfaces/plan-estrategico.interface';
+import { EstadoPlanCodigo, PlanEstrategico } from '../../interfaces/plan-estrategico.interface';
 import { PlanEstrategicoEstadoModal } from './plan-estrategico-estado-modal';
 
 const PLANES_BASE = `${environment.apiUrl}/planes-estrategicos`;
@@ -48,11 +45,7 @@ function makePlanDto(
     estado_plan: {
       codigo: estadoCodigo,
       nombre:
-        estadoCodigo === 'BORRADOR'
-          ? 'Borrador'
-          : estadoCodigo === 'ACTIVO'
-            ? 'Activo'
-            : 'Cerrado',
+        estadoCodigo === 'BORRADOR' ? 'Borrador' : estadoCodigo === 'ACTIVO' ? 'Activo' : 'Cerrado',
     },
     ...overrides,
   };
@@ -141,10 +134,9 @@ describe('PlanEstrategicoEstadoModal', () => {
     const message = 'Ya existe un plan activo';
 
     fixture.componentInstance.guardar();
-    httpMock.expectOne(`${PLANES_BASE}/1/activar`).flush(
-      { statusCode: 409, message },
-      { status: 409, statusText: 'Conflict' },
-    );
+    httpMock
+      .expectOne(`${PLANES_BASE}/1/activar`)
+      .flush({ statusCode: 409, message }, { status: 409, statusText: 'Conflict' });
 
     expect(fixture.componentInstance.errorGeneral()).toBe(message);
   });
@@ -153,10 +145,9 @@ describe('PlanEstrategicoEstadoModal', () => {
     const fixture = create(makePlan('BORRADOR'));
 
     fixture.componentInstance.guardar();
-    httpMock.expectOne(`${PLANES_BASE}/1/activar`).flush(
-      { statusCode: 403, message: 'Forbidden' },
-      { status: 403, statusText: 'Forbidden' },
-    );
+    httpMock
+      .expectOne(`${PLANES_BASE}/1/activar`)
+      .flush({ statusCode: 403, message: 'Forbidden' }, { status: 403, statusText: 'Forbidden' });
 
     expect(fixture.componentInstance.errorGeneral()).toBe(
       'No tiene permisos para cambiar el estado del plan.',

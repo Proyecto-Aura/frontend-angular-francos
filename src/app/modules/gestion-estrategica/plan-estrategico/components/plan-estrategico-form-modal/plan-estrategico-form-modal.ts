@@ -99,10 +99,7 @@ export class PlanEstrategicoFormModal {
     effect(() => {
       const anioFin = this.anioFin();
 
-      if (
-        anioFin &&
-        !this.opcionesAnioFin().some((opcion) => opcion.value === anioFin)
-      ) {
+      if (anioFin && !this.opcionesAnioFin().some((opcion) => opcion.value === anioFin)) {
         this.anioFin.set('');
       }
     });

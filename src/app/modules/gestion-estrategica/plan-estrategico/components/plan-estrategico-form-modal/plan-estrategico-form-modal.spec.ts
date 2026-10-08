@@ -141,14 +141,14 @@ describe('PlanEstrategicoFormModal', () => {
     fillValidForm(fixture);
 
     fixture.componentInstance.guardar();
-    httpMock.expectOne(PLANES_BASE).flush(
-      { statusCode: 409, message: 'Ya existe otro plan registrado con ese nombre' },
-      { status: 409, statusText: 'Conflict' },
-    );
+    httpMock
+      .expectOne(PLANES_BASE)
+      .flush(
+        { statusCode: 409, message: 'Ya existe otro plan registrado con ese nombre' },
+        { status: 409, statusText: 'Conflict' },
+      );
 
-    expect(fixture.componentInstance.errores().nombre).toBe(
-      'Ya existe un plan con este nombre.',
-    );
+    expect(fixture.componentInstance.errores().nombre).toBe('Ya existe un plan con este nombre.');
   });
 
   it('puts a year conflict on the end-year field', () => {
@@ -157,10 +157,9 @@ describe('PlanEstrategicoFormModal', () => {
     const message = 'El año de fin no puede ser anterior al año de inicio';
 
     fixture.componentInstance.guardar();
-    httpMock.expectOne(PLANES_BASE).flush(
-      { statusCode: 409, message },
-      { status: 409, statusText: 'Conflict' },
-    );
+    httpMock
+      .expectOne(PLANES_BASE)
+      .flush({ statusCode: 409, message }, { status: 409, statusText: 'Conflict' });
 
     expect(fixture.componentInstance.errores().anioFin).toBe(message);
   });
@@ -170,10 +169,9 @@ describe('PlanEstrategicoFormModal', () => {
     fillValidForm(fixture);
 
     fixture.componentInstance.guardar();
-    httpMock.expectOne(PLANES_BASE).flush(
-      { statusCode: 403, message: 'Forbidden' },
-      { status: 403, statusText: 'Forbidden' },
-    );
+    httpMock
+      .expectOne(PLANES_BASE)
+      .flush({ statusCode: 403, message: 'Forbidden' }, { status: 403, statusText: 'Forbidden' });
 
     expect(fixture.componentInstance.errorGeneral()).toBe(
       'No tiene permisos para registrar planes estratégicos.',
@@ -185,10 +183,12 @@ describe('PlanEstrategicoFormModal', () => {
     fillValidForm(fixture);
 
     fixture.componentInstance.guardar();
-    httpMock.expectOne(PLANES_BASE).flush(
-      { statusCode: 500, message: 'Error interno' },
-      { status: 500, statusText: 'Server Error' },
-    );
+    httpMock
+      .expectOne(PLANES_BASE)
+      .flush(
+        { statusCode: 500, message: 'Error interno' },
+        { status: 500, statusText: 'Server Error' },
+      );
 
     expect(fixture.componentInstance.errorGeneral()).toBe(
       'No se pudo guardar el plan. Intente nuevamente.',

@@ -50,7 +50,9 @@ describe('PlanEstrategicoService', () => {
   afterEach(() => httpMock.verify());
 
   it('lists a requested page and maps the response', () => {
-    let result: ReturnType<PlanEstrategicoService['listar']> extends import('rxjs').Observable<infer T>
+    let result: ReturnType<PlanEstrategicoService['listar']> extends import('rxjs').Observable<
+      infer T
+    >
       ? T
       : never;
     service.listar(2, 10).subscribe((page) => (result = page));
@@ -124,17 +126,13 @@ describe('PlanEstrategicoService', () => {
     const activarReq = httpMock.expectOne(`${PLANES_BASE}/3/activar`);
     expect(activarReq.request.method).toBe('PATCH');
     expect(activarReq.request.body).toBeNull();
-    activarReq.flush(
-      makePlanDto({ estado_plan: { codigo: 'ACTIVO', nombre: 'Activo' } }),
-    );
+    activarReq.flush(makePlanDto({ estado_plan: { codigo: 'ACTIVO', nombre: 'Activo' } }));
 
     service.cerrar(3).subscribe();
     const cerrarReq = httpMock.expectOne(`${PLANES_BASE}/3/cerrar`);
     expect(cerrarReq.request.method).toBe('PATCH');
     expect(cerrarReq.request.body).toBeNull();
-    cerrarReq.flush(
-      makePlanDto({ estado_plan: { codigo: 'CERRADO', nombre: 'Cerrado' } }),
-    );
+    cerrarReq.flush(makePlanDto({ estado_plan: { codigo: 'CERRADO', nombre: 'Cerrado' } }));
   });
 
   it('deletes a plan by id', () => {

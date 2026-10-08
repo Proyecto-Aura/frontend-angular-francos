@@ -1,7 +1,4 @@
-import {
-  PlanEstrategico,
-  PlanEstrategicoForm,
-} from '../../interfaces/plan-estrategico.interface';
+import { PlanEstrategico, PlanEstrategicoForm } from '../../interfaces/plan-estrategico.interface';
 import { seSolapa, validarPlanForm } from './plan-estrategico-form.validaciones';
 
 function makeForm(overrides: Partial<PlanEstrategicoForm> = {}): PlanEstrategicoForm {
