@@ -1,0 +1,66 @@
+<app-ds-modal
+  [open]="open()"
+  title="Cambiar estado del plan"
+  [description]="descripcionModal()"
+  [hasFooter]="true"
+  [width]="480"
+  (closed)="cerrar()"
+>
+  @if (plan(); as planActual) {
+    @if (siguienteEstado(); as siguiente) {
+      <div class="flex flex-col gap-4">
+        <div class="flex items-center justify-center gap-3.5 rounded-lg bg-muted p-4">
+          <app-ds-badge [tone]="tonoEstado(planActual.estadoCodigo)" [dot]="true">
+            {{ nombreEstado(planActual.estadoCodigo) }}
+          </app-ds-badge>
+          <app-ds-icon [img]="LucideArrowRight" [size]="18" />
+          <app-ds-badge [tone]="tonoEstado(siguiente)" [dot]="true">
+            {{ nombreEstado(siguiente) }}
+          </app-ds-badge>
+        </div>
+
+        @if (tieneConflicto() && planActivo(); as activo) {
+          <div
+            class="flex items-start gap-2.5 rounded-lg bg-destructive/10 px-3.5 py-3 text-ds-sm text-destructive"
+          >
+            <app-ds-icon class="mt-0.5 shrink-0" [img]="LucideOctagonAlert" [size]="18" />
+            <span
+              >Ya existe un plan activo ({{ activo.codigo }}). Ciérrelo antes de activar este
+              plan.</span
+            >
+          </div>
+        } @else if (esCierre()) {
+          <app-ds-checkbox
+            [(checked)]="confirmacionCierre"
+            label="Entiendo que esta acción es irreversible y que el plan quedará de solo lectura."
+          />
+        }
+
+        @if (errorGeneral()) {
+          <div class="rounded-lg bg-destructive/10 px-3.5 py-3 text-ds-sm text-destructive">
+            {{ errorGeneral() }}
+          </div>
+        }
+      </div>
+    }
+  }
+
+  <span footer class="flex gap-2">
+    @if (tieneConflicto()) {
+      <app-ds-button variant="secondary" (clicked)="cerrar()">Entendido</app-ds-button>
+    } @else {
+      <app-ds-button variant="secondary" (clicked)="cerrar()">Cancelar</app-ds-button>
+      @if (siguienteEstado(); as siguiente) {
+        <app-ds-button
+          [variant]="esCierre() ? 'destructive' : 'primary'"
+          [disabled]="guardando() || (esCierre() && !confirmacionCierre())"
+          (clicked)="guardar()"
+        >
+          {{
+            guardando() ? 'Guardando…' : siguiente === 'CERRADO' ? 'Cerrar plan' : 'Activar plan'
+          }}
+        </app-ds-button>
+      }
+    }
+  </span>
+</app-ds-modal>
