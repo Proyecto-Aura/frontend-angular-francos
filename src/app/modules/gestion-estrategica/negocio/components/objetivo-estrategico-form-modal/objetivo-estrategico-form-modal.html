@@ -1,0 +1,118 @@
+<app-ds-modal
+  [open]="open()"
+  [title]="titulo()"
+  [description]="planNombre()"
+  [hasFooter]="true"
+  [width]="600"
+  (closed)="cerrar()"
+>
+  <div class="flex flex-col gap-5">
+    @if (objetivo(); as objetivoActual) {
+      <app-ds-field
+        label="Código"
+        hint="Generado automáticamente"
+        htmlFor="objetivo-estrategico-codigo"
+      >
+        <app-ds-input
+          id="objetivo-estrategico-codigo"
+          [value]="objetivoActual.codigo"
+          [disabled]="true"
+        />
+      </app-ds-field>
+    }
+
+    <app-ds-field
+      label="Nombre del objetivo"
+      htmlFor="objetivo-estrategico-nombre"
+      [required]="true"
+      [error]="errorDe('nombre')"
+    >
+      <app-ds-input
+        id="objetivo-estrategico-nombre"
+        [(value)]="nombre"
+        placeholder="Ej. Incrementar la rentabilidad en 15%"
+        [invalid]="!!errores().nombre"
+      />
+    </app-ds-field>
+
+    <app-ds-field label="Descripción" htmlFor="objetivo-estrategico-descripcion">
+      <app-ds-textarea
+        id="objetivo-estrategico-descripcion"
+        [(value)]="descripcion"
+        [rows]="3"
+        placeholder="Detalla el objetivo"
+      />
+    </app-ds-field>
+
+    <app-ds-field label="Perspectiva (BSC)" [required]="true" [error]="errorDe('perspectivaId')">
+      <div class="grid grid-cols-2 gap-2">
+        @for (perspectiva of perspectivasOrdenadas(); track perspectiva.id) {
+          <button
+            type="button"
+            [class]="clasesPerspectiva(perspectiva)"
+            [attr.aria-pressed]="perspectivaId() === perspectiva.id"
+            (click)="seleccionarPerspectiva(perspectiva.id)"
+          >
+            <span [class]="clasePuntoPerspectiva(perspectiva.orden)"></span>
+            <span class="min-w-0 flex-1">{{ perspectiva.nombre }}</span>
+            @if (perspectivaId() === perspectiva.id) {
+              <app-ds-icon [img]="LucideCheck" [size]="16" />
+            }
+          </button>
+        }
+      </div>
+    </app-ds-field>
+
+    <app-ds-field
+      label="Responsable"
+      htmlFor="objetivo-estrategico-responsable"
+      [required]="true"
+      [error]="errorDe('responsable')"
+    >
+      <app-ds-input
+        id="objetivo-estrategico-responsable"
+        [(value)]="responsable"
+        placeholder="Nombre del responsable"
+        [invalid]="!!errores().responsable"
+      />
+    </app-ds-field>
+
+    <app-ds-field label="Relación causa-efecto (mapa estratégico)" [error]="errorRelaciones()">
+      @if (objetivosRelacionables().length > 0) {
+        <div class="flex max-h-45 flex-col gap-2 overflow-y-auto">
+          @for (objetivoRelacionable of objetivosRelacionables(); track objetivoRelacionable.id) {
+            <app-ds-checkbox
+              [checked]="estaRelacionada(objetivoRelacionable.id)"
+              [label]="objetivoRelacionable.codigo + ' · ' + objetivoRelacionable.nombre"
+              (checkedChange)="cambiarRelacion(objetivoRelacionable.id, $event)"
+            />
+          }
+        </div>
+      } @else {
+        <div
+          class="rounded-(--radius-field) border border-border bg-muted px-3.5 py-3 text-ds-sm text-muted-foreground"
+        >
+          No hay otros objetivos en este plan. Crea más objetivos para vincularlos.
+        </div>
+      }
+    </app-ds-field>
+
+    @if (errorGeneral()) {
+      <div class="rounded-lg bg-destructive/10 px-3.5 py-3 text-ds-sm text-destructive">
+        {{ errorGeneral() }}
+      </div>
+    }
+  </div>
+
+  <span footer class="flex gap-2">
+    <app-ds-button variant="secondary" (clicked)="cerrar()">Cancelar</app-ds-button>
+    <app-ds-button variant="primary" [disabled]="guardando()" (clicked)="guardar()">
+      @if (!guardando()) {
+        <span icon>
+          <app-ds-icon [img]="modoEdicion() ? LucideCheck : LucidePlus" [size]="16" />
+        </span>
+      }
+      {{ guardando() ? 'Guardando…' : modoEdicion() ? 'Guardar cambios' : 'Crear objetivo' }}
+    </app-ds-button>
+  </span>
+</app-ds-modal>
