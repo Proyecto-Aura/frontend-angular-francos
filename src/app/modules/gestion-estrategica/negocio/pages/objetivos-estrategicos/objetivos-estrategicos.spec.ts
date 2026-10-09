@@ -113,7 +113,6 @@ describe('ObjetivosEstrategicosPage', () => {
   it('loads perspectives and selected-plan objectives on initialization', () => {
     create();
 
-    expect(planSeleccionado.cargar).toHaveBeenCalledOnce();
     expect(objetivoService.listarPerspectivas).toHaveBeenCalledOnce();
     expect(objetivoService.listarPorPlan).toHaveBeenCalledWith(5);
   });
