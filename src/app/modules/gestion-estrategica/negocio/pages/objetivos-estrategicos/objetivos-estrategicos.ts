@@ -27,7 +27,6 @@ import { Card } from '../../../../../shared/ds/card/card';
 import { DataTable, DsColumn } from '../../../../../shared/ds/data-table/data-table';
 import { Icon } from '../../../../../shared/ds/icon/icon';
 import { IconButton } from '../../../../../shared/ds/icon-button/icon-button';
-import { PlanSeleccionadoBar } from '../../../plan-estrategico/components/plan-seleccionado-bar/plan-seleccionado-bar';
 import { PlanSeleccionadoService } from '../../../plan-estrategico/services/plan-seleccionado.service';
 import { ObjetivoEstrategicoEliminarModal } from '../../components/objetivo-estrategico-eliminar-modal/objetivo-estrategico-eliminar-modal';
 import { ObjetivoEstrategicoEstadoModal } from '../../components/objetivo-estrategico-estado-modal/objetivo-estrategico-estado-modal';
@@ -51,7 +50,6 @@ import { ObjetivoEstrategicoService } from '../../services/objetivo-estrategico.
     ObjetivoEstrategicoEliminarModal,
     ObjetivoEstrategicoEstadoModal,
     ObjetivoEstrategicoFormModal,
-    PlanSeleccionadoBar,
     RouterLink,
   ],
   selector: 'app-objetivos-estrategicos',
@@ -141,7 +139,6 @@ export class ObjetivosEstrategicosPage implements AfterViewInit, OnInit {
   }
 
   ngOnInit(): void {
-    this.planSeleccionado.cargar();
     this.objetivoService
       .listarPerspectivas()
       .pipe(takeUntilDestroyed(this.destroyRef))
