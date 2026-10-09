@@ -1,4 +1,14 @@
-import { Component, TemplateRef, Type, ViewChild, computed, inject, signal } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  TemplateRef,
+  Type,
+  ViewChild,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
+import { finalize } from 'rxjs';
 import {
   LucideBan,
   LucideBox,
@@ -25,6 +35,8 @@ import { Textarea } from '../../../../../shared/ds/textarea/textarea';
 import { CfgFormModel, CfgTab, RegistroCfg, nf } from '../../interfaces/producto.interface';
 import { AvisoBanner } from '../../components/aviso-banner/aviso-banner';
 import { CatalogoService } from '../../services/catalogo.service';
+import { mensajeDeError } from '../../utils/error-api';
+import { ConfiguracionCatalogoService } from '../../services/configuracion-catalogo.service';
 
 interface RowCtx {
   $implicit: RegistroCfg;
@@ -78,8 +90,14 @@ const TABS: TabInfo[] = [
   selector: 'app-configuracion-catalogo',
   templateUrl: './configuracion-catalogo.html',
 })
-export class ConfiguracionCatalogo {
-  private catalogoService = inject(CatalogoService);
+export class ConfiguracionCatalogo implements OnInit {
+  private catalogo = inject(CatalogoService);
+  private catalogoService = inject(ConfiguracionCatalogoService);
+
+  ngOnInit(): void {
+    if (!this.catalogo.productos().length) this.catalogo.cargar();
+    this.catalogoService.cargarCategorias();
+  }
 
   @ViewChild('nombreCell', { static: true }) nombreCellTpl!: TemplateRef<RowCtx>;
   @ViewChild('descripcionCell', { static: true }) descripcionCellTpl!: TemplateRef<RowCtx>;
@@ -101,6 +119,11 @@ export class ConfiguracionCatalogo {
   protected query = signal('');
   protected estadoFiltro = signal('');
   protected aviso = signal('');
+  protected avisoTono = signal<'ok' | 'error'>('ok');
+  protected guardando = signal(false);
+  protected errorApi = signal('');
+  protected cargandoCategorias = this.catalogoService.cargandoCategorias;
+  protected errorCategorias = this.catalogoService.errorCategorias;
 
   protected readonly estadoOptions: SelectOption[] = [
     { value: 'Activo', label: 'Activo' },
@@ -198,10 +221,20 @@ export class ConfiguracionCatalogo {
   protected cf = signal<CfgFormModel>({ nombre: '', descripcion: '' });
   protected errores = signal<string[]>([]);
 
+  private mostrarAviso(mensaje: string, tono: 'ok' | 'error' = 'ok') {
+    this.aviso.set(mensaje);
+    this.avisoTono.set(tono);
+  }
+
+  protected cargarCategorias() {
+    this.catalogoService.cargarCategorias();
+  }
+
   protected nuevo() {
     this.selId.set(null);
     this.cf.set({ nombre: '', descripcion: '' });
     this.errores.set([]);
+    this.errorApi.set('');
     this.modo.set('nuevo');
   }
 
@@ -209,6 +242,7 @@ export class ConfiguracionCatalogo {
     this.selId.set(reg.id);
     this.cf.set({ nombre: reg.nombre, descripcion: reg.descripcion });
     this.errores.set([]);
+    this.errorApi.set('');
     this.modo.set('editar');
   }
 
@@ -216,6 +250,7 @@ export class ConfiguracionCatalogo {
     this.modo.set(null);
     this.selId.set(null);
     this.errores.set([]);
+    this.errorApi.set('');
   }
 
   protected setCampo(campo: keyof CfgFormModel, valor: string) {
@@ -228,8 +263,20 @@ export class ConfiguracionCatalogo {
       this.errores.set(err);
       return;
     }
-    this.aviso.set(this.catalogoService.guardarCfg(this.tab(), this.selId(), this.cf()));
-    this.cerrarForm();
+    this.errores.set([]);
+    this.errorApi.set('');
+    this.guardando.set(true);
+    this.catalogoService
+      .guardarCfg(this.tab(), this.selId(), this.cf())
+      .pipe(finalize(() => this.guardando.set(false)))
+      .subscribe({
+        next: (mensaje) => {
+          this.mostrarAviso(mensaje);
+          this.cerrarForm();
+        },
+        error: (e: unknown) =>
+          this.errorApi.set(mensajeDeError(e, 'No se pudo guardar. Inténtalo de nuevo.')),
+      });
   }
 
   // --- Desactivar (con confirmación) / Reactivar (directo) ---
@@ -258,7 +305,15 @@ export class ConfiguracionCatalogo {
   }
 
   protected alternar(reg: RegistroCfg) {
-    this.aviso.set(this.catalogoService.alternarCfg(this.tab(), reg.id));
+    this.guardando.set(true);
+    this.catalogoService
+      .alternarCfg(this.tab(), reg.id)
+      .pipe(finalize(() => this.guardando.set(false)))
+      .subscribe({
+        next: (mensaje) => this.mostrarAviso(mensaje),
+        error: (e: unknown) =>
+          this.mostrarAviso(mensajeDeError(e, 'No se pudo cambiar el estado.'), 'error'),
+      });
     this.confirmaId.set(null);
   }
 }

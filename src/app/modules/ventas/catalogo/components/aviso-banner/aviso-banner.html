@@ -1,9 +1,15 @@
 @if (texto()) {
-  <div class="flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3">
+  <div
+    class="flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3"
+    [attr.role]="tono() === 'error' ? 'alert' : 'status'"
+  >
     <span
-      class="inline-flex size-8 flex-none items-center justify-center rounded-md bg-success/10 text-success"
+      class="inline-flex size-8 flex-none items-center justify-center rounded-md"
+      [class]="
+        tono() === 'error' ? 'bg-destructive/10 text-destructive' : 'bg-success/10 text-success'
+      "
     >
-      <app-ds-icon [img]="LucideCircleCheck" [size]="17" />
+      <app-ds-icon [img]="tono() === 'error' ? LucideCircleAlert : LucideCircleCheck" [size]="17" />
     </span>
     <p class="min-w-0 flex-1 font-medium text-foreground">{{ texto() }}</p>
     <app-ds-icon-button label="Cerrar aviso" variant="ghost" size="sm" (clicked)="closed.emit()">

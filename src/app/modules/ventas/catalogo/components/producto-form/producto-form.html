@@ -18,6 +18,15 @@
       </div>
     }
 
+    @if (errorApi()) {
+      <div
+        role="alert"
+        class="flex items-start gap-3 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-ds-sm text-destructive"
+      >
+        <app-ds-icon [img]="LucideCircleAlert" [size]="17" />
+        <p class="min-w-0 flex-1">{{ errorApi() }}</p>
+      </div>
+    }
     <div class="grid grid-cols-2 gap-4">
       <app-ds-field label="Nombre del producto" [required]="true">
         <app-ds-input
@@ -28,8 +37,8 @@
       </app-ds-field>
       <app-ds-field label="Categoría" [required]="true">
         <app-ds-select
-          [value]="pf().categoria"
-          (valueChange)="setCampo('categoria', $event)"
+          [value]="pf().categoriaId"
+          (valueChange)="setCampo('categoriaId', $event)"
           [options]="categoriaOptions()"
         />
       </app-ds-field>
@@ -75,7 +84,7 @@
               skuDePresentacion(p)
             }}</span>
             <span class="flex-1"></span>
-            @if (pf().presentaciones.length > 1) {
+            @if (puedeQuitar(p)) {
               <app-ds-icon-button
                 label="Quitar presentación"
                 variant="ghost"
@@ -90,9 +99,10 @@
           <div class="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-3.5">
             <app-ds-field label="Presentación" [required]="true">
               <app-ds-select
-                [value]="p.nombre"
-                (valueChange)="setPres(i, 'nombre', $event)"
-                [options]="presentacionOptions(p.nombre)"
+                [value]="p.presentacionId"
+                (valueChange)="setPres(i, 'presentacionId', $event)"
+                [options]="presentacionOptions(p.presentacionId)"
+                [disabled]="p.productoPresentacionId !== null"
               />
             </app-ds-field>
             <app-ds-field label="Precio unitario" [required]="true">
@@ -118,55 +128,16 @@
             </app-ds-field>
           </div>
 
-          <app-ds-field label="Imagen">
-            @if (!p.imagen) {
-              <button
-                type="button"
-                class="flex w-full flex-wrap items-center gap-3.5 rounded-lg border border-dashed border-border bg-muted px-3.5 py-3 text-left"
-                (click)="adjuntar(i)"
-              >
-                <span
-                  class="inline-flex size-[52px] flex-none items-center justify-center rounded-md border border-border bg-card text-muted-foreground"
-                >
-                  <app-ds-icon [img]="LucideImage" [size]="22" />
-                </span>
-                <span class="grid min-w-0 flex-1 gap-0.5">
-                  <span class="text-ds-sm font-medium text-foreground">Adjuntar imagen</span>
-                  <span class="text-ds-sm text-muted-foreground">JPG o PNG · máx. 2 MB</span>
-                </span>
-              </button>
-            } @else {
-              <div
-                class="flex flex-wrap items-center gap-3.5 rounded-lg border border-success/40 bg-success/10 px-3.5 py-3"
-              >
-                <span
-                  class="inline-flex size-[52px] flex-none items-center justify-center rounded-md border border-border bg-card text-success"
-                >
-                  <app-ds-icon [img]="LucideImage" [size]="22" />
-                </span>
-                <span class="grid min-w-0 flex-1 gap-0.5">
-                  <span
-                    class="inline-flex items-center gap-1.5 text-ds-sm font-semibold text-success"
-                  >
-                    <app-ds-icon [img]="LucideCheck" [size]="13" /> Imagen cargada
-                  </span>
-                  <span class="truncate text-ds-sm font-medium text-foreground">{{
-                    p.imagen
-                  }}</span>
-                  <span class="text-ds-sm tabular-nums text-muted-foreground"
-                    >{{ extension(p.imagen) }} · {{ peso(p.imagen) }}</span
-                  >
-                </span>
-                <span class="flex flex-none items-center gap-2">
-                  <app-ds-button variant="secondary" size="sm" (clicked)="adjuntar(i)"
-                    >Cambiar imagen</app-ds-button
-                  >
-                  <app-ds-button variant="secondary" size="sm" (clicked)="setPres(i, 'imagen', '')"
-                    >Eliminar</app-ds-button
-                  >
-                </span>
-              </div>
-            }
+          <app-ds-field
+            label="URL de la imagen"
+            hint="Opcional. Enlace público a la imagen (la subida de archivos aún no está disponible)."
+          >
+            <app-ds-input
+              type="url"
+              placeholder="https://..."
+              [value]="p.imagen"
+              (valueChange)="setPres(i, 'imagen', $event)"
+            />
           </app-ds-field>
 
           <div class="grid gap-3.5 rounded-md border border-border bg-muted p-3.5">
@@ -215,8 +186,8 @@
 
   <span footer class="flex gap-2">
     <app-ds-button variant="secondary" (clicked)="cerrar()">Cancelar</app-ds-button>
-    <app-ds-button (clicked)="guardar()">{{
-      modo() === 'editar' ? 'Guardar cambios' : 'Registrar producto'
+    <app-ds-button [disabled]="guardando()" (clicked)="guardar()">{{
+      guardando() ? 'Guardando…' : modo() === 'editar' ? 'Guardar cambios' : 'Registrar producto'
     }}</app-ds-button>
   </span>
 </app-ds-modal>

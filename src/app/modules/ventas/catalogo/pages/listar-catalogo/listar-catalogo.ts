@@ -1,12 +1,15 @@
 import {
   AfterViewInit,
   Component,
+  DestroyRef,
+  OnInit,
   TemplateRef,
   ViewChild,
   computed,
   inject,
   signal,
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   LucideBan,
   LucideEye,
@@ -32,6 +35,7 @@ import {
   Disponibilidad,
   FilaCatalogo,
   Producto,
+  ResultadoGuardado,
   UNIDAD,
   disponibilidadDe,
   money,
@@ -41,6 +45,7 @@ import { AvisoBanner } from '../../components/aviso-banner/aviso-banner';
 import { ProductoDetalle } from '../../components/producto-detalle/producto-detalle';
 import { ProductoForm } from '../../components/producto-form/producto-form';
 import { CatalogoService } from '../../services/catalogo.service';
+import { mensajeDeError } from '../../utils/error-api';
 
 const POR_PAGINA_TARJETAS = 12;
 const POR_PAGINA_TABLA = 5;
@@ -50,6 +55,8 @@ interface RowCtx {
   $implicit: FilaCatalogo;
   index: number;
 }
+
+const SIN_AVISO: ResultadoGuardado = { mensaje: '', tono: 'ok' };
 
 @Component({
   imports: [
@@ -69,8 +76,9 @@ interface RowCtx {
   selector: 'app-listar-catalogo',
   templateUrl: './listar-catalogo.html',
 })
-export class ListarCatalogo implements AfterViewInit {
+export class ListarCatalogo implements AfterViewInit, OnInit {
   private catalogoService = inject(CatalogoService);
+  private destroyRef = inject(DestroyRef);
 
   @ViewChild('productoCell', { static: true }) productoCellTpl!: TemplateRef<RowCtx>;
   @ViewChild('precioCell', { static: true }) precioCellTpl!: TemplateRef<RowCtx>;
@@ -93,6 +101,10 @@ export class ListarCatalogo implements AfterViewInit {
   protected readonly money = money;
   protected readonly nf = nf;
   protected readonly unidad = UNIDAD;
+
+  protected cargando = this.catalogoService.cargando;
+  protected errorCarga = this.catalogoService.errorCarga;
+  protected hayProductos = computed(() => this.catalogoService.filas().length > 0);
 
   // --- Filtros ---
   protected query = signal('');
@@ -168,6 +180,10 @@ export class ListarCatalogo implements AfterViewInit {
     { key: 'acciones', header: 'Acciones', width: '150px', align: 'right' },
   ]);
 
+  ngOnInit(): void {
+    this.catalogoService.cargar();
+  }
+
   ngAfterViewInit(): void {
     this.columns.update((cols) =>
       cols.map((col) => {
@@ -238,7 +254,7 @@ export class ListarCatalogo implements AfterViewInit {
   protected formModo = signal<'nuevo' | 'editar' | null>(null);
   protected productoEnEdicion = signal<Producto | null>(null);
   protected skuDetalle = signal<string | null>(null);
-  protected aviso = signal('');
+  protected aviso = signal<ResultadoGuardado>(SIN_AVISO);
 
   /** El detalle se resuelve por SKU para reflejar cambios (p. ej. al desactivar desde el propio modal). */
   protected filaDetalle = computed(() => {
@@ -268,12 +284,30 @@ export class ListarCatalogo implements AfterViewInit {
     this.skuDetalle.set(f.sku);
   }
 
-  protected mostrarAviso(texto: string) {
-    this.aviso.set(texto);
+  protected mostrarAviso(resultado: ResultadoGuardado) {
+    this.aviso.set(resultado);
+  }
+
+  protected cerrarAviso() {
+    this.aviso.set(SIN_AVISO);
+  }
+
+  protected cargar() {
+    this.catalogoService.cargar();
   }
 
   /** Desactivar/Reactivar presentación: lógico, sin confirmación (así lo define el diseño). */
   protected alternarEstado(f: FilaCatalogo) {
-    this.aviso.set(this.catalogoService.alternarEstadoPresentacion(f.productoId, f.presentacionId));
+    this.catalogoService
+      .alternarEstadoPresentacion(f.productoId, f.presentacionId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (mensaje) => this.aviso.set({ mensaje, tono: 'ok' }),
+        error: (error: unknown) =>
+          this.aviso.set({
+            mensaje: mensajeDeError(error, 'No se pudo cambiar el estado. Intente nuevamente.'),
+            tono: 'error',
+          }),
+      });
   }
 }

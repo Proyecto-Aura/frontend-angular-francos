@@ -1,17 +1,27 @@
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { SelectOption } from '../../../../../shared/ds/select/select';
-import { PresentacionForm, ProductoFormModel } from '../../interfaces/producto.interface';
+import {
+  PresentacionForm,
+  ProductoFormModel,
+  ResultadoGuardado,
+} from '../../interfaces/producto.interface';
 import { CatalogoService } from '../../services/catalogo.service';
+import { API, flushCatalogo } from '../../testing/catalogo.fixtures';
 import { ProductoForm } from './producto-form';
 
 // Los miembros del componente son `protected`: el spec los consulta mediante esta vista tipada.
 interface ProductoFormApi {
   pf: { (): ProductoFormModel; set(v: ProductoFormModel): void };
   errores: Signal<string[]>;
+  errorApi: Signal<string>;
+  guardando: Signal<boolean>;
   titulo: Signal<string>;
   categoriaOptions: Signal<SelectOption[]>;
-  setCampo(campo: 'nombre' | 'categoria' | 'descripcion', valor: string): void;
+  presentacionOptions(actual: string): SelectOption[];
+  setCampo(campo: 'nombre' | 'categoriaId' | 'descripcion', valor: string): void;
   setPres<K extends keyof PresentacionForm>(
     idx: number,
     campo: K,
@@ -19,8 +29,7 @@ interface ProductoFormApi {
   ): void;
   agregarPres(): void;
   quitarPres(idx: number): void;
-  adjuntar(idx: number): void;
-  extension(imagen: string): string;
+  puedeQuitar(p: PresentacionForm): boolean;
   skuDePresentacion(p: PresentacionForm): string;
   guardar(): void;
   cerrar(): void;
@@ -29,7 +38,8 @@ interface ProductoFormApi {
 describe('ProductoForm', () => {
   let fixture: ComponentFixture<ProductoForm>;
   let service: CatalogoService;
-  let guardados: string[];
+  let httpMock: HttpTestingController;
+  let guardados: ResultadoGuardado[];
   let cierres: number;
 
   function api(): ProductoFormApi {
@@ -50,15 +60,21 @@ describe('ProductoForm', () => {
   function completarFormulario(): void {
     api().setCampo('nombre', 'Chifles BBQ');
     api().setCampo('descripcion', 'Sabor BBQ.');
-    api().setPres(0, 'nombre', 'Bolsa 100 g');
+    api().setPres(0, 'presentacionId', '1');
     api().setPres(0, 'precioUnit', '6');
     api().setPres(0, 'precioMayor', '5');
     api().setPres(0, 'umbral', '12');
   }
 
   beforeEach(() => {
-    TestBed.configureTestingModule({});
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(), provideHttpClientTesting()],
+    });
     service = TestBed.inject(CatalogoService);
+    httpMock = TestBed.inject(HttpTestingController);
+    service.cargar();
+    flushCatalogo(httpMock);
+
     fixture = TestBed.createComponent(ProductoForm);
     guardados = [];
     cierres = 0;
@@ -66,14 +82,17 @@ describe('ProductoForm', () => {
     fixture.componentInstance.closed.subscribe(() => cierres++);
   });
 
+  afterEach(() => httpMock.verify());
+
   it('opens an empty form with the first active category', () => {
     abrir('nuevo');
 
     expect(api().titulo()).toBe('Registrar producto');
     expect(api().pf().nombre).toBe('');
-    expect(api().pf().categoria).toBe('Chifles');
+    expect(api().pf().categoriaId).toBe('1');
     expect(api().pf().presentaciones).toHaveLength(1);
     expect(api().errores()).toEqual([]);
+    expect(api().errorApi()).toBe('');
   });
 
   it('loads the product to edit', () => {
@@ -81,21 +100,33 @@ describe('ProductoForm', () => {
 
     expect(api().titulo()).toBe('Editar producto');
     expect(api().pf().nombre).toBe('Chifles clásicos');
+    expect(api().pf().categoriaId).toBe('1');
     expect(api().pf().presentaciones).toHaveLength(2);
     expect(api().pf().presentaciones[0].precioUnit).toBe('5.5');
+    expect(api().pf().presentaciones[0].productoPresentacionId).toBe(11);
   });
 
-  it('adds and removes presentations', () => {
-    abrir('nuevo');
+  it('adds new presentations and removes only the ones not saved yet', () => {
+    abrir('editar', 1);
 
     api().agregarPres();
-    expect(api().pf().presentaciones).toHaveLength(2);
+    expect(api().pf().presentaciones).toHaveLength(3);
+    expect(api().puedeQuitar(api().pf().presentaciones[0])).toBe(false);
+    expect(api().puedeQuitar(api().pf().presentaciones[2])).toBe(true);
 
-    api().quitarPres(0);
-    expect(api().pf().presentaciones).toHaveLength(1);
+    api().quitarPres(2);
+    expect(api().pf().presentaciones).toHaveLength(2);
   });
 
-  it('shows the generated SKU only when editing', () => {
+  it('does not allow removing the only presentation of a new product', () => {
+    abrir('nuevo');
+
+    expect(api().puedeQuitar(api().pf().presentaciones[0])).toBe(false);
+    api().agregarPres();
+    expect(api().puedeQuitar(api().pf().presentaciones[1])).toBe(true);
+  });
+
+  it('shows the real SKU for saved presentations and a note for new ones', () => {
     abrir('editar', 1);
     expect(api().skuDePresentacion(api().pf().presentaciones[1])).toBe('FR-P1-PR2');
 
@@ -105,30 +136,34 @@ describe('ProductoForm', () => {
     );
   });
 
-  it('simulates the image attachment from the product name', () => {
-    abrir('nuevo');
-    api().setCampo('nombre', 'Chifles Clásicos');
-
-    api().adjuntar(0);
-
-    expect(api().pf().presentaciones[0].imagen).toBe('chifles-clasicos-1.jpg');
-    expect(api().extension('chifles-clasicos-1.jpg')).toBe('JPG');
-  });
-
   it('keeps an inactive category visible only when it is the current one', () => {
     abrir('nuevo');
     expect(
       api()
         .categoriaOptions()
         .map((o) => o.value),
-    ).not.toContain('Temporada');
+    ).not.toContain('5');
 
-    api().setCampo('categoria', 'Temporada');
+    api().setCampo('categoriaId', '5');
 
     const opcion = api()
       .categoriaOptions()
-      .find((o) => o.value === 'Temporada');
+      .find((o) => o.value === '5');
     expect(opcion?.label).toBe('Temporada (inactiva)');
+  });
+
+  it('offers the active presentations with their label, and the current one even if inactive', () => {
+    abrir('nuevo');
+
+    const opciones = api().presentacionOptions('');
+    expect(opciones[0]).toEqual({ value: '', label: 'Seleccionar presentación' });
+    expect(opciones.map((o) => o.label)).toContain('1 kg');
+    expect(opciones.map((o) => o.value)).not.toContain('7');
+    expect(
+      api()
+        .presentacionOptions('7')
+        .find((o) => o.value === '7')?.label,
+    ).toBe('500 gr (inactiva)');
   });
 
   it('does not save and lists the missing fields when the form is invalid', () => {
@@ -139,7 +174,7 @@ describe('ProductoForm', () => {
     expect(api().errores()).toContain('nombre del producto');
     expect(guardados).toEqual([]);
     expect(cierres).toBe(0);
-    expect(service.productos()).toHaveLength(7);
+    httpMock.expectNone(API.productos);
   });
 
   it('registers a valid product, emits the notice and closes', () => {
@@ -147,11 +182,29 @@ describe('ProductoForm', () => {
     completarFormulario();
 
     api().guardar();
+    expect(api().guardando()).toBe(true);
 
-    expect(service.productos()).toHaveLength(8);
+    httpMock.expectOne(API.productos).flush({
+      id: 8,
+      producto_presentaciones: [{ id: 81, sku: 'FR-P8-PR1', presentacion_id: 1 }],
+    });
+    flushCatalogo(httpMock);
+
+    expect(api().guardando()).toBe(false);
     expect(guardados).toHaveLength(1);
-    expect(guardados[0]).toContain('Producto registrado · SKU FR-P8-PR1');
+    expect(guardados[0].tono).toBe('ok');
+    expect(guardados[0].mensaje).toContain('Producto registrado · SKU FR-P8-PR1');
     expect(cierres).toBe(1);
+  });
+
+  it('ignores a second click while it is saving', () => {
+    abrir('nuevo');
+    completarFormulario();
+
+    api().guardar();
+    api().guardar();
+
+    expect(httpMock.match(API.productos)).toHaveLength(1);
   });
 
   it('updates the edited product, emits the notice and closes', () => {
@@ -160,12 +213,50 @@ describe('ProductoForm', () => {
 
     api().guardar();
 
-    expect(service.productos()).toHaveLength(7);
-    expect(service.productos().find((p) => p.id === 1)?.nombre).toBe('Chifles clásicos XL');
+    httpMock.expectOne(`${API.productos}/1`).flush({});
+    httpMock.expectOne(`${API.productoPresentaciones}/11`).flush({});
+    // La primera presentación tiene una promoción vigente: también se guarda.
+    httpMock.expectOne(`${API.promociones}/91`).flush({});
+    httpMock.expectOne(`${API.productoPresentaciones}/12`).flush({});
+    flushCatalogo(httpMock);
+
     expect(guardados).toEqual([
-      'Producto actualizado · el SKU y el slug se mantienen sin cambios.',
+      {
+        tono: 'ok',
+        mensaje: 'Producto actualizado · el SKU y el slug se mantienen sin cambios.',
+      },
     ]);
     expect(cierres).toBe(1);
+  });
+
+  it('keeps the form open and shows the API reason when the product cannot be saved', () => {
+    abrir('nuevo');
+    completarFormulario();
+
+    api().guardar();
+    httpMock
+      .expectOne(API.productos)
+      .flush(
+        { statusCode: 409, message: 'Ya existe un producto registrado con ese nombre' },
+        { status: 409, statusText: 'Conflict' },
+      );
+
+    expect(api().errorApi()).toBe('Ya existe un producto registrado con ese nombre');
+    expect(api().guardando()).toBe(false);
+    expect(guardados).toEqual([]);
+    expect(cierres).toBe(0);
+  });
+
+  it('explains missing permissions on 403', () => {
+    abrir('nuevo');
+    completarFormulario();
+
+    api().guardar();
+    httpMock
+      .expectOne(API.productos)
+      .flush({ statusCode: 403, message: 'Forbidden' }, { status: 403, statusText: 'Forbidden' });
+
+    expect(api().errorApi()).toBe('No tiene permisos para gestionar el catálogo de productos.');
   });
 
   it('closes without saving', () => {

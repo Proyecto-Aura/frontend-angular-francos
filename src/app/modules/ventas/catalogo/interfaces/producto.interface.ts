@@ -1,22 +1,32 @@
-// Modelo y reglas del catálogo — portados desde la lógica real del diseño
-// (FrancoSPortalEmpresarialDesignSystem), igual que en clientes.
-
+// Modelo y reglas del catálogo. Los datos llegan de la API (dto -> mapper ->
+// interfaz, igual que en auth) y estas reglas son las mismas que valida el backend.
 export type EstadoPresentacion = 'Activo' | 'Inactivo';
+
 export type Disponibilidad = 'disponible' | 'bajo' | 'agotado';
 
 export interface Promocion {
+  /** Id de la promoción en el backend (para editarla o desactivarla). */
+  id: number;
   pct: number;
   ini: string;
   fin: string;
 }
 
 export interface Presentacion {
+  /** Id en el catálogo de presentaciones (el `PR{id}` del SKU). */
   id: number;
+  /** Id de la presentación de este producto (lo que usa la API para editarla). */
+  productoPresentacionId: number;
+  /** Etiqueta de la presentación, por ejemplo "100 gr". */
   nombre: string;
+  sku: string;
+  slug: string;
   precioUnit: number;
+  /** 0 si la presentación no tiene precio mayorista. */
   precioMayor: number;
   umbral: number; // cantidad desde la que aplica precio mayorista
   promo: Promocion | null;
+  /** URL de la imagen ('' si no tiene). */
   imagen: string;
   visible: boolean;
   estado: EstadoPresentacion;
@@ -26,6 +36,7 @@ export interface Presentacion {
 export interface Producto {
   id: number;
   nombre: string;
+  categoriaId: number;
   categoria: string;
   descripcion: string;
   destacado: boolean;
@@ -36,6 +47,7 @@ export interface Producto {
 export interface FilaCatalogo {
   productoId: number;
   presentacionId: number;
+  productoPresentacionId: number;
   nombre: string;
   categoria: string;
   destacado: boolean;
@@ -48,6 +60,21 @@ export interface FilaCatalogo {
   stock: number;
   visible: boolean;
   sku: string;
+  slug: string;
+  imagen: string;
+}
+
+/** Categoría o presentación del catálogo que se ofrece en los selectores. */
+export interface OpcionCatalogo {
+  id: number;
+  nombre: string;
+  activa: boolean;
+}
+
+/** Resultado de guardar: el aviso a mostrar y si todo salió bien. */
+export interface ResultadoGuardado {
+  mensaje: string;
+  tono: 'ok' | 'error';
 }
 
 export const UNIDAD = 'unid';
@@ -68,6 +95,7 @@ export function aFilas(productos: Producto[]): FilaCatalogo[] {
     p.presentaciones.map((pr) => ({
       productoId: p.id,
       presentacionId: pr.id,
+      productoPresentacionId: pr.productoPresentacionId,
       nombre: p.nombre,
       categoria: p.categoria,
       destacado: p.destacado,
@@ -79,7 +107,9 @@ export function aFilas(productos: Producto[]): FilaCatalogo[] {
       estado: pr.estado,
       stock: pr.stock,
       visible: pr.visible,
-      sku: skuDe(p.id, pr.id),
+      sku: pr.sku,
+      slug: pr.slug,
+      imagen: pr.imagen,
     })),
   );
 }
@@ -89,16 +119,17 @@ export function aFilas(productos: Producto[]): FilaCatalogo[] {
 // son string y se convierten a number al guardar (igual que el diseño).
 
 export interface PresentacionForm {
-  id: number | null; // null = presentación nueva (su id/SKU se asigna al guardar)
-  nombre: string;
-  unidad: string;
+  /** Id de la presentación del producto; null = presentación nueva (su SKU se asigna al guardar). */
+  productoPresentacionId: number | null;
+  sku: string | null;
+  /** Id de la presentación elegida en el selector ('' = sin elegir). */
+  presentacionId: string;
   precioUnit: string;
   precioMayor: string;
   umbral: string;
   imagen: string;
-  estado: EstadoPresentacion;
-  visible: boolean;
-  stock: number;
+  /** Id de la promoción que ya existe (null = no tiene). */
+  promoId: number | null;
   promoActiva: boolean;
   promoPct: string;
   promoIni: string;
@@ -107,32 +138,31 @@ export interface PresentacionForm {
 
 export interface ProductoFormModel {
   nombre: string;
-  categoria: string;
+  /** Id de la categoría elegida en el selector ('' = sin elegir). */
+  categoriaId: string;
   descripcion: string;
   destacado: boolean;
   presentaciones: PresentacionForm[];
 }
 
 export const presentacionVacia = (): PresentacionForm => ({
-  id: null,
-  nombre: '',
-  unidad: UNIDAD,
+  productoPresentacionId: null,
+  sku: null,
+  presentacionId: '',
   precioUnit: '',
   precioMayor: '',
   umbral: '',
   imagen: '',
-  estado: 'Activo',
-  visible: false,
-  stock: 0,
+  promoId: null,
   promoActiva: false,
   promoPct: '',
   promoIni: '',
   promoFin: '',
 });
 
-export const productoFormVacio = (categoria: string): ProductoFormModel => ({
+export const productoFormVacio = (categoriaId: string): ProductoFormModel => ({
   nombre: '',
-  categoria,
+  categoriaId,
   descripcion: '',
   destacado: false,
   presentaciones: [presentacionVacia()],
@@ -141,20 +171,18 @@ export const productoFormVacio = (categoria: string): ProductoFormModel => ({
 export function formDesdeProducto(p: Producto): ProductoFormModel {
   return {
     nombre: p.nombre,
-    categoria: p.categoria,
+    categoriaId: String(p.categoriaId),
     descripcion: p.descripcion,
     destacado: p.destacado,
     presentaciones: p.presentaciones.map((pr) => ({
-      id: pr.id,
-      nombre: pr.nombre,
-      unidad: UNIDAD,
+      productoPresentacionId: pr.productoPresentacionId,
+      sku: pr.sku,
+      presentacionId: String(pr.id),
       precioUnit: String(pr.precioUnit),
-      precioMayor: String(pr.precioMayor),
-      umbral: String(pr.umbral),
+      precioMayor: pr.precioMayor ? String(pr.precioMayor) : '',
+      umbral: pr.umbral ? String(pr.umbral) : '',
       imagen: pr.imagen,
-      estado: pr.estado,
-      visible: pr.visible,
-      stock: pr.stock,
+      promoId: pr.promo ? pr.promo.id : null,
       promoActiva: !!pr.promo,
       promoPct: pr.promo ? String(pr.promo.pct) : '',
       promoIni: pr.promo ? pr.promo.ini : '',
@@ -163,38 +191,55 @@ export function formDesdeProducto(p: Producto): ProductoFormModel {
   };
 }
 
-/** Convierte el formulario en Presentacion. `fallbackId` se usa solo para presentaciones nuevas. */
-export function presentacionDesdeForm(pr: PresentacionForm, fallbackId: number): Presentacion {
-  return {
-    id: pr.id ?? fallbackId,
-    nombre: pr.nombre,
-    precioUnit: Number(pr.precioUnit),
-    precioMayor: Number(pr.precioMayor),
-    umbral: Number(pr.umbral),
-    imagen: pr.imagen,
-    visible: pr.visible,
-    estado: pr.estado,
-    stock: pr.stock,
-    promo: pr.promoActiva ? { pct: Number(pr.promoPct), ini: pr.promoIni, fin: pr.promoFin } : null,
-  };
-}
+const DOS_DECIMALES = /^\d+(\.\d{1,2})?$/;
+const ENTERO = /^\d+$/;
 
-/** Mismas reglas y mensajes que `validarProducto` del diseño. */
+const esUrlHttp = (valor: string): boolean => {
+  try {
+    const url = new URL(valor);
+    return url.protocol === 'http:' || url.protocol === 'https:';
+  } catch {
+    return false;
+  }
+};
+
+/** Mismas reglas que valida el backend, con los mensajes del diseño. */
 export function validarProducto(pf: ProductoFormModel): string[] {
   const e: string[] = [];
-  if (!pf.nombre) e.push('nombre del producto');
-  if (!pf.descripcion) e.push('descripción');
+  if (!pf.nombre.trim()) e.push('nombre del producto');
+  if (!pf.categoriaId) e.push('categoría');
+  if (!pf.descripcion.trim()) e.push('descripción');
   if (!pf.presentaciones.length) e.push('al menos una presentación');
+  const usadas = new Set<string>();
   pf.presentaciones.forEach((p, i) => {
     const n = ` (presentación ${i + 1})`;
-    if (!p.nombre) e.push('nombre de la presentación' + n);
-    if (!(Number(p.precioUnit) > 0)) e.push('precio unitario mayor a 0' + n);
-    if (!(Number(p.precioMayor) > 0)) e.push('precio mayorista mayor a 0' + n);
-    else if (Number(p.precioMayor) > Number(p.precioUnit))
-      e.push('el precio mayorista no puede superar el unitario' + n);
-    if (!(Number(p.umbral) > 0)) e.push('umbral mayorista mayor a 0' + n);
+    if (!p.presentacionId) e.push('nombre de la presentación' + n);
+    else if (usadas.has(p.presentacionId)) e.push('la presentación ya está en el producto' + n);
+    else usadas.add(p.presentacionId);
+
+    const unitarioValido = DOS_DECIMALES.test(p.precioUnit.trim()) && Number(p.precioUnit) > 0;
+    if (!unitarioValido) e.push('precio unitario mayor a 0 (máx. 2 decimales)' + n);
+
+    if (!(DOS_DECIMALES.test(p.precioMayor.trim()) && Number(p.precioMayor) > 0)) {
+      e.push('precio mayorista mayor a 0 (máx. 2 decimales)' + n);
+    } else if (unitarioValido && Number(p.precioMayor) >= Number(p.precioUnit)) {
+      e.push('el precio mayorista debe ser menor que el unitario' + n);
+    }
+
+    if (!(ENTERO.test(p.umbral.trim()) && Number(p.umbral) > 0)) {
+      e.push('umbral mayorista entero mayor a 0' + n);
+    }
+
+    if (p.imagen.trim() && !esUrlHttp(p.imagen.trim())) {
+      e.push('la imagen debe ser una URL válida (http o https)' + n);
+    }
+
     if (p.promoActiva) {
-      if (!(Number(p.promoPct) > 0 && Number(p.promoPct) < 100))
+      if (!(
+        DOS_DECIMALES.test(p.promoPct.trim()) &&
+        Number(p.promoPct) > 0 &&
+        Number(p.promoPct) < 100
+      ))
         e.push('porcentaje de promoción entre 1 y 99' + n);
       if (!p.promoIni || !p.promoFin) e.push('fechas de la promoción' + n);
       else if (p.promoFin < p.promoIni) e.push('la fecha de fin debe ser posterior al inicio' + n);
@@ -205,17 +250,6 @@ export function validarProducto(pf: ProductoFormModel): string[] {
 
 // ───────────────────────── Detalle ─────────────────────────
 
-const slugify = (s: string): string =>
-  s
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/(^-|-$)/g, '');
-
-export const slugDe = (nombre: string, presentacion: string): string =>
-  slugify(`${nombre} ${presentacion}`);
-
 const MESES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 
 /** "2026-09-30" -> "30 Sep 2026" (igual que el diseño). */
@@ -223,9 +257,6 @@ export const fechaCorta = (iso: string): string => {
   const p = iso.split('-');
   return p.length === 3 ? `${p[2]} ${MESES[Number(p[1]) - 1]} ${p[0]}` : iso;
 };
-
-/** Peso simulado de la imagen adjunta (el diseño lo deriva del nombre del archivo). */
-export const pesoImagen = (nombre: string): string => `${140 + ((nombre.length * 37) % 420)} KB`;
 
 // ───────────────────────── Configuración del catálogo ─────────────────────────
 

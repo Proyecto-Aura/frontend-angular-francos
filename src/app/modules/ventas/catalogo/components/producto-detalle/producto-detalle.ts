@@ -12,7 +12,6 @@ import {
   fechaCorta,
   money,
   nf,
-  slugDe,
 } from '../../interfaces/producto.interface';
 
 interface Campo {
@@ -70,7 +69,7 @@ export class ProductoDetalle {
           : 'Sin promoción',
       },
       { label: 'Visible en Portal B', value: f.visible ? 'Activado' : 'Desactivado' },
-      { label: 'Slug', value: slugDe(f.nombre, f.presentacion) },
+      { label: 'Slug', value: f.slug || '—' },
     ];
   });
 }

@@ -6,7 +6,7 @@
     </p>
   </div>
 
-  <app-aviso-banner [texto]="aviso()" (closed)="aviso.set('')" />
+  <app-aviso-banner [texto]="aviso().mensaje" [tono]="aviso().tono" (closed)="cerrarAviso()" />
 
   <app-ds-filter-bar [hasSearch]="true" [hasActions]="true">
     <app-ds-input
@@ -78,18 +78,39 @@
     </span>
   </app-ds-filter-bar>
 
-  @if (vista() === 'tarjetas') {
+  @if (cargando()) {
+    <p
+      class="rounded-lg border border-border bg-card p-8 text-center text-ds-base text-muted-foreground"
+    >
+      Cargando catálogo…
+    </p>
+  } @else if (errorCarga()) {
+    <div
+      class="flex flex-col items-center gap-3 rounded-lg border border-border bg-card p-8 text-center"
+    >
+      <p class="text-ds-base text-muted-foreground">No se pudo cargar el catálogo de productos.</p>
+      <app-ds-button variant="secondary" (clicked)="cargar()">Reintentar</app-ds-button>
+    </div>
+  } @else if (vista() === 'tarjetas') {
     @if (filasPagina().length) {
       <div class="grid grid-cols-[repeat(auto-fill,minmax(244px,1fr))] gap-4">
         @for (f of filasPagina(); track f.sku) {
           <article
             class="flex min-w-0 flex-col overflow-hidden rounded-lg border border-border bg-card shadow-ds-xs"
           >
-            <!-- TODO(backend): reemplazar el placeholder por la foto real (campo imagen) -->
             <div
               class="relative flex h-[156px] flex-none items-center justify-center bg-muted text-muted-foreground"
             >
-              <app-ds-icon [img]="LucidePackage" [size]="40" />
+              @if (f.imagen) {
+                <img
+                  [src]="f.imagen"
+                  [alt]="'Imagen de ' + f.nombre + ' ' + f.presentacion"
+                  loading="lazy"
+                  class="absolute inset-0 h-full w-full object-cover"
+                />
+              } @else {
+                <app-ds-icon [img]="LucidePackage" [size]="40" />
+              }
               <div class="pointer-events-none absolute left-2.5 top-2.5 flex flex-wrap gap-1.5">
                 @if (f.destacado) {
                   <app-ds-badge tone="warning">Destacado</app-ds-badge>
@@ -160,7 +181,7 @@
       <p
         class="rounded-lg border border-border bg-card p-8 text-center text-ds-base text-muted-foreground"
       >
-        Sin resultados
+        {{ hayProductos() ? 'Sin resultados' : 'Sin productos registrados' }}
       </p>
     }
   } @else {

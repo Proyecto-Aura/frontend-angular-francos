@@ -1,210 +1,469 @@
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { ResultadoGuardado, formDesdeProducto } from '../interfaces/producto.interface';
 import {
-  ProductoFormModel,
-  presentacionVacia,
-  productoFormVacio,
-} from '../interfaces/producto.interface';
+  API,
+  catalogoDto,
+  flushCatalogo,
+  makeFormValido,
+  makeFilaDto,
+  makePresentacion,
+  makeProducto,
+  page,
+} from '../testing/catalogo.fixtures';
 import { CatalogoService } from './catalogo.service';
-
-function makeFormValido(overrides: Partial<ProductoFormModel> = {}): ProductoFormModel {
-  return {
-    ...productoFormVacio('Chifles'),
-    nombre: 'Chifles BBQ',
-    descripcion: 'Sabor BBQ.',
-    presentaciones: [
-      {
-        ...presentacionVacia(),
-        nombre: 'Bolsa 100 g',
-        precioUnit: '6',
-        precioMayor: '5',
-        umbral: '12',
-      },
-    ],
-    ...overrides,
-  };
-}
 
 describe('CatalogoService', () => {
   let service: CatalogoService;
+  let httpMock: HttpTestingController;
 
   beforeEach(() => {
-    TestBed.configureTestingModule({});
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(), provideHttpClientTesting()],
+    });
     service = TestBed.inject(CatalogoService);
+    httpMock = TestBed.inject(HttpTestingController);
   });
 
-  describe('productos', () => {
-    it('exposes one catalog row per presentation', () => {
-      expect(service.productos()).toHaveLength(7);
+  afterEach(() => httpMock.verify());
+
+  function cargarCatalogo(): void {
+    service.cargar();
+    flushCatalogo(httpMock);
+  }
+
+  describe('carga', () => {
+    it('does not call the API until asked to load', () => {
+      expect(service.productos()).toEqual([]);
+      expect(service.cargando()).toBe(false);
+    });
+
+    it('loads rows, categories and presentation options from the API', () => {
+      service.cargar();
+      expect(service.cargando()).toBe(true);
+
+      flushCatalogo(httpMock);
+
+      expect(service.cargando()).toBe(false);
+      expect(service.errorCarga()).toBe(false);
       expect(service.filas()).toHaveLength(9);
+      expect(service.productos()).toHaveLength(7);
+      expect(service.categoriaOpciones()).toHaveLength(5);
+      expect(service.presentacionOpciones().map((o) => o.nombre)).toContain('1 kg');
     });
 
     it('lists the category names for the filter', () => {
-      expect(service.categorias()).toHaveLength(7);
-      expect(service.categorias()).toContain('Chifles');
-    });
+      cargarCatalogo();
 
-    it('registers a product with the next id and one SKU per presentation', () => {
-      const form = makeFormValido();
-      form.presentaciones.push({
-        ...presentacionVacia(),
-        nombre: 'Pack x6',
-        precioUnit: '30',
-        precioMayor: '25',
-        umbral: '6',
-      });
-
-      const aviso = service.registrar(form);
-
-      expect(service.productos()).toHaveLength(8);
-      expect(service.productos()[7].id).toBe(8);
-      expect(service.productos()[7].presentaciones.map((p) => p.id)).toEqual([1, 2]);
-      expect(aviso).toContain('Producto registrado');
-      expect(aviso).toContain('FR-P8-PR1, FR-P8-PR2');
-      expect(aviso).toContain('visible en Portal B inicia desactivado');
-    });
-
-    it('updates a product keeping its id and SKUs', () => {
-      const form = makeFormValido({ nombre: 'Chifles clásicos XL' });
-      form.presentaciones[0].id = 1;
-
-      const aviso = service.actualizar(1, form);
-
-      const producto = service.productos().find((p) => p.id === 1);
-      expect(producto?.nombre).toBe('Chifles clásicos XL');
-      expect(producto?.presentaciones[0].id).toBe(1);
-      expect(aviso).toBe('Producto actualizado · el SKU y el slug se mantienen sin cambios.');
-    });
-
-    it('does not touch other products when updating one', () => {
-      const antes = service.productos().find((p) => p.id === 2);
-
-      service.actualizar(1, makeFormValido());
-
-      expect(service.productos().find((p) => p.id === 2)).toBe(antes);
-    });
-
-    it('deactivates and reactivates a presentation logically', () => {
-      const desactivar = service.alternarEstadoPresentacion(1, 1);
-      expect(service.filas().find((f) => f.sku === 'FR-P1-PR1')?.estado).toBe('Inactivo');
-      expect(desactivar).toBe('Presentación FR-P1-PR1 desactivada de forma lógica.');
-
-      const reactivar = service.alternarEstadoPresentacion(1, 1);
-      expect(service.filas().find((f) => f.sku === 'FR-P1-PR1')?.estado).toBe('Activo');
-      expect(reactivar).toBe('Presentación FR-P1-PR1 reactivada.');
-      expect(service.filas()).toHaveLength(9);
-    });
-  });
-
-  describe('configuración: validarCfg', () => {
-    it('requires name and description for categories', () => {
-      expect(service.validarCfg('categorias', null, { nombre: '', descripcion: '' })).toEqual([
-        'nombre',
-        'descripción',
+      expect(service.categorias()).toEqual([
+        'Chifles',
+        'Camote',
+        'Snacks andinos',
+        'Frutos secos',
+        'Temporada',
       ]);
     });
 
-    it('rejects a duplicated name ignoring case', () => {
-      const errores = service.validarCfg('categorias', null, {
-        nombre: 'chifles',
-        descripcion: 'x',
-      });
+    it('requests the remaining pages when the API paginates', () => {
+      service.cargar();
 
-      expect(errores).toEqual(['el nombre ya está registrado']);
+      const [primera, segunda] = [catalogoDto().slice(0, 5), catalogoDto().slice(5)];
+      httpMock
+        .expectOne((r) => r.url === API.productoPresentaciones && r.params.get('page') === '1')
+        .flush(page(primera, 1, 2));
+      httpMock
+        .expectOne((r) => r.url === API.productoPresentaciones && r.params.get('page') === '2')
+        .flush(page(segunda, 2, 2));
+      httpMock.expectOne((r) => r.url === API.categorias).flush(page([]));
+      httpMock.expectOne((r) => r.url === API.presentaciones).flush(page([]));
+
+      expect(service.filas()).toHaveLength(9);
     });
 
-    it('allows keeping the name of the record being edited', () => {
-      const errores = service.validarCfg('categorias', 1, {
-        nombre: 'Chifles',
-        descripcion: 'x',
-      });
+    it('flags an error and clears the catalog when loading fails', () => {
+      service.cargar();
 
-      expect(errores).toEqual([]);
+      httpMock
+        .expectOne((r) => r.url === API.productoPresentaciones)
+        .flush({ message: 'boom' }, { status: 500, statusText: 'Error' });
+      // forkJoin cancela las demás peticiones en cuanto una falla.
+      httpMock.match(() => true);
+
+      expect(service.errorCarga()).toBe(true);
+      expect(service.cargando()).toBe(false);
+      expect(service.productos()).toEqual([]);
     });
   });
 
-  describe('configuración: guardarCfg', () => {
-    it('adds an active category with the next id', () => {
-      const aviso = service.guardarCfg('categorias', null, {
-        nombre: 'Panadería',
-        descripcion: 'Productos de panadería.',
+  describe('registrar', () => {
+    let resultado: ResultadoGuardado | undefined;
+    let error: unknown;
+
+    beforeEach(() => {
+      resultado = undefined;
+      error = undefined;
+    });
+
+    const productoCreado = {
+      id: 8,
+      producto_presentaciones: [{ id: 81, sku: 'FR-P8-PR1', presentacion_id: 1 }],
+    };
+
+    it('creates the product with its presentations in one POST and reloads the catalog', () => {
+      service.registrar(makeFormValido()).subscribe((r) => (resultado = r));
+
+      const req = httpMock.expectOne(API.productos);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual({
+        categoria_id: 1,
+        nombre: 'Chifles BBQ',
+        descripcion: 'Sabor BBQ.',
+        destacado: false,
+        producto_presentaciones: [
+          { presentacion_id: 1, precio_unitario: 6, precio_mayorista: 5, umbral_mayorista: 12 },
+        ],
+      });
+      req.flush(productoCreado);
+      flushCatalogo(httpMock);
+
+      expect(resultado?.tono).toBe('ok');
+      expect(resultado?.mensaje).toContain('Producto registrado · SKU FR-P8-PR1');
+      expect(resultado?.mensaje).toContain('visible en Portal B inicia desactivado');
+    });
+
+    it('creates the promotion of each presentation that has one', () => {
+      const form = makeFormValido();
+      form.presentaciones[0] = {
+        ...form.presentaciones[0],
+        promoActiva: true,
+        promoPct: '25',
+        promoIni: '2026-10-01',
+        promoFin: '2026-10-31',
+      };
+
+      service.registrar(form).subscribe((r) => (resultado = r));
+      httpMock.expectOne(API.productos).flush(productoCreado);
+
+      const promo = httpMock.expectOne(API.promociones);
+      expect(promo.request.method).toBe('POST');
+      expect(promo.request.body).toEqual({
+        producto_presentacion_id: 81,
+        valor: 25,
+        fecha_inicio: '2026-10-01',
+        fecha_fin: '2026-10-31',
+      });
+      promo.flush({ id: 5 });
+      flushCatalogo(httpMock);
+
+      expect(resultado?.tono).toBe('ok');
+    });
+
+    it('reports a failed promotion without failing the registration', () => {
+      const form = makeFormValido();
+      form.presentaciones[0] = {
+        ...form.presentaciones[0],
+        promoActiva: true,
+        promoPct: '25',
+        promoIni: '2026-10-01',
+        promoFin: '2026-10-31',
+      };
+
+      service.registrar(form).subscribe((r) => (resultado = r));
+      httpMock.expectOne(API.productos).flush(productoCreado);
+      httpMock
+        .expectOne(API.promociones)
+        .flush(
+          { statusCode: 409, message: 'Ya existe una promoción activa que se cruza' },
+          { status: 409, statusText: 'Conflict' },
+        );
+      flushCatalogo(httpMock);
+
+      expect(resultado?.tono).toBe('error');
+      expect(resultado?.mensaje).toContain('Producto registrado (SKU FR-P8-PR1)');
+      expect(resultado?.mensaje).toContain('Ya existe una promoción activa que se cruza');
+    });
+
+    it('fails, and creates no promotions, when the product itself cannot be created', () => {
+      const form = makeFormValido();
+      form.presentaciones[0] = { ...form.presentaciones[0], promoActiva: true };
+
+      service.registrar(form).subscribe({ error: (e) => (error = e) });
+      httpMock
+        .expectOne(API.productos)
+        .flush(
+          { statusCode: 409, message: 'Ya existe un producto registrado con ese nombre' },
+          { status: 409, statusText: 'Conflict' },
+        );
+
+      expect(error).toBeDefined();
+      httpMock.expectNone(API.promociones);
+    });
+  });
+
+  describe('actualizar', () => {
+    let resultado: ResultadoGuardado | undefined;
+    let error: unknown;
+
+    beforeEach(() => {
+      resultado = undefined;
+      error = undefined;
+    });
+
+    it('updates the product and each existing presentation, then reloads', () => {
+      const form = formDesdeProducto(makeProducto());
+      form.nombre = 'Chifles clásicos XL';
+      form.presentaciones[0].precioUnit = '6.5';
+
+      service.actualizar(1, form).subscribe((r) => (resultado = r));
+
+      const producto = httpMock.expectOne(`${API.productos}/1`);
+      expect(producto.request.method).toBe('PATCH');
+      expect(producto.request.body).toEqual({
+        categoria_id: 1,
+        nombre: 'Chifles clásicos XL',
+        descripcion: 'Plátano bellaco en hojuelas.',
+        destacado: true,
+      });
+      producto.flush({});
+
+      const presentacion = httpMock.expectOne(`${API.productoPresentaciones}/11`);
+      expect(presentacion.request.method).toBe('PATCH');
+      expect(presentacion.request.body).toEqual({
+        precio_unitario: 6.5,
+        precio_mayorista: 4.2,
+        umbral_mayorista: 24,
+        imagen_url: null,
+      });
+      presentacion.flush({});
+      flushCatalogo(httpMock);
+
+      expect(resultado).toEqual({
+        tono: 'ok',
+        mensaje: 'Producto actualizado · el SKU y el slug se mantienen sin cambios.',
+      });
+    });
+
+    it('adds the new presentations to the product', () => {
+      const form = formDesdeProducto(makeProducto());
+      form.presentaciones.push({
+        ...makeFormValido().presentaciones[0],
+        presentacionId: '2',
+        precioUnit: '9.9',
+        precioMayor: '7.9',
+        umbral: '12',
       });
 
-      expect(service.categoriasCfg()).toHaveLength(8);
-      expect(service.categoriasCfg()[7]).toEqual({
-        id: 8,
-        nombre: 'Panadería',
-        descripcion: 'Productos de panadería.',
-        estado: 'Activo',
+      service.actualizar(1, form).subscribe((r) => (resultado = r));
+      httpMock.expectOne(`${API.productos}/1`).flush({});
+      httpMock.expectOne(`${API.productoPresentaciones}/11`).flush({});
+
+      const nueva = httpMock.expectOne(API.productoPresentaciones);
+      expect(nueva.request.method).toBe('POST');
+      expect(nueva.request.body).toMatchObject({
+        producto_id: 1,
+        presentacion_id: 2,
+        precio_unitario: 9.9,
       });
-      expect(aviso).toBe(
-        'Categoría Panadería registrada · disponible en los selectores de producto.',
+      nueva.flush({ id: 12 });
+      flushCatalogo(httpMock);
+
+      expect(resultado?.tono).toBe('ok');
+    });
+
+    it('creates, edits and deactivates promotions according to the form', () => {
+      const form = formDesdeProducto(
+        makeProducto({
+          presentaciones: [
+            makePresentacion({
+              promo: { id: 91, pct: 10, ini: '2026-09-01', fin: '2026-09-30' },
+            }),
+            makePresentacion({
+              id: 2,
+              productoPresentacionId: 12,
+              sku: 'FR-P1-PR2',
+              nombre: '200 gr',
+              promo: { id: 92, pct: 15, ini: '2026-09-10', fin: '2026-09-30' },
+            }),
+            makePresentacion({
+              id: 3,
+              productoPresentacionId: 13,
+              sku: 'FR-P1-PR3',
+              nombre: '120 gr',
+            }),
+          ],
+        }),
       );
-    });
+      form.presentaciones[0].promoPct = '20'; // edita la promoción 91
+      form.presentaciones[1].promoActiva = false; // desactiva la promoción 92
+      form.presentaciones[2] = {
+        ...form.presentaciones[2],
+        promoActiva: true,
+        promoPct: '30',
+        promoIni: '2026-11-01',
+        promoFin: '2026-11-30',
+      }; // crea una promoción nueva
 
-    it('renames a category in the products that use it', () => {
-      const aviso = service.guardarCfg('categorias', 1, {
-        nombre: 'Chifles y más',
-        descripcion: 'Nueva descripción.',
+      service.actualizar(1, form).subscribe((r) => (resultado = r));
+      httpMock.expectOne(`${API.productos}/1`).flush({});
+
+      httpMock.expectOne(`${API.productoPresentaciones}/11`).flush({});
+      const editar = httpMock.expectOne(`${API.promociones}/91`);
+      expect(editar.request.method).toBe('PATCH');
+      expect(editar.request.body).toEqual({
+        valor: 20,
+        fecha_inicio: '2026-09-01',
+        fecha_fin: '2026-09-30',
       });
+      editar.flush({});
 
-      expect(service.categoriasCfg()[0].nombre).toBe('Chifles y más');
-      expect(service.productos().filter((p) => p.categoria === 'Chifles y más')).toHaveLength(2);
-      expect(service.productos().filter((p) => p.categoria === 'Chifles')).toHaveLength(0);
-      expect(aviso).toBe('Categoría Chifles y más actualizada.');
-    });
+      httpMock.expectOne(`${API.productoPresentaciones}/12`).flush({});
+      const desactivar = httpMock.expectOne(`${API.promociones}/92`);
+      expect(desactivar.request.method).toBe('DELETE');
+      desactivar.flush({});
 
-    it('edits a presentation without changing its state', () => {
-      service.guardarCfg('presentaciones', 8, {
-        nombre: 'Display x30',
-        descripcion: 'Display de 30.',
+      httpMock.expectOne(`${API.productoPresentaciones}/13`).flush({});
+      const crear = httpMock.expectOne(API.promociones);
+      expect(crear.request.method).toBe('POST');
+      expect(crear.request.body).toEqual({
+        producto_presentacion_id: 13,
+        valor: 30,
+        fecha_inicio: '2026-11-01',
+        fecha_fin: '2026-11-30',
       });
+      crear.flush({});
+      flushCatalogo(httpMock);
 
-      const edited = service.presentacionesCfg().find((x) => x.id === 8);
-      expect(edited?.nombre).toBe('Display x30');
-      expect(edited?.estado).toBe('Inactivo');
+      expect(resultado?.tono).toBe('ok');
     });
-  });
 
-  describe('configuración: alternarCfg', () => {
-    it('deactivates an active record explaining that products keep it', () => {
-      const aviso = service.alternarCfg('categorias', 1);
-
-      expect(service.categoriasCfg()[0].estado).toBe('Inactivo');
-      expect(aviso).toBe(
-        'Categoría Chifles desactivada · ya no aparece en nuevos registros y se mantiene en los productos existentes.',
+    it('stops at the first failing step and reports it', () => {
+      const form = formDesdeProducto(
+        makeProducto({
+          presentaciones: [
+            makePresentacion(),
+            makePresentacion({
+              id: 2,
+              productoPresentacionId: 12,
+              sku: 'FR-P1-PR2',
+              nombre: '200 gr',
+            }),
+          ],
+        }),
       );
+
+      service.actualizar(1, form).subscribe((r) => (resultado = r));
+      httpMock.expectOne(`${API.productos}/1`).flush({});
+      httpMock.expectOne(`${API.productoPresentaciones}/11`).flush(
+        {
+          statusCode: 409,
+          message: 'El precio mayorista debe ser menor que el precio unitario',
+        },
+        { status: 409, statusText: 'Conflict' },
+      );
+
+      httpMock.expectNone(`${API.productoPresentaciones}/12`);
+      flushCatalogo(httpMock);
+
+      expect(resultado?.tono).toBe('error');
+      expect(resultado?.mensaje).toContain('Se guardaron los datos del producto');
+      expect(resultado?.mensaje).toContain('El precio mayorista debe ser menor');
     });
 
-    it('reactivates an inactive presentation', () => {
-      const aviso = service.alternarCfg('presentaciones', 8);
+    it('fails, and touches no presentation, when the product cannot be saved', () => {
+      service
+        .actualizar(1, formDesdeProducto(makeProducto()))
+        .subscribe({ error: (e) => (error = e) });
+      httpMock
+        .expectOne(`${API.productos}/1`)
+        .flush(
+          { statusCode: 409, message: 'Ya existe otro producto registrado con ese nombre' },
+          { status: 409, statusText: 'Conflict' },
+        );
 
-      expect(service.presentacionesCfg().find((x) => x.id === 8)?.estado).toBe('Activo');
-      expect(aviso).toBe('Presentación Display x24 reactivada.');
-    });
-
-    it('returns an empty notice when the record does not exist', () => {
-      expect(service.alternarCfg('categorias', 999)).toBe('');
+      expect(error).toBeDefined();
+      httpMock.expectNone(`${API.productoPresentaciones}/11`);
     });
   });
 
-  describe('configuración: usosDe', () => {
-    it('counts presentations of the products in a category', () => {
-      const chifles = service.categoriasCfg()[0];
+  describe('alternarEstadoPresentacion', () => {
+    it('deactivates an active presentation with DELETE and reloads', () => {
+      cargarCatalogo();
+      let mensaje = '';
 
-      expect(service.usosDe('categorias', chifles)).toBe(3);
+      service.alternarEstadoPresentacion(1, 1).subscribe((m) => (mensaje = m));
+
+      const req = httpMock.expectOne(`${API.productoPresentaciones}/11`);
+      expect(req.request.method).toBe('DELETE');
+      req.flush({});
+      flushCatalogo(httpMock);
+
+      expect(mensaje).toBe('Presentación FR-P1-PR1 desactivada de forma lógica.');
     });
 
-    it('counts products that use a presentation name', () => {
-      const bolsa100 = service.presentacionesCfg()[0];
+    it('reactivates an inactive presentation with PATCH /activate', () => {
+      cargarCatalogo();
+      let mensaje = '';
 
-      expect(service.usosDe('presentaciones', bolsa100)).toBe(2);
+      service.alternarEstadoPresentacion(7, 4).subscribe((m) => (mensaje = m));
+
+      const req = httpMock.expectOne(`${API.productoPresentaciones}/71/activate`);
+      expect(req.request.method).toBe('PATCH');
+      req.flush({});
+      flushCatalogo(httpMock);
+
+      expect(mensaje).toBe('Presentación FR-P7-PR4 reactivada.');
+    });
+
+    it('propagates the API reason and does not reload when it is rejected', () => {
+      cargarCatalogo();
+      let error: unknown;
+
+      service.alternarEstadoPresentacion(1, 1).subscribe({ error: (e) => (error = e) });
+      httpMock
+        .expectOne(`${API.productoPresentaciones}/11`)
+        .flush(
+          { statusCode: 409, message: 'No se puede desactivar: todavía tiene stock disponible' },
+          { status: 409, statusText: 'Conflict' },
+        );
+
+      expect(error).toBeDefined();
+      httpMock.expectNone((r) => r.url === API.categorias);
+    });
+
+    it('fails when the presentation is not in the catalog', () => {
+      let error: unknown;
+
+      service.alternarEstadoPresentacion(99, 99).subscribe({ error: (e) => (error = e) });
+
+      expect(error).toBeDefined();
     });
   });
 
-  describe('lista', () => {
-    it('returns the list that matches the tab', () => {
-      expect(service.lista('categorias')).toBe(service.categoriasCfg());
-      expect(service.lista('presentaciones')).toBe(service.presentacionesCfg());
-    });
+  it('keeps a presentation without stock record as sin stock', () => {
+    service.cargar();
+    flushCatalogo(httpMock, [
+      {
+        ...makeFilaDto({
+          id: 1,
+          productoId: 1,
+          nombre: 'Sin stock',
+          categoriaId: 1,
+          categoria: 'Chifles',
+          presentacionId: 1,
+          cantidad: 100,
+          unidad: 'gr',
+          precio: 5,
+          mayorista: null,
+          umbral: null,
+        }),
+        producto_terminado: null,
+      },
+    ]);
+
+    const [fila] = service.filas();
+    expect(fila.stock).toBe(0);
+    expect(fila.precioMayor).toBe(0);
+    expect(fila.umbral).toBe(0);
   });
 });

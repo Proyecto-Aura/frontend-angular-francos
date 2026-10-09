@@ -1,409 +1,287 @@
-import { Injectable, computed, signal } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Injectable, computed, inject, signal } from '@angular/core';
 import {
-  CfgFormModel,
-  CfgTab,
+  Observable,
+  catchError,
+  finalize,
+  forkJoin,
+  map,
+  of,
+  switchMap,
+  tap,
+  throwError,
+} from 'rxjs';
+import { environment } from '../../../../../environments/environment';
+import {
+  CategoriaDto,
+  PageDto,
+  PresentacionDto,
+  ProductoCreadoDto,
+  ProductoPresentacionFilaDto,
+} from '../interfaces/producto-dto.interface';
+import {
+  OpcionCatalogo,
+  PresentacionForm,
   Producto,
   ProductoFormModel,
-  RegistroCfg,
-  UNIDAD,
+  ResultadoGuardado,
   aFilas,
-  presentacionDesdeForm,
-  skuDe,
 } from '../interfaces/producto.interface';
+import {
+  toActualizarProductoPresentacionRequest,
+  toActualizarProductoRequest,
+  toActualizarPromocionRequest,
+  toCrearProductoPresentacionRequest,
+  toCrearProductoRequest,
+  toCrearPromocionRequest,
+  toOpcionCategoria,
+  toOpcionPresentacion,
+  toProductos,
+} from '../mappers/producto.mapper';
+import { mensajeDeError } from '../utils/error-api';
 
-// TODO(backend): reemplazar MOCK_PRODUCTOS por HttpClient contra /api/ventas/catalogo
-// cuando exista el endpoint — mismo patrón dto -> mapper -> interfaz que AuthService.
-// Los datos son los mismos 7 productos de ejemplo del diseño original.
-const MOCK_PRODUCTOS: Producto[] = [
-  {
-    id: 1,
-    nombre: 'Chifles clásicos',
-    categoria: 'Chifles',
-    descripcion: 'Plátano bellaco en hojuelas, fritas y saladas al punto.',
-    destacado: true,
-    presentaciones: [
-      {
-        id: 1,
-        nombre: 'Bolsa 100 g',
-        precioUnit: 5.5,
-        precioMayor: 4.2,
-        umbral: 24,
-        promo: { pct: 10, ini: '2026-09-01', fin: '2026-09-30' },
-        imagen: 'chifles-clasicos-100.jpg',
-        visible: false,
-        estado: 'Activo',
-        stock: 480,
-      },
-      {
-        id: 2,
-        nombre: 'Bolsa 200 g',
-        precioUnit: 9.9,
-        precioMayor: 7.9,
-        umbral: 12,
-        promo: null,
-        imagen: 'chifles-clasicos-200.jpg',
-        visible: false,
-        estado: 'Activo',
-        stock: 260,
-      },
-    ],
-  },
-  {
-    id: 2,
-    nombre: 'Chifles picantes',
-    categoria: 'Chifles',
-    descripcion: 'Chifles con ají panca y limón, picor medio.',
-    destacado: true,
-    presentaciones: [
-      {
-        id: 1,
-        nombre: 'Bolsa 100 g',
-        precioUnit: 6,
-        precioMayor: 4.6,
-        umbral: 24,
-        promo: null,
-        imagen: 'chifles-picantes-100.jpg',
-        visible: false,
-        estado: 'Activo',
-        stock: 320,
-      },
-    ],
-  },
-  {
-    id: 3,
-    nombre: 'Camote frito',
-    categoria: 'Camote',
-    descripcion: 'Hojuelas de camote amarillo, crocantes y sin sal añadida.',
-    destacado: false,
-    presentaciones: [
-      {
-        id: 1,
-        nombre: 'Bolsa 120 g',
-        precioUnit: 7.5,
-        precioMayor: 6,
-        umbral: 18,
-        promo: null,
-        imagen: 'camote-frito-120.jpg',
-        visible: false,
-        estado: 'Activo',
-        stock: 210,
-      },
-    ],
-  },
-  {
-    id: 4,
-    nombre: 'Camote salado',
-    categoria: 'Camote',
-    descripcion: 'Camote en hojuelas con sal de maras.',
-    destacado: false,
-    presentaciones: [
-      {
-        id: 1,
-        nombre: 'Bolsa 120 g',
-        precioUnit: 7.9,
-        precioMayor: 6.3,
-        umbral: 18,
-        promo: { pct: 15, ini: '2026-09-10', fin: '2026-09-30' },
-        imagen: 'camote-salado-120.jpg',
-        visible: false,
-        estado: 'Activo',
-        stock: 150,
-      },
-    ],
-  },
-  {
-    id: 5,
-    nombre: 'Canchita serrana',
-    categoria: 'Canchita y maíz',
-    descripcion: 'Maíz chulpe tostado con sal, receta serrana.',
-    destacado: true,
-    presentaciones: [
-      {
-        id: 1,
-        nombre: 'Bolsa 150 g',
-        precioUnit: 6.5,
-        precioMayor: 5.2,
-        umbral: 20,
-        promo: null,
-        imagen: 'canchita-150.jpg',
-        visible: false,
-        estado: 'Activo',
-        stock: 390,
-      },
-      {
-        id: 2,
-        nombre: 'Pack x6',
-        precioUnit: 34,
-        precioMayor: 28,
-        umbral: 6,
-        promo: null,
-        imagen: 'canchita-pack6.jpg',
-        visible: false,
-        estado: 'Activo',
-        stock: 90,
-      },
-    ],
-  },
-  {
-    id: 6,
-    nombre: 'Maní crocante',
-    categoria: 'Maní y frutos secos',
-    descripcion: 'Maní tostado con cobertura crocante salada.',
-    destacado: false,
-    presentaciones: [
-      {
-        id: 1,
-        nombre: 'Bolsa 180 g',
-        precioUnit: 8.9,
-        precioMayor: 7.1,
-        umbral: 15,
-        promo: null,
-        imagen: 'mani-crocante-180.jpg',
-        visible: false,
-        estado: 'Activo',
-        stock: 175,
-      },
-    ],
-  },
-  {
-    id: 7,
-    nombre: 'Habas tostadas',
-    categoria: 'Habas y legumbres',
-    descripcion: 'Habas doradas al horno con un toque de sal.',
-    destacado: false,
-    presentaciones: [
-      {
-        id: 1,
-        nombre: 'Bolsa 150 g',
-        precioUnit: 6.9,
-        precioMayor: 5.5,
-        umbral: 20,
-        promo: null,
-        imagen: 'habas-150.jpg',
-        visible: false,
-        estado: 'Inactivo',
-        stock: 0,
-      },
-    ],
-  },
-];
+const PRODUCTOS = `${environment.apiUrl}/productos`;
+const PRODUCTO_PRESENTACIONES = `${environment.apiUrl}/producto-presentaciones`;
+const PROMOCIONES = `${environment.apiUrl}/promociones`;
+const CATEGORIAS = `${environment.apiUrl}/categorias`;
+const PRESENTACIONES = `${environment.apiUrl}/presentaciones`;
 
-// Catálogos de configuración del diseño (CATEGORIAS_BASE / PRESENTACIONES_CFG).
-const MOCK_CATEGORIAS: RegistroCfg[] = [
-  {
-    id: 1,
-    nombre: 'Chifles',
-    descripcion: 'Hojuelas de plátano bellaco en sus distintas variedades.',
-    estado: 'Activo',
-  },
-  {
-    id: 2,
-    nombre: 'Camote',
-    descripcion: 'Hojuelas de camote amarillo y morado.',
-    estado: 'Activo',
-  },
-  {
-    id: 3,
-    nombre: 'Canchita y maíz',
-    descripcion: 'Canchita, maíz chulpe y maíces tostados.',
-    estado: 'Activo',
-  },
-  {
-    id: 4,
-    nombre: 'Maní y frutos secos',
-    descripcion: 'Maní, pecanas y mezclas tostadas.',
-    estado: 'Activo',
-  },
-  {
-    id: 5,
-    nombre: 'Habas y legumbres',
-    descripcion: 'Habas, garbanzos y legumbres tostadas.',
-    estado: 'Activo',
-  },
-  {
-    id: 6,
-    nombre: 'Mix y surtidos',
-    descripcion: 'Combinaciones de snacks en un solo empaque.',
-    estado: 'Activo',
-  },
-  {
-    id: 7,
-    nombre: 'Temporada',
-    descripcion: 'Líneas estacionales de campaña.',
-    estado: 'Inactivo',
-  },
-];
+// Máximo que acepta la API por página.
+const LIMITE = 100;
 
-const MOCK_PRESENTACIONES: RegistroCfg[] = [
-  { id: 1, nombre: 'Bolsa 100 g', descripcion: 'Bolsa sellada de 100 gramos.', estado: 'Activo' },
-  { id: 2, nombre: 'Bolsa 120 g', descripcion: 'Bolsa sellada de 120 gramos.', estado: 'Activo' },
-  { id: 3, nombre: 'Bolsa 150 g', descripcion: 'Bolsa sellada de 150 gramos.', estado: 'Activo' },
-  { id: 4, nombre: 'Bolsa 180 g', descripcion: 'Bolsa sellada de 180 gramos.', estado: 'Activo' },
-  { id: 5, nombre: 'Bolsa 200 g', descripcion: 'Bolsa sellada de 200 gramos.', estado: 'Activo' },
-  { id: 6, nombre: 'Pack x6', descripcion: 'Pack de 6 bolsas.', estado: 'Activo' },
-  { id: 7, nombre: 'Pack x12', descripcion: 'Pack de 12 bolsas.', estado: 'Activo' },
-  {
-    id: 8,
-    nombre: 'Display x24',
-    descripcion: 'Display de exhibición de 24 unidades.',
-    estado: 'Inactivo',
-  },
-];
-
-const ETIQUETA: Record<CfgTab, string> = {
-  categorias: 'Categoría',
-  presentaciones: 'Presentación',
-};
+/** Un paso de un guardado: si falla, los siguientes no se ejecutan. */
+interface Paso {
+  descripcion: string;
+  run: () => Observable<unknown>;
+}
 
 @Injectable({ providedIn: 'root' })
 export class CatalogoService {
-  productos = signal<Producto[]>(MOCK_PRODUCTOS);
-  categoriasCfg = signal<RegistroCfg[]>(MOCK_CATEGORIAS);
-  presentacionesCfg = signal<RegistroCfg[]>(MOCK_PRESENTACIONES);
+  private http = inject(HttpClient);
+
+  productos = signal<Producto[]>([]);
+  categoriaOpciones = signal<OpcionCatalogo[]>([]);
+  presentacionOpciones = signal<OpcionCatalogo[]>([]);
+  cargando = signal(false);
+  errorCarga = signal(false);
 
   filas = computed(() => aFilas(this.productos()));
   /** Nombres de categoría para el filtro del listado. */
-  categorias = computed(() => this.categoriasCfg().map((c) => c.nombre));
+  categorias = computed(() => this.categoriaOpciones().map((c) => c.nombre));
 
-  // ───────────── Productos ─────────────
+  // ───────────── Lectura ─────────────
 
-  /** Devuelve el aviso a mostrar (mismo texto que el diseño). */
-  registrar(pf: ProductoFormModel): string {
-    const id = Math.max(0, ...this.productos().map((p) => p.id)) + 1;
-    const presentaciones = pf.presentaciones.map((pr, i) => presentacionDesdeForm(pr, i + 1));
-    const skus = presentaciones.map((pr) => skuDe(id, pr.id)).join(', ');
-    this.productos.update((list) => [
-      ...list,
-      {
-        id,
-        nombre: pf.nombre,
-        categoria: pf.categoria,
-        descripcion: pf.descripcion,
-        destacado: pf.destacado,
-        presentaciones,
-      },
-    ]);
-    return `Producto registrado · SKU ${skus} · producto terminado creado por presentación (cantidad 0, stock actual 0, stock mínimo 1, unidad ${UNIDAD}) · visible en Portal B inicia desactivado.`;
+  /** Carga el catálogo completo (el listado filtra y pagina en pantalla). */
+  cargar(): void {
+    this.cargando.set(true);
+    this.errorCarga.set(false);
+
+    this.obtener()
+      .pipe(finalize(() => this.cargando.set(false)))
+      .subscribe({
+        error: () => {
+          this.productos.set([]);
+          this.errorCarga.set(true);
+        },
+      });
   }
 
-  actualizar(id: number, pf: ProductoFormModel): string {
-    this.productos.update((list) =>
-      list.map((p) =>
-        p.id !== id
-          ? p
-          : {
-              ...p,
-              nombre: pf.nombre,
-              categoria: pf.categoria,
-              descripcion: pf.descripcion,
-              destacado: pf.destacado,
-              presentaciones: pf.presentaciones.map((pr, i) => presentacionDesdeForm(pr, i + 1)),
-            },
-      ),
-    );
-    return 'Producto actualizado · el SKU y el slug se mantienen sin cambios.';
-  }
-
-  /** "Desactivar" es lógico: alterna Activo/Inactivo de la presentación, sin borrarla. Devuelve el aviso. */
-  alternarEstadoPresentacion(productoId: number, presentacionId: number): string {
-    const sku = skuDe(productoId, presentacionId);
-    const actual = this.productos()
-      .find((p) => p.id === productoId)
-      ?.presentaciones.find((pr) => pr.id === presentacionId)?.estado;
-    this.productos.update((list) =>
-      list.map((p) =>
-        p.id !== productoId
-          ? p
-          : {
-              ...p,
-              presentaciones: p.presentaciones.map((pr) =>
-                pr.id !== presentacionId
-                  ? pr
-                  : { ...pr, estado: pr.estado === 'Activo' ? 'Inactivo' : 'Activo' },
-              ),
-            },
-      ),
-    );
-    return actual === 'Activo'
-      ? `Presentación ${sku} desactivada de forma lógica.`
-      : `Presentación ${sku} reactivada.`;
-  }
-
-  // ───────────── Configuración (categorías / presentaciones) ─────────────
-
-  lista(tab: CfgTab): RegistroCfg[] {
-    return tab === 'categorias' ? this.categoriasCfg() : this.presentacionesCfg();
-  }
-
-  /** Cantidad de productos/presentaciones que usan el registro (columna "Productos asociados"). */
-  usosDe(tab: CfgTab, reg: RegistroCfg): number {
-    const prods = this.productos();
-    if (tab === 'categorias') {
-      return prods
-        .filter((p) => p.categoria === reg.nombre)
-        .reduce((a, p) => a + p.presentaciones.length, 0);
-    }
-    return prods.reduce(
-      (a, p) => a + p.presentaciones.filter((pr) => pr.nombre === reg.nombre).length,
-      0,
+  private obtener(): Observable<void> {
+    return forkJoin({
+      filas: this.listarTodos<ProductoPresentacionFilaDto>(PRODUCTO_PRESENTACIONES),
+      categorias: this.listarTodos<CategoriaDto>(CATEGORIAS),
+      presentaciones: this.listarTodos<PresentacionDto>(PRESENTACIONES),
+    }).pipe(
+      tap(({ filas, categorias, presentaciones }) => {
+        this.productos.set(toProductos(filas));
+        this.categoriaOpciones.set(categorias.map(toOpcionCategoria));
+        this.presentacionOpciones.set(presentaciones.map(toOpcionPresentacion));
+      }),
+      map(() => undefined),
     );
   }
 
-  validarCfg(tab: CfgTab, selId: number | null, cf: CfgFormModel): string[] {
-    const e: string[] = [];
-    if (!cf.nombre) e.push('nombre');
-    if (!cf.descripcion) e.push('descripción');
-    const dup = this.lista(tab).some(
-      (x) => x.nombre.toLowerCase() === cf.nombre.toLowerCase() && x.id !== selId,
-    );
-    if (dup) e.push('el nombre ya está registrado');
-    return e;
-  }
+  listarTodos<T>(url: string): Observable<T[]> {
+    const pagina = (page: number) =>
+      this.http.get<PageDto<T>>(url, { params: { page, limit: LIMITE } });
 
-  /** Alta (selId = null) o edición. Devuelve el aviso. Renombrar una categoría actualiza sus productos. */
-  guardarCfg(tab: CfgTab, selId: number | null, cf: CfgFormModel): string {
-    const etiqueta = ETIQUETA[tab];
-    const signalLista = tab === 'categorias' ? this.categoriasCfg : this.presentacionesCfg;
-    if (tab === 'categorias' && selId !== null) {
-      const anterior = signalLista().find((x) => x.id === selId)?.nombre;
-      if (anterior && anterior !== cf.nombre) {
-        this.productos.update((l) =>
-          l.map((p) => (p.categoria === anterior ? { ...p, categoria: cf.nombre } : p)),
+    return pagina(1).pipe(
+      switchMap((primera) => {
+        const restantes = Array.from(
+          { length: Math.max(0, primera.meta.total_pages - 1) },
+          (_, i) => pagina(i + 2),
         );
-      }
-    }
-    signalLista.update((l) =>
-      selId === null
-        ? [
-            ...l,
-            {
-              id: Math.max(0, ...l.map((x) => x.id)) + 1,
-              nombre: cf.nombre,
-              descripcion: cf.descripcion,
-              estado: 'Activo',
-            },
-          ]
-        : l.map((x) =>
-            x.id === selId ? { ...x, nombre: cf.nombre, descripcion: cf.descripcion } : x,
-          ),
+
+        if (restantes.length === 0) return of(primera.data);
+
+        return forkJoin(restantes).pipe(
+          map((paginas) => [primera.data, ...paginas.map((p) => p.data)].flat()),
+        );
+      }),
     );
-    return selId === null
-      ? `${etiqueta} ${cf.nombre} registrada · disponible en los selectores de producto.`
-      : `${etiqueta} ${cf.nombre} actualizada.`;
   }
 
-  /** Desactivar/Reactivar es lógico: si hay productos asociados el registro nunca se elimina. */
-  alternarCfg(tab: CfgTab, id: number): string {
-    const etiqueta = ETIQUETA[tab];
-    const reg = this.lista(tab).find((x) => x.id === id);
-    if (!reg) return '';
-    const nuevo = reg.estado === 'Activo' ? 'Inactivo' : 'Activo';
-    const aplicar = (l: RegistroCfg[]): RegistroCfg[] =>
-      l.map((x) => (x.id === id ? { ...x, estado: nuevo } : x));
-    if (tab === 'categorias') this.categoriasCfg.update(aplicar);
-    else this.presentacionesCfg.update(aplicar);
-    return reg.estado === 'Activo'
-      ? `${etiqueta} ${reg.nombre} desactivada · ya no aparece en nuevos registros y se mantiene en los productos existentes.`
-      : `${etiqueta} ${reg.nombre} reactivada.`;
+  // ───────────── Escritura ─────────────
+
+  /**
+   * Registra el producto con sus presentaciones y luego sus promociones. Solo
+   * falla (error) si el producto no se pudo crear; si falla una promoción, el
+   * producto ya existe y se informa en el aviso.
+   */
+  registrar(pf: ProductoFormModel): Observable<ResultadoGuardado> {
+    return this.http.post<ProductoCreadoDto>(PRODUCTOS, toCrearProductoRequest(pf)).pipe(
+      switchMap((creado) => {
+        const pasos: Paso[] = pf.presentaciones
+          .filter((p) => p.promoActiva)
+          .map((p) => ({
+            descripcion: `la promoción de la presentación ${this.etiquetaDe(p)}`,
+            run: () => {
+              const creada = creado.producto_presentaciones.find(
+                (pp) => pp.presentacion_id === Number(p.presentacionId),
+              );
+              return creada
+                ? this.http.post(PROMOCIONES, toCrearPromocionRequest(creada.id, p))
+                : throwError(() => new Error('presentación no encontrada'));
+            },
+          }));
+
+        return this.ejecutar(pasos).pipe(
+          switchMap((fallo) => this.obtener().pipe(map(() => this.avisoRegistro(creado, fallo)))),
+        );
+      }),
+    );
+  }
+
+  /**
+   * Actualiza el producto y luego cada presentación (con su promoción). Solo falla
+   * (error) si no se pudo guardar el producto; si falla una presentación, lo
+   * anterior ya quedó guardado y se informa en el aviso.
+   */
+  actualizar(id: number, pf: ProductoFormModel): Observable<ResultadoGuardado> {
+    return this.http.patch(`${PRODUCTOS}/${id}`, toActualizarProductoRequest(pf)).pipe(
+      switchMap(() =>
+        this.ejecutar(
+          pf.presentaciones.map((p) => ({
+            descripcion: `la presentación ${this.etiquetaDe(p)}`,
+            run: () => this.guardarPresentacion(id, p),
+          })),
+        ),
+      ),
+      switchMap((fallo) =>
+        this.obtener().pipe(
+          map((): ResultadoGuardado =>
+            fallo
+              ? {
+                  tono: 'error',
+                  mensaje: `Se guardaron los datos del producto, pero no se pudo guardar ${fallo}`,
+                }
+              : {
+                  tono: 'ok',
+                  mensaje: 'Producto actualizado · el SKU y el slug se mantienen sin cambios.',
+                },
+          ),
+        ),
+      ),
+    );
+  }
+
+  /** "Desactivar" es lógico: alterna Activo/Inactivo de la presentación, sin borrarla. */
+  alternarEstadoPresentacion(productoId: number, presentacionId: number): Observable<string> {
+    const fila = this.filas().find(
+      (f) => f.productoId === productoId && f.presentacionId === presentacionId,
+    );
+
+    if (!fila) {
+      return throwError(() => new Error('Presentación no encontrada'));
+    }
+
+    const activar = fila.estado !== 'Activo';
+    const url = `${PRODUCTO_PRESENTACIONES}/${fila.productoPresentacionId}`;
+    const peticion = activar ? this.http.patch(`${url}/activate`, null) : this.http.delete(url);
+
+    return peticion.pipe(
+      switchMap(() => this.obtener()),
+      map(() =>
+        activar
+          ? `Presentación ${fila.sku} reactivada.`
+          : `Presentación ${fila.sku} desactivada de forma lógica.`,
+      ),
+    );
+  }
+
+  // ───────────── Apoyo ─────────────
+
+  private guardarPresentacion(productoId: number, p: PresentacionForm): Observable<unknown> {
+    const productoPresentacionId$: Observable<number> =
+      p.productoPresentacionId === null
+        ? this.http
+            .post<{ id: number }>(
+              PRODUCTO_PRESENTACIONES,
+              toCrearProductoPresentacionRequest(productoId, p),
+            )
+            .pipe(map((creada) => creada.id))
+        : this.http
+            .patch(
+              `${PRODUCTO_PRESENTACIONES}/${p.productoPresentacionId}`,
+              toActualizarProductoPresentacionRequest(p),
+            )
+            .pipe(map(() => p.productoPresentacionId as number));
+
+    return productoPresentacionId$.pipe(
+      switchMap((productoPresentacionId) => this.guardarPromocion(productoPresentacionId, p)),
+    );
+  }
+
+  /** Crea, edita o desactiva la promoción de la presentación según lo que muestre el formulario. */
+  private guardarPromocion(
+    productoPresentacionId: number,
+    p: PresentacionForm,
+  ): Observable<unknown> {
+    if (p.promoActiva) {
+      return p.promoId === null
+        ? this.http.post(PROMOCIONES, toCrearPromocionRequest(productoPresentacionId, p))
+        : this.http.patch(`${PROMOCIONES}/${p.promoId}`, toActualizarPromocionRequest(p));
+    }
+
+    return p.promoId === null ? of(null) : this.http.delete(`${PROMOCIONES}/${p.promoId}`);
+  }
+
+  /** Ejecuta los pasos en orden. Devuelve el mensaje del primero que falle, o null si todos salieron bien. */
+  private ejecutar(pasos: Paso[]): Observable<string | null> {
+    return pasos.reduce<Observable<string | null>>(
+      (anterior, paso) =>
+        anterior.pipe(
+          switchMap((fallo) =>
+            fallo
+              ? of(fallo)
+              : paso.run().pipe(
+                  map((): string | null => null),
+                  catchError((error: unknown) =>
+                    of(`${paso.descripcion}: ${mensajeDeError(error, 'error inesperado')}`),
+                  ),
+                ),
+          ),
+        ),
+      of(null),
+    );
+  }
+
+  private etiquetaDe(p: PresentacionForm): string {
+    const opcion = this.presentacionOpciones().find((o) => String(o.id) === p.presentacionId);
+    return opcion ? opcion.nombre : (p.sku ?? '');
+  }
+
+  private avisoRegistro(creado: ProductoCreadoDto, fallo: string | null): ResultadoGuardado {
+    const skus = creado.producto_presentaciones.map((pp) => pp.sku).join(', ');
+
+    return fallo
+      ? {
+          tono: 'error',
+          mensaje: `Producto registrado (SKU ${skus}), pero no se pudo guardar ${fallo}. Edita el producto para volver a intentarlo.`,
+        }
+      : {
+          tono: 'ok',
+          mensaje: `Producto registrado · SKU ${skus} · producto terminado creado por presentación (stock actual 0, stock mínimo 1) · visible en Portal B inicia desactivado.`,
+        };
   }
 }

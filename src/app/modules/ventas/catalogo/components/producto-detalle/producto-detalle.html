@@ -7,11 +7,18 @@
 >
   @if (fila(); as f) {
     <div class="grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] items-start gap-5">
-      <!-- TODO(backend): reemplazar el placeholder por la foto real (campo imagen) -->
       <div
         class="relative flex h-[240px] items-center justify-center overflow-hidden rounded-lg border border-border bg-muted text-muted-foreground"
       >
-        <app-ds-icon [img]="LucidePackage" [size]="48" />
+        @if (f.imagen) {
+          <img
+            [src]="f.imagen"
+            [alt]="'Imagen de ' + f.nombre + ' ' + f.presentacion"
+            class="absolute inset-0 h-full w-full object-cover"
+          />
+        } @else {
+          <app-ds-icon [img]="LucidePackage" [size]="48" />
+        }
         <div class="pointer-events-none absolute left-2.5 top-2.5 flex flex-wrap gap-1.5">
           @if (f.destacado) {
             <app-ds-badge tone="warning">Destacado</app-ds-badge>

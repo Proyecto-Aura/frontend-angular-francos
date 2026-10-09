@@ -6,7 +6,7 @@
     </p>
   </div>
 
-  <app-aviso-banner [texto]="aviso()" (closed)="aviso.set('')" />
+  <app-aviso-banner [texto]="aviso()" [tono]="avisoTono()" (closed)="aviso.set('')" />
 
   <app-ds-tabs [tabs]="tabsDs()" [activeId]="tab()" (changed)="cambiarTab($event)" />
 
@@ -31,7 +31,22 @@
     </app-ds-button>
   </app-ds-filter-bar>
 
-  <app-ds-data-table [columns]="columns()" [rows]="filas()" empty="Sin registros" />
+  @if (tab() === 'categorias' && cargandoCategorias()) {
+    <p
+      class="rounded-lg border border-border bg-card p-8 text-center text-ds-base text-muted-foreground"
+    >
+      Cargando categorías…
+    </p>
+  } @else if (tab() === 'categorias' && errorCategorias()) {
+    <div
+      class="flex flex-col items-center gap-3 rounded-lg border border-border bg-card p-8 text-center"
+    >
+      <p class="text-ds-base text-muted-foreground">No se pudieron cargar las categorías.</p>
+      <app-ds-button variant="secondary" (clicked)="cargarCategorias()">Reintentar</app-ds-button>
+    </div>
+  } @else {
+    <app-ds-data-table [columns]="columns()" [rows]="filas()" empty="Sin registros" />
+  }
   <p class="text-ds-sm text-muted-foreground">{{ subtitulo() }}</p>
 </div>
 
@@ -95,6 +110,14 @@
           <p class="font-semibold">Revisa los datos del formulario</p>
           <p class="mt-1">Falta o es inválido: {{ errores().join(', ') }}.</p>
         </div>
+      </div>
+    }
+    @if (errorApi()) {
+      <div
+        class="flex items-start gap-3 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-ds-sm text-destructive"
+      >
+        <app-ds-icon [img]="LucideCircleAlert" [size]="17" />
+        <p class="min-w-0 flex-1">{{ errorApi() }}</p>
       </div>
     }
     <app-ds-field [label]="'Nombre de la ' + tabActual().singular" [required]="true">
