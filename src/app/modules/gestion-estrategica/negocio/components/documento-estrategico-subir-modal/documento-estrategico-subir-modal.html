@@ -1,0 +1,105 @@
+<app-ds-modal
+  [open]="open()"
+  title="Subir documento estratégico"
+  [description]="planNombre()"
+  [hasFooter]="true"
+  [width]="560"
+  (closed)="cerrar()"
+>
+  <div class="flex flex-col gap-5">
+    <app-ds-field
+      label="Nombre del documento"
+      htmlFor="documento-estrategico-nombre"
+      [required]="true"
+      [error]="errorNombre()"
+    >
+      <app-ds-input
+        id="documento-estrategico-nombre"
+        [(value)]="nombre"
+        placeholder="Ej. Análisis PESTEL 2026"
+        [invalid]="!!errorNombre()"
+      />
+    </app-ds-field>
+
+    <app-ds-field
+      label="Archivo"
+      hint="PDF, Word, Excel o imagen · máx. 10 MB"
+      [required]="true"
+      [error]="errorArchivo()"
+    >
+      @if (archivo(); as archivoActual) {
+        <div
+          class="flex items-center gap-3 rounded-(--radius-field) border border-border bg-card px-3.5 py-3"
+        >
+          <span
+            class="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-accent text-primary"
+          >
+            <app-ds-icon [img]="LucideFileText" [size]="18" />
+          </span>
+          <div class="min-w-0 flex-1">
+            <p class="truncate font-medium text-foreground" [title]="archivoActual.name">
+              {{ archivoActual.name }}
+            </p>
+            <p class="mt-0.5 text-ds-sm text-muted-foreground">
+              {{ formatearTamano(archivoActual.size) }}
+            </p>
+          </div>
+          <app-ds-icon-button
+            label="Quitar archivo"
+            variant="secondary"
+            size="sm"
+            (clicked)="quitarArchivo()"
+          >
+            <app-ds-icon [img]="LucideX" [size]="16" />
+          </app-ds-icon-button>
+        </div>
+      } @else {
+        <div
+          role="button"
+          tabindex="0"
+          class="flex cursor-pointer flex-col items-center gap-2 rounded-(--radius-field) border border-dashed border-border bg-card px-5 py-7 text-center"
+          [class.border-primary]="arrastrando()"
+          [class.bg-accent]="arrastrando()"
+          (click)="archivoInput.click()"
+          (keydown.enter)="archivoInput.click()"
+          (keydown.space)="archivoInput.click(); $event.preventDefault()"
+          (dragover)="arrastrarSobre($event)"
+          (dragleave)="salirArrastre($event)"
+          (drop)="soltarArchivo($event)"
+        >
+          <span
+            class="flex h-10 w-10 items-center justify-center rounded-full bg-accent text-primary"
+          >
+            <app-ds-icon [img]="LucideUpload" [size]="18" />
+          </span>
+          <p class="text-ds-sm text-muted-foreground">
+            <span class="font-medium text-primary">Selecciona un archivo</span> o arrástralo aquí
+          </p>
+          <input
+            #archivoInput
+            type="file"
+            class="sr-only"
+            [accept]="ACCEPT"
+            (change)="seleccionarArchivo($event)"
+          />
+        </div>
+      }
+    </app-ds-field>
+
+    @if (errorGeneral()) {
+      <div class="rounded-lg bg-destructive/10 px-3.5 py-3 text-ds-sm text-destructive">
+        {{ errorGeneral() }}
+      </div>
+    }
+  </div>
+
+  <span footer class="flex gap-2">
+    <app-ds-button variant="secondary" (clicked)="cerrar()">Cancelar</app-ds-button>
+    <app-ds-button variant="primary" [disabled]="guardando()" (clicked)="guardar()">
+      @if (!guardando()) {
+        <span icon><app-ds-icon [img]="LucideUpload" [size]="16" /></span>
+      }
+      {{ guardando() ? 'Subiendo…' : 'Subir documento' }}
+    </app-ds-button>
+  </span>
+</app-ds-modal>
