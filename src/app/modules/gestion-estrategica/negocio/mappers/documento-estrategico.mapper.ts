@@ -1,3 +1,4 @@
+import { extension } from '../components/documento-estrategico-subir-modal/documento-estrategico.archivo';
 import {
   DocumentoEstrategicoDto,
   DocumentosEstrategicosPageDto,
@@ -8,8 +9,8 @@ import {
 } from '../interfaces/documento-estrategico.interface';
 
 function tipoDeArchivo(nombreOriginal: string | null): string {
-  const extension = nombreOriginal?.split('.').pop()?.trim();
-  return extension ? extension.toUpperCase() : 'ARCHIVO';
+  const extensionArchivo = extension(nombreOriginal ?? '');
+  return extensionArchivo ? extensionArchivo.toUpperCase() : 'ARCHIVO';
 }
 
 export function toDocumentoEstrategico(dto: DocumentoEstrategicoDto): DocumentoEstrategico {
