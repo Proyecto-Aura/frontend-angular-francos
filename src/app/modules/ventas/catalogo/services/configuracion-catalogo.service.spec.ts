@@ -4,7 +4,9 @@ import { TestBed } from '@angular/core/testing';
 import {
   API,
   CATEGORIAS_CFG_DTO,
+  PRESENTACIONES_CFG_DTO,
   flushCategoriasCfg,
+  flushPresentacionesCfg,
   makePresentacion,
   makeProducto,
 } from '../testing/catalogo.fixtures';
@@ -29,6 +31,101 @@ describe('ConfiguracionCatalogoService', () => {
     service.cargarCategorias();
     flushCategoriasCfg(httpMock);
   }
+
+  function cargarPresentaciones() {
+    service.cargarPresentaciones();
+    flushPresentacionesCfg(httpMock);
+  }
+
+  describe('cargarPresentaciones', () => {
+    it('starts without static presentations', () => {
+      expect(service.presentacionesCfg()).toEqual([]);
+    });
+
+    it('loads every presentation (active and inactive) named by quantity and unit', () => {
+      cargarPresentaciones();
+
+      expect(service.presentacionesCfg()).toHaveLength(4);
+      expect(service.presentacionesCfg()[1]).toEqual({
+        id: 2,
+        nombre: '250 gr',
+        descripcion: 'Bolsa de 250 gramos.',
+        estado: 'Activo',
+        cantidad: 250,
+        unidad: 'gr',
+      });
+      expect(service.presentacionesCfg()[3].estado).toBe('Inactivo');
+      expect(service.errorPresentaciones()).toBe(false);
+      expect(service.cargandoPresentaciones()).toBe(false);
+    });
+
+    it('shows an empty description when the API sends null', () => {
+      cargarPresentaciones();
+
+      expect(service.presentacionesCfg()[2].descripcion).toBe('');
+    });
+
+    it('refreshes the presentation selectors of the product form', () => {
+      cargarPresentaciones();
+
+      const opciones = TestBed.inject(CatalogoService).presentacionOpciones();
+      expect(opciones).toHaveLength(4);
+      expect(opciones[3]).toEqual({ id: 4, nombre: '1 kg', activa: false });
+    });
+
+    it('flags the error and keeps the list empty when the API fails', () => {
+      service.cargarPresentaciones();
+      expect(service.cargandoPresentaciones()).toBe(true);
+      httpMock
+        .expectOne((r) => r.url === API.presentaciones)
+        .flush({ message: 'x' }, { status: 500, statusText: 'Error' });
+
+      expect(service.errorPresentaciones()).toBe(true);
+      expect(service.presentacionesCfg()).toEqual([]);
+      expect(service.cargandoPresentaciones()).toBe(false);
+    });
+  });
+
+  describe('validarCfg de presentaciones', () => {
+    beforeEach(cargarPresentaciones);
+
+    const form = (cantidad: string, unidad: string, descripcion = 'Bolsa.') => ({
+      nombre: '',
+      descripcion,
+      cantidad,
+      unidad,
+    });
+
+    it('accepts a new quantity and unit with a description', () => {
+      expect(service.validarCfg('presentaciones', null, form('750', 'gr'))).toEqual([]);
+    });
+
+    it('requires an integer quantity between 1 and 1,000,000', () => {
+      for (const invalida of ['', '0', '-5', '1.5', 'abc', '1000001']) {
+        expect(service.validarCfg('presentaciones', null, form(invalida, 'gr'))).toEqual([
+          'cantidad (entero entre 1 y 1.000.000)',
+        ]);
+      }
+    });
+
+    it('requires a valid unit and a description', () => {
+      expect(service.validarCfg('presentaciones', null, form('750', 'lt', '  '))).toEqual([
+        'unidad de medida',
+        'descripción',
+      ]);
+    });
+
+    it('rejects a quantity and unit that already exist', () => {
+      expect(service.validarCfg('presentaciones', null, form('250', 'gr'))).toEqual([
+        'la presentación ya está registrada',
+      ]);
+    });
+
+    it('accepts the same quantity with another unit and keeps the record being edited', () => {
+      expect(service.validarCfg('presentaciones', null, form('250', 'kg'))).toEqual([]);
+      expect(service.validarCfg('presentaciones', 2, form('250', 'gr'))).toEqual([]);
+    });
+  });
 
   describe('cargarCategorias', () => {
     it('starts without static categories', () => {
@@ -163,17 +260,82 @@ describe('ConfiguracionCatalogoService', () => {
       expect(service.categoriasCfg()).toHaveLength(7);
     });
 
-    it('edits a presentation locally without changing its state (HU-041 pending)', () => {
+    it('creates a presentation through the API and adds it to the list', () => {
+      cargarPresentaciones();
+      let aviso = '';
       service
-        .guardarCfg('presentaciones', 8, { nombre: 'Display x30', descripcion: 'Display de 30.' })
-        .subscribe();
+        .guardarCfg('presentaciones', null, {
+          nombre: '',
+          descripcion: ' Bolsa de 750 gramos. ',
+          cantidad: '750',
+          unidad: 'gr',
+        })
+        .subscribe((a) => (aviso = a));
 
-      const edited = service.presentacionesCfg().find((x) => x.id === 8);
-      expect(edited?.nombre).toBe('Display x30');
-      expect(edited?.estado).toBe('Inactivo');
+      const req = httpMock.expectOne(API.presentaciones);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual({
+        cantidad: 750,
+        unidad_medida: 'gr',
+        descripcion: 'Bolsa de 750 gramos.',
+      });
+      req.flush({
+        id: 5,
+        cantidad: 750,
+        unidad_medida: 'gr',
+        descripcion: 'Bolsa de 750 gramos.',
+        estado: true,
+      });
+
+      expect(service.presentacionesCfg()).toHaveLength(5);
+      expect(service.presentacionesCfg()[4].nombre).toBe('750 gr');
+      expect(aviso).toBe(
+        'Presentación 750 gr registrada · disponible en los selectores de producto.',
+      );
+      expect(TestBed.inject(CatalogoService).presentacionOpciones()).toHaveLength(5);
+    });
+
+    it('edits a presentation through the API', () => {
+      cargarPresentaciones();
+      let aviso = '';
+      service
+        .guardarCfg('presentaciones', 3, {
+          nombre: '',
+          descripcion: 'Nueva.',
+          cantidad: '600',
+          unidad: 'gr',
+        })
+        .subscribe((a) => (aviso = a));
+
+      const req = httpMock.expectOne(`${API.presentaciones}/3`);
+      expect(req.request.method).toBe('PATCH');
+      req.flush({ id: 3, cantidad: 600, unidad_medida: 'gr', descripcion: 'Nueva.', estado: true });
+
+      expect(service.presentacionesCfg()[2].nombre).toBe('600 gr');
+      expect(service.presentacionesCfg()).toHaveLength(4);
+      expect(aviso).toBe('Presentación 600 gr actualizada.');
+    });
+
+    it('keeps the list and fails when the API rejects the presentation', () => {
+      cargarPresentaciones();
+      let error: unknown;
+      service
+        .guardarCfg('presentaciones', null, {
+          nombre: '',
+          descripcion: 'x',
+          cantidad: '250',
+          unidad: 'gr',
+        })
+        .subscribe({ error: (e) => (error = e) });
+
+      httpMock
+        .expectOne(API.presentaciones)
+        .flush({ message: 'Ya existe' }, { status: 409, statusText: 'Conflict' });
+
+      expect(error).toBeTruthy();
+      expect(service.presentacionesCfg()).toHaveLength(4);
     });
   });
-
   describe('alternarCfg', () => {
     beforeEach(cargarCategorias);
 
@@ -204,14 +366,32 @@ describe('ConfiguracionCatalogoService', () => {
       expect(aviso).toBe('Categoría Temporada reactivada.');
     });
 
-    it('reactivates an inactive presentation locally', () => {
+    it('deactivates an active presentation through the API', () => {
+      cargarPresentaciones();
       let aviso = '';
-      service.alternarCfg('presentaciones', 8).subscribe((a) => (aviso = a));
+      service.alternarCfg('presentaciones', 1).subscribe((a) => (aviso = a));
 
-      expect(service.presentacionesCfg().find((x) => x.id === 8)?.estado).toBe('Activo');
-      expect(aviso).toBe('Presentación Display x24 reactivada.');
+      const req = httpMock.expectOne(`${API.presentaciones}/1`);
+      expect(req.request.method).toBe('DELETE');
+      req.flush({ ...PRESENTACIONES_CFG_DTO[0], estado: false });
+
+      expect(service.presentacionesCfg()[0].estado).toBe('Inactivo');
+      expect(aviso).toContain('Presentación 100 gr desactivada');
+      expect(TestBed.inject(CatalogoService).presentacionOpciones()[0].activa).toBe(false);
     });
 
+    it('reactivates an inactive presentation through the API', () => {
+      cargarPresentaciones();
+      let aviso = '';
+      service.alternarCfg('presentaciones', 4).subscribe((a) => (aviso = a));
+
+      const req = httpMock.expectOne(`${API.presentaciones}/4/activate`);
+      expect(req.request.method).toBe('PATCH');
+      req.flush({ ...PRESENTACIONES_CFG_DTO[3], estado: true });
+
+      expect(service.presentacionesCfg()[3].estado).toBe('Activo');
+      expect(aviso).toBe('Presentación 1 kg reactivada.');
+    });
     it('emits an empty notice when the record does not exist', () => {
       let aviso: string | undefined;
       service.alternarCfg('categorias', 999).subscribe((a) => (aviso = a));
@@ -223,19 +403,20 @@ describe('ConfiguracionCatalogoService', () => {
   describe('usosDe', () => {
     beforeEach(() => {
       cargarCategorias();
+      cargarPresentaciones();
       TestBed.inject(CatalogoService).productos.set([
         makeProducto({
           id: 1,
           categoria: 'Chifles',
           presentaciones: [
-            makePresentacion({ nombre: 'Bolsa 100 g' }),
-            makePresentacion({ id: 2, nombre: 'Bolsa 200 g' }),
+            makePresentacion({ nombre: '100 gr' }),
+            makePresentacion({ id: 2, nombre: '250 gr' }),
           ],
         }),
         makeProducto({
           id: 2,
           categoria: 'Chifles',
-          presentaciones: [makePresentacion({ nombre: 'Bolsa 100 g' })],
+          presentaciones: [makePresentacion({ nombre: '100 gr' })],
         }),
         makeProducto({ id: 3, categoria: 'Camote', presentaciones: [makePresentacion()] }),
       ]);
@@ -247,10 +428,10 @@ describe('ConfiguracionCatalogoService', () => {
       expect(service.usosDe('categorias', chifles)).toBe(3);
     });
 
-    it('counts the presentations that use a presentation name', () => {
+    it('counts the presentations that use a presentation name (100 gr)', () => {
       const bolsa100 = service.presentacionesCfg()[0];
 
-      expect(service.usosDe('presentaciones', bolsa100)).toBe(2);
+      expect(service.usosDe('presentaciones', bolsa100)).toBe(3);
     });
   });
 

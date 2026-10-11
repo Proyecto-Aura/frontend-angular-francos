@@ -2,12 +2,20 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
 import { Observable, finalize, map, of, tap } from 'rxjs';
 import { environment } from '../../../../../environments/environment';
-import { CategoriaDto } from '../interfaces/producto-dto.interface';
-import { CfgFormModel, CfgTab, RegistroCfg } from '../interfaces/producto.interface';
-import { toOpcionCategoria } from '../mappers/producto.mapper';
+import { CategoriaDto, PresentacionDto } from '../interfaces/producto-dto.interface';
+import { CfgFormModel, CfgTab, RegistroCfg, UnidadCfg } from '../interfaces/producto.interface';
+import {
+  etiquetaPresentacion,
+  toOpcionCategoria,
+  toOpcionPresentacion,
+} from '../mappers/producto.mapper';
 import { CatalogoService } from './catalogo.service';
 
 const CATEGORIAS = `${environment.apiUrl}/categorias`;
+const PRESENTACIONES = `${environment.apiUrl}/presentaciones`;
+
+// La API identifica una presentación por cantidad + unidad de medida: su "nombre" es la etiqueta (500 gr).
+const MAXIMO_CANTIDAD = 1_000_000;
 
 const toRegistroCategoria = (dto: CategoriaDto): RegistroCfg => ({
   id: dto.id,
@@ -16,24 +24,16 @@ const toRegistroCategoria = (dto: CategoriaDto): RegistroCfg => ({
   estado: dto.estado ? 'Activo' : 'Inactivo',
 });
 
-// Configuración del catálogo (categorías y presentaciones).
-// Categorías (HU-040) ya usa la API; las presentaciones (HU-041) siguen con datos de ejemplo.
-// TODO(backend): conectar presentaciones cuando se aborde la HU-041.
-const MOCK_PRESENTACIONES: RegistroCfg[] = [
-  { id: 1, nombre: 'Bolsa 100 g', descripcion: 'Bolsa sellada de 100 gramos.', estado: 'Activo' },
-  { id: 2, nombre: 'Bolsa 120 g', descripcion: 'Bolsa sellada de 120 gramos.', estado: 'Activo' },
-  { id: 3, nombre: 'Bolsa 150 g', descripcion: 'Bolsa sellada de 150 gramos.', estado: 'Activo' },
-  { id: 4, nombre: 'Bolsa 180 g', descripcion: 'Bolsa sellada de 180 gramos.', estado: 'Activo' },
-  { id: 5, nombre: 'Bolsa 200 g', descripcion: 'Bolsa sellada de 200 gramos.', estado: 'Activo' },
-  { id: 6, nombre: 'Pack x6', descripcion: 'Pack de 6 bolsas.', estado: 'Activo' },
-  { id: 7, nombre: 'Pack x12', descripcion: 'Pack de 12 bolsas.', estado: 'Activo' },
-  {
-    id: 8,
-    nombre: 'Display x24',
-    descripcion: 'Display de exhibición de 24 unidades.',
-    estado: 'Inactivo',
-  },
-];
+// Configuración del catálogo (categorías y presentaciones), ambas con la API real.
+
+const toRegistroPresentacion = (dto: PresentacionDto): RegistroCfg => ({
+  id: dto.id,
+  nombre: etiquetaPresentacion(dto.cantidad, dto.unidad_medida),
+  descripcion: dto.descripcion ?? '',
+  estado: dto.estado ? 'Activo' : 'Inactivo',
+  cantidad: dto.cantidad,
+  unidad: dto.unidad_medida,
+});
 
 const ETIQUETA: Record<CfgTab, string> = {
   categorias: 'Categoría',
@@ -48,7 +48,9 @@ export class ConfiguracionCatalogoService {
   categoriasCfg = signal<RegistroCfg[]>([]);
   cargandoCategorias = signal(false);
   errorCategorias = signal(false);
-  presentacionesCfg = signal<RegistroCfg[]>(MOCK_PRESENTACIONES);
+  presentacionesCfg = signal<RegistroCfg[]>([]);
+  cargandoPresentaciones = signal(false);
+  errorPresentaciones = signal(false);
 
   lista(tab: CfgTab): RegistroCfg[] {
     return tab === 'categorias' ? this.categoriasCfg() : this.presentacionesCfg();
@@ -70,12 +72,28 @@ export class ConfiguracionCatalogoService {
 
   validarCfg(tab: CfgTab, selId: number | null, cf: CfgFormModel): string[] {
     const e: string[] = [];
+    if (tab === 'presentaciones') return this.validarPresentacion(selId, cf);
     if (!cf.nombre) e.push('nombre');
     if (!cf.descripcion) e.push('descripción');
     const dup = this.lista(tab).some(
       (x) => x.nombre.toLowerCase() === cf.nombre.toLowerCase() && x.id !== selId,
     );
     if (dup) e.push('el nombre ya está registrado');
+    return e;
+  }
+
+  private validarPresentacion(selId: number | null, cf: CfgFormModel): string[] {
+    const e: string[] = [];
+    const cantidad = (cf.cantidad ?? '').trim();
+    const cantidadValida =
+      /^\d+$/.test(cantidad) && Number(cantidad) >= 1 && Number(cantidad) <= MAXIMO_CANTIDAD;
+    if (!cantidadValida) e.push('cantidad (entero entre 1 y 1.000.000)');
+    if (cf.unidad !== 'kg' && cf.unidad !== 'gr') e.push('unidad de medida');
+    if (!cf.descripcion.trim()) e.push('descripción');
+    const dup = this.presentacionesCfg().some(
+      (x) => x.cantidad === Number(cantidad) && x.unidad === cf.unidad && x.id !== selId,
+    );
+    if (cantidadValida && dup) e.push('la presentación ya está registrada');
     return e;
   }
 
@@ -96,6 +114,28 @@ export class ConfiguracionCatalogoService {
       });
   }
 
+  /** Carga todas las presentaciones (activas e inactivas) desde la API. */
+  cargarPresentaciones(): void {
+    this.cargandoPresentaciones.set(true);
+    this.errorPresentaciones.set(false);
+
+    this.catalogo
+      .listarTodos<PresentacionDto>(PRESENTACIONES)
+      .pipe(finalize(() => this.cargandoPresentaciones.set(false)))
+      .subscribe({
+        next: (presentaciones) => this.aplicarPresentaciones(presentaciones),
+        error: () => {
+          this.presentacionesCfg.set([]);
+          this.errorPresentaciones.set(true);
+        },
+      });
+  }
+
+  private aplicarPresentaciones(presentaciones: PresentacionDto[]): void {
+    this.presentacionesCfg.set(presentaciones.map(toRegistroPresentacion));
+    this.catalogo.presentacionOpciones.set(presentaciones.map(toOpcionPresentacion));
+  }
+
   private aplicarCategorias(categorias: CategoriaDto[]): void {
     this.categoriasCfg.set(categorias.map(toRegistroCategoria));
     this.catalogo.categoriaOpciones.set(categorias.map(toOpcionCategoria));
@@ -104,10 +144,14 @@ export class ConfiguracionCatalogoService {
   /** Alta (selId = null) o edición. Emite el aviso; en categorías, error si la API rechaza. */
   guardarCfg(tab: CfgTab, selId: number | null, cf: CfgFormModel): Observable<string> {
     const etiqueta = ETIQUETA[tab];
+    const nombre =
+      tab === 'presentaciones'
+        ? etiquetaPresentacion(Number(cf.cantidad), cf.unidad as UnidadCfg)
+        : cf.nombre.trim();
     const aviso =
       selId === null
-        ? `${etiqueta} ${cf.nombre.trim()} registrada · disponible en los selectores de producto.`
-        : `${etiqueta} ${cf.nombre.trim()} actualizada.`;
+        ? `${etiqueta} ${nombre} registrada · disponible en los selectores de producto.`
+        : `${etiqueta} ${nombre} actualizada.`;
 
     if (tab === 'categorias') {
       const cuerpo = { nombre: cf.nombre.trim(), descripcion: cf.descripcion.trim() };
@@ -122,22 +166,20 @@ export class ConfiguracionCatalogoService {
       );
     }
 
-    this.presentacionesCfg.update((l) =>
+    const cuerpo = {
+      cantidad: Number(cf.cantidad),
+      unidad_medida: cf.unidad,
+      descripcion: cf.descripcion.trim(),
+    };
+    const peticion =
       selId === null
-        ? [
-            ...l,
-            {
-              id: Math.max(0, ...l.map((x) => x.id)) + 1,
-              nombre: cf.nombre,
-              descripcion: cf.descripcion,
-              estado: 'Activo',
-            },
-          ]
-        : l.map((x) =>
-            x.id === selId ? { ...x, nombre: cf.nombre, descripcion: cf.descripcion } : x,
-          ),
+        ? this.http.post<PresentacionDto>(PRESENTACIONES, cuerpo)
+        : this.http.patch<PresentacionDto>(`${PRESENTACIONES}/${selId}`, cuerpo);
+
+    return peticion.pipe(
+      tap((dto) => this.reemplazarPresentacion(dto)),
+      map(() => aviso),
     );
-    return of(aviso);
   }
 
   /** Desactivar/Reactivar es lógico: si hay productos asociados el registro nunca se elimina. */
@@ -161,9 +203,25 @@ export class ConfiguracionCatalogoService {
       );
     }
 
-    const nuevo = activo ? 'Inactivo' : 'Activo';
-    this.presentacionesCfg.update((l) => l.map((x) => (x.id === id ? { ...x, estado: nuevo } : x)));
-    return of(aviso);
+    const peticion = activo
+      ? this.http.delete<PresentacionDto>(`${PRESENTACIONES}/${id}`)
+      : this.http.patch<PresentacionDto>(`${PRESENTACIONES}/${id}/activate`, {});
+
+    return peticion.pipe(
+      tap((dto) => this.reemplazarPresentacion(dto)),
+      map(() => aviso),
+    );
+  }
+
+  private reemplazarPresentacion(dto: PresentacionDto): void {
+    const existentes = this.presentacionesCfg();
+    const lista = existentes.some((x) => x.id === dto.id)
+      ? existentes.map((x) => (x.id === dto.id ? toRegistroPresentacion(dto) : x))
+      : [...existentes, toRegistroPresentacion(dto)];
+    this.presentacionesCfg.set(lista);
+    this.catalogo.presentacionOpciones.set(
+      lista.map((p) => ({ id: p.id, nombre: p.nombre, activa: p.estado === 'Activo' })),
+    );
   }
 
   private reemplazarCategoria(dto: CategoriaDto): void {

@@ -31,18 +31,20 @@
     </app-ds-button>
   </app-ds-filter-bar>
 
-  @if (tab() === 'categorias' && cargandoCategorias()) {
+  @if (cargando()) {
     <p
       class="rounded-lg border border-border bg-card p-8 text-center text-ds-base text-muted-foreground"
     >
-      Cargando categorías…
+      Cargando {{ tabActual().label.toLowerCase() }}…
     </p>
-  } @else if (tab() === 'categorias' && errorCategorias()) {
+  } @else if (errorCarga()) {
     <div
       class="flex flex-col items-center gap-3 rounded-lg border border-border bg-card p-8 text-center"
     >
-      <p class="text-ds-base text-muted-foreground">No se pudieron cargar las categorías.</p>
-      <app-ds-button variant="secondary" (clicked)="cargarCategorias()">Reintentar</app-ds-button>
+      <p class="text-ds-base text-muted-foreground">
+        No se pudieron cargar las {{ tabActual().label.toLowerCase() }}.
+      </p>
+      <app-ds-button variant="secondary" (clicked)="reintentar()">Reintentar</app-ds-button>
     </div>
   } @else {
     <app-ds-data-table [columns]="columns()" [rows]="filas()" empty="Sin registros" />
@@ -120,13 +122,37 @@
         <p class="min-w-0 flex-1">{{ errorApi() }}</p>
       </div>
     }
-    <app-ds-field [label]="'Nombre de la ' + tabActual().singular" [required]="true">
-      <app-ds-input
-        [value]="cf().nombre"
-        (valueChange)="setCampo('nombre', $event)"
-        [placeholder]="tabActual().placeholderNombre"
-      />
-    </app-ds-field>
+    @if (tab() === 'categorias') {
+      <app-ds-field [label]="'Nombre de la ' + tabActual().singular" [required]="true">
+        <app-ds-input
+          [value]="cf().nombre"
+          (valueChange)="setCampo('nombre', $event)"
+          [placeholder]="tabActual().placeholderNombre"
+        />
+      </app-ds-field>
+    } @else {
+      <div class="grid grid-cols-2 gap-4">
+        <app-ds-field
+          label="Cantidad"
+          hint="Número entero. El nombre se arma con la unidad, por ejemplo 500 gr."
+          [required]="true"
+        >
+          <app-ds-input
+            type="number"
+            [value]="cf().cantidad ?? ''"
+            (valueChange)="setCampo('cantidad', $event)"
+            placeholder="Ej. 500"
+          />
+        </app-ds-field>
+        <app-ds-field label="Unidad de medida" [required]="true">
+          <app-ds-select
+            [value]="cf().unidad ?? 'gr'"
+            (valueChange)="setCampo('unidad', $event)"
+            [options]="unidadOptions"
+          />
+        </app-ds-field>
+      </div>
+    }
     <app-ds-field label="Descripción" [required]="true">
       <app-ds-textarea
         [rows]="2"
