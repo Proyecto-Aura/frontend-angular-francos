@@ -3,7 +3,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { AuthService } from './auth.service';
 import { environment } from '../../../../environments/environment';
-import { LoginResponseDto } from '../interfaces/usuario-dto.interface';
+import { LoginResponseDto, MeResponseDto } from '../interfaces/usuario-dto.interface';
 
 const AUTH_BASE = `${environment.apiUrl}/auth`;
 
@@ -13,6 +13,19 @@ function makeResponse(): LoginResponseDto {
     roles: ['admin'],
     email_verificado: true,
     debe_cambiar_contrasena: false,
+  };
+}
+
+function makeMeResponse(overrides: Partial<MeResponseDto> = {}): MeResponseDto {
+  return {
+    nombre_completo: "Admin Sistema Franco's",
+    nombres: 'Admin',
+    apellido_paterno: 'Sistema',
+    apellido_materno: "Franco's",
+    email: 'admin@francos.test',
+    username: 'admin',
+    roles: ['admin'],
+    ...overrides,
   };
 }
 
@@ -101,5 +114,40 @@ describe('AuthService', () => {
 
     expect(service.session()).toBeNull();
     expect(service.isAuthenticated()).toBe(false);
+  });
+
+  it('getCurrentUser fetches GET /auth/me', () => {
+    service.getCurrentUser().subscribe(me => expect(me).toEqual(makeMeResponse()));
+    httpMock.expectOne(`${AUTH_BASE}/me`).flush(makeMeResponse());
+  });
+
+  it('getCurrentUser caches the result — a second call does not trigger a second HTTP request', () => {
+    service.getCurrentUser().subscribe();
+    httpMock.expectOne(`${AUTH_BASE}/me`).flush(makeMeResponse());
+
+    service.getCurrentUser().subscribe();
+    httpMock.expectNone(`${AUTH_BASE}/me`);
+  });
+
+  it('getCurrentUser cache is invalidated by a new login', () => {
+    service.getCurrentUser().subscribe();
+    httpMock.expectOne(`${AUTH_BASE}/me`).flush(makeMeResponse());
+
+    service.login('ventas', 'ventas123').subscribe();
+    httpMock.expectOne(`${AUTH_BASE}/login`).flush(makeResponse());
+
+    service.getCurrentUser().subscribe();
+    httpMock.expectOne(`${AUTH_BASE}/me`).flush(makeMeResponse({ nombre_completo: 'Usuario de Ventas' }));
+  });
+
+  it('getCurrentUser cache is invalidated by logout', () => {
+    service.getCurrentUser().subscribe();
+    httpMock.expectOne(`${AUTH_BASE}/me`).flush(makeMeResponse());
+
+    service.logout().subscribe();
+    httpMock.expectOne(`${AUTH_BASE}/logout`).flush(null);
+
+    service.getCurrentUser().subscribe();
+    httpMock.expectOne(`${AUTH_BASE}/me`).flush(makeMeResponse());
   });
 });
