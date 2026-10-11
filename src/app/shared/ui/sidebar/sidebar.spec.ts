@@ -7,6 +7,10 @@ describe('Sidebar', () => {
     TestBed.configureTestingModule({ providers: [provideRouter([])] });
   });
 
+  function navLinks(fixture: ReturnType<typeof TestBed.createComponent<Sidebar>>): NodeListOf<HTMLAnchorElement> {
+    return fixture.nativeElement.querySelector('nav').querySelectorAll('a');
+  }
+
   it('starts expanded (collapsed = false)', () => {
     const fixture = TestBed.createComponent(Sidebar);
     fixture.detectChanges();
@@ -32,7 +36,7 @@ describe('Sidebar', () => {
     ]);
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.querySelectorAll('a').length).toBe(2);
+    expect(navLinks(fixture).length).toBe(2);
   });
 
   it('renders the sectionLabel above the links when set and expanded', () => {
@@ -57,8 +61,8 @@ describe('Sidebar', () => {
     ]);
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.querySelector('a')).toBeNull();
-    expect(fixture.nativeElement.querySelector('button[type="button"]')).toBeTruthy();
+    expect(navLinks(fixture).length).toBe(0);
+    expect(fixture.nativeElement.querySelector('nav button[type="button"]')).toBeTruthy();
     expect(fixture.componentInstance.isExpanded('Catalogo')).toBe(false);
   });
 
@@ -87,10 +91,23 @@ describe('Sidebar', () => {
       },
     ]);
     fixture.detectChanges();
-    expect(fixture.nativeElement.querySelectorAll('a').length).toBe(0);
+    expect(navLinks(fixture).length).toBe(0);
 
     fixture.componentInstance.toggleExpanded('Catalogo');
     fixture.detectChanges();
-    expect(fixture.nativeElement.querySelectorAll('a').length).toBe(2);
+    expect(navLinks(fixture).length).toBe(2);
+  });
+
+  it('always renders a fixed "Inicio" link to /home, outside the data-driven nav', () => {
+    const fixture = TestBed.createComponent(Sidebar);
+    fixture.detectChanges();
+
+    // Sin links() seteado (= []), el unico <a> de todo el componente tiene
+    // que ser este botón fijo — confirma que vive fuera del <nav> de datos.
+    expect(navLinks(fixture).length).toBe(0);
+    const exitLink: HTMLAnchorElement | null = fixture.nativeElement.querySelector('a');
+    expect(exitLink).toBeTruthy();
+    expect(exitLink?.getAttribute('routerLink') ?? exitLink?.getAttribute('ng-reflect-router-link')).toBe('/home');
+    expect((fixture.nativeElement.textContent as string)).toContain('Inicio');
   });
 });
