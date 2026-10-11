@@ -327,12 +327,10 @@ describe('ProductoForm', () => {
       api().elegirImagen(0, eventoCon(archivo));
 
       api().guardar();
-      httpMock
-        .expectOne(API.productos)
-        .flush({
-          id: 8,
-          producto_presentaciones: [{ id: 81, sku: 'FR-P8-PR1', presentacion_id: 1 }],
-        });
+      httpMock.expectOne(API.productos).flush({
+        id: 8,
+        producto_presentaciones: [{ id: 81, sku: 'FR-P8-PR1', presentacion_id: 1 }],
+      });
       const subida = httpMock.expectOne(`${API.productoPresentaciones}/81/imagen`);
       expect((subida.request.body as FormData).get('imagen')).toBe(archivo);
       subida.flush({});
