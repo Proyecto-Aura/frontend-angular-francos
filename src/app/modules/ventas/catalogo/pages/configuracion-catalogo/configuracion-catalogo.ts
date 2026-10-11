@@ -65,8 +65,8 @@ const TABS: TabInfo[] = [
     id: 'presentaciones',
     label: 'Presentaciones',
     singular: 'presentación',
-    placeholderBuscar: 'Nombre de presentación…',
-    placeholderNombre: 'Ej. Caja 900 g',
+    placeholderBuscar: 'Ej. 500 gr…',
+    placeholderNombre: 'Ej. 500 gr',
     accion: 'Agregar presentación',
   },
 ];
@@ -97,6 +97,7 @@ export class ConfiguracionCatalogo implements OnInit {
   ngOnInit(): void {
     if (!this.catalogo.productos().length) this.catalogo.cargar();
     this.catalogoService.cargarCategorias();
+    this.catalogoService.cargarPresentaciones();
   }
 
   @ViewChild('nombreCell', { static: true }) nombreCellTpl!: TemplateRef<RowCtx>;
@@ -124,6 +125,20 @@ export class ConfiguracionCatalogo implements OnInit {
   protected errorApi = signal('');
   protected cargandoCategorias = this.catalogoService.cargandoCategorias;
   protected errorCategorias = this.catalogoService.errorCategorias;
+  protected cargandoPresentaciones = this.catalogoService.cargandoPresentaciones;
+  protected errorPresentaciones = this.catalogoService.errorPresentaciones;
+
+  protected readonly unidadOptions: SelectOption[] = [
+    { value: 'gr', label: 'Gramos (gr)' },
+    { value: 'kg', label: 'Kilogramos (kg)' },
+  ];
+
+  protected cargando = computed(() =>
+    this.tab() === 'categorias' ? this.cargandoCategorias() : this.cargandoPresentaciones(),
+  );
+  protected errorCarga = computed(() =>
+    this.tab() === 'categorias' ? this.errorCategorias() : this.errorPresentaciones(),
+  );
 
   protected readonly estadoOptions: SelectOption[] = [
     { value: 'Activo', label: 'Activo' },
@@ -218,7 +233,7 @@ export class ConfiguracionCatalogo implements OnInit {
   // --- Alta / edición ---
   protected modo = signal<'nuevo' | 'editar' | null>(null);
   protected selId = signal<number | null>(null);
-  protected cf = signal<CfgFormModel>({ nombre: '', descripcion: '' });
+  protected cf = signal<CfgFormModel>(this.formVacio());
   protected errores = signal<string[]>([]);
 
   private mostrarAviso(mensaje: string, tono: 'ok' | 'error' = 'ok') {
@@ -226,13 +241,18 @@ export class ConfiguracionCatalogo implements OnInit {
     this.avisoTono.set(tono);
   }
 
-  protected cargarCategorias() {
-    this.catalogoService.cargarCategorias();
+  private formVacio(): CfgFormModel {
+    return { nombre: '', descripcion: '', cantidad: '', unidad: 'gr' };
+  }
+
+  protected reintentar() {
+    if (this.tab() === 'categorias') this.catalogoService.cargarCategorias();
+    else this.catalogoService.cargarPresentaciones();
   }
 
   protected nuevo() {
     this.selId.set(null);
-    this.cf.set({ nombre: '', descripcion: '' });
+    this.cf.set(this.formVacio());
     this.errores.set([]);
     this.errorApi.set('');
     this.modo.set('nuevo');
@@ -240,7 +260,12 @@ export class ConfiguracionCatalogo implements OnInit {
 
   protected editar(reg: RegistroCfg) {
     this.selId.set(reg.id);
-    this.cf.set({ nombre: reg.nombre, descripcion: reg.descripcion });
+    this.cf.set({
+      nombre: reg.nombre,
+      descripcion: reg.descripcion,
+      cantidad: reg.cantidad === undefined ? '' : String(reg.cantidad),
+      unidad: reg.unidad ?? 'gr',
+    });
     this.errores.set([]);
     this.errorApi.set('');
     this.modo.set('editar');

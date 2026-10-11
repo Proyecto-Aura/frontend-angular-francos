@@ -272,10 +272,19 @@ export interface RegistroCfg {
   nombre: string;
   descripcion: string;
   estado: EstadoPresentacion;
+  /** Solo presentaciones: cantidad y unidad con las que la API la identifica. */
+  cantidad?: number;
+  unidad?: UnidadCfg;
 }
+
+/** Unidades de medida que acepta la API para una presentación. */
+export type UnidadCfg = 'kg' | 'gr';
 
 /** Campos editables en el modal de configuración. */
 export interface CfgFormModel {
   nombre: string;
   descripcion: string;
+  /** Solo presentaciones. */
+  cantidad?: string;
+  unidad?: string;
 }

@@ -11,8 +11,10 @@ import { ConfiguracionCatalogoService } from '../../services/configuracion-catal
 import {
   API,
   CATEGORIAS_CFG_DTO,
+  PRESENTACIONES_CFG_DTO,
   catalogoDto,
   flushCategoriasCfg,
+  flushPresentacionesCfg,
 } from '../../testing/catalogo.fixtures';
 import { ConfiguracionCatalogo } from './configuracion-catalogo';
 
@@ -63,6 +65,7 @@ describe('ConfiguracionCatalogo', () => {
     page = fixture.componentInstance as unknown as ConfiguracionCatalogoApi;
     fixture.detectChanges();
     flushCategoriasCfg(httpMock);
+    flushPresentacionesCfg(httpMock);
   });
 
   afterEach(() => httpMock.verify());
@@ -80,14 +83,14 @@ describe('ConfiguracionCatalogo', () => {
   });
 
   it('shows the record count of each tab', () => {
-    expect(page.tabsDs().map((t) => t.count)).toEqual([7, 8]);
+    expect(page.tabsDs().map((t) => t.count)).toEqual([7, 4]);
   });
 
   it('switches tab and shows its records', () => {
     page.cambiarTab('presentaciones');
 
     expect(page.tab()).toBe('presentaciones');
-    expect(page.todas()).toHaveLength(8);
+    expect(page.todas().map((r) => r.nombre)).toEqual(['100 gr', '250 gr', '500 gr', '1 kg']);
   });
 
   it('shows name, description, associated products, state and actions in every tab', () => {
@@ -113,7 +116,7 @@ describe('ConfiguracionCatalogo', () => {
     page.nuevo();
 
     expect(page.modo()).toBe('nuevo');
-    expect(page.cf()).toEqual({ nombre: '', descripcion: '' });
+    expect(page.cf()).toEqual({ nombre: '', descripcion: '', cantidad: '', unidad: 'gr' });
   });
 
   it('loads the record data when editing', () => {
@@ -122,7 +125,12 @@ describe('ConfiguracionCatalogo', () => {
     page.editar(chifles);
 
     expect(page.modo()).toBe('editar');
-    expect(page.cf()).toEqual({ nombre: 'Chifles', descripcion: chifles.descripcion });
+    expect(page.cf()).toEqual({
+      nombre: 'Chifles',
+      descripcion: chifles.descripcion,
+      cantidad: '',
+      unidad: 'gr',
+    });
   });
 
   it('does not save an invalid record and lists what is missing', () => {
@@ -185,9 +193,9 @@ describe('ConfiguracionCatalogo', () => {
 
   it('uses a plain message when the record has no associated products', () => {
     page.cambiarTab('presentaciones');
-    const packX12 = service.presentacionesCfg()[6];
+    const sinProductos = service.presentacionesCfg()[1];
 
-    page.pedirDesactivar(packX12);
+    page.pedirDesactivar(sinProductos);
 
     expect(page.textoConfirma()).toContain('Puede reactivarse en cualquier momento');
   });
@@ -231,5 +239,125 @@ describe('ConfiguracionCatalogo', () => {
     page.cambiarTab('presentaciones');
 
     expect(page.confirmaId()).toBeNull();
+  });
+
+  describe('pestaña de presentaciones (HU-A-041)', () => {
+    beforeEach(() => page.cambiarTab('presentaciones'));
+
+    it('loads the presentations from the API, named by quantity and unit', () => {
+      expect(service.presentacionesCfg().map((p) => p.nombre)).toEqual([
+        '100 gr',
+        '250 gr',
+        '500 gr',
+        '1 kg',
+      ]);
+      expect(page.todas()[2].descripcion).toBe('');
+      expect(page.todas()[3].estado).toBe('Inactivo');
+    });
+
+    it('opens the form with quantity and unit, not with a free name', () => {
+      page.nuevo();
+      fixture.detectChanges();
+
+      expect(page.cf()).toEqual({ nombre: '', descripcion: '', cantidad: '', unidad: 'gr' });
+      expect(document.body.textContent).toContain('Cantidad');
+      expect(document.body.textContent).toContain('Unidad de medida');
+      expect(document.body.textContent).not.toContain('Nombre de la presentación');
+    });
+
+    it('loads quantity and unit of the record when editing', () => {
+      page.editar(service.presentacionesCfg()[3]);
+
+      expect(page.cf()).toEqual({
+        nombre: '1 kg',
+        descripcion: 'Bolsa de un kilo.',
+        cantidad: '1',
+        unidad: 'kg',
+      });
+    });
+
+    it('lists what is missing before calling the API', () => {
+      page.nuevo();
+
+      page.guardar();
+
+      expect(page.errores()).toEqual(['cantidad (entero entre 1 y 1.000.000)', 'descripción']);
+      expect(page.modo()).toBe('nuevo');
+    });
+
+    it('saves a valid presentation through the API and shows its name', () => {
+      page.nuevo();
+      page.setCampo('cantidad', '750');
+      page.setCampo('unidad', 'gr');
+      page.setCampo('descripcion', 'Bolsa de 750 gramos.');
+
+      page.guardar();
+      const req = httpMock.expectOne(API.presentaciones);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual({
+        cantidad: 750,
+        unidad_medida: 'gr',
+        descripcion: 'Bolsa de 750 gramos.',
+      });
+      req.flush({
+        id: 5,
+        cantidad: 750,
+        unidad_medida: 'gr',
+        descripcion: 'Bolsa de 750 gramos.',
+        estado: true,
+      });
+
+      expect(service.presentacionesCfg().map((p) => p.nombre)).toContain('750 gr');
+      expect(page.aviso()).toBe(
+        'Presentación 750 gr registrada · disponible en los selectores de producto.',
+      );
+      expect(page.avisoTono()).toBe('ok');
+      expect(page.modo()).toBeNull();
+    });
+
+    it('keeps the form open and shows the API error when the combination already exists', () => {
+      page.nuevo();
+      page.setCampo('cantidad', '600');
+      page.setCampo('descripcion', 'Otra bolsa.');
+
+      page.guardar();
+      httpMock
+        .expectOne(API.presentaciones)
+        .flush(
+          { message: 'Ya existe una presentacion con esta cantidad y unidad de medida' },
+          { status: 409, statusText: 'Conflict' },
+        );
+
+      expect(page.modo()).toBe('nuevo');
+      expect(page.errorApi()).toBe(
+        'Ya existe una presentacion con esta cantidad y unidad de medida',
+      );
+      expect(service.presentacionesCfg()).toHaveLength(4);
+    });
+
+    it('deactivates through the API after confirming and explains the associated products', () => {
+      const cien = service.presentacionesCfg()[0];
+      page.pedirDesactivar(cien);
+      expect(page.textoConfirma()).toContain('producto(s) asociados');
+
+      page.alternar(cien);
+      httpMock
+        .expectOne(`${API.presentaciones}/1`)
+        .flush({ ...PRESENTACIONES_CFG_DTO[0], estado: false });
+
+      expect(service.presentacionesCfg()[0].estado).toBe('Inactivo');
+      expect(page.aviso()).toContain('Presentación 100 gr desactivada');
+      expect(page.confirmaId()).toBeNull();
+    });
+
+    it('reactivates through the API without asking for confirmation', () => {
+      page.alternar(service.presentacionesCfg()[3]);
+      const req = httpMock.expectOne(`${API.presentaciones}/4/activate`);
+      expect(req.request.method).toBe('PATCH');
+      req.flush({ ...PRESENTACIONES_CFG_DTO[3], estado: true });
+
+      expect(service.presentacionesCfg()[3].estado).toBe('Activo');
+      expect(page.aviso()).toBe('Presentación 1 kg reactivada.');
+    });
   });
 });

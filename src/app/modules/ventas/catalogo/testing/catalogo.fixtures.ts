@@ -339,6 +339,22 @@ export const CATEGORIAS_CFG_DTO: CategoriaDto[] = [
   { id: 7, nombre: 'Temporada', descripcion: 'Líneas estacionales.', estado: false },
 ];
 
+/** Las presentaciones de la pantalla de configuración, con descripción (una inactiva). */
+export const PRESENTACIONES_CFG_DTO: PresentacionDto[] = [
+  { id: 1, cantidad: 100, unidad_medida: 'gr', descripcion: 'Bolsa de 100 gramos.', estado: true },
+  { id: 2, cantidad: 250, unidad_medida: 'gr', descripcion: 'Bolsa de 250 gramos.', estado: true },
+  { id: 3, cantidad: 500, unidad_medida: 'gr', descripcion: null, estado: true },
+  { id: 4, cantidad: 1, unidad_medida: 'kg', descripcion: 'Bolsa de un kilo.', estado: false },
+];
+
+/** Responde la lectura de presentaciones de `ConfiguracionCatalogoService.cargarPresentaciones()`. */
+export function flushPresentacionesCfg(
+  httpMock: HttpTestingController,
+  presentaciones: PresentacionDto[] = PRESENTACIONES_CFG_DTO,
+): void {
+  primeraPagina(httpMock, API.presentaciones).flush(page(presentaciones));
+}
+
 /** Responde la lectura de categorías de `ConfiguracionCatalogoService.cargarCategorias()`. */
 export function flushCategoriasCfg(
   httpMock: HttpTestingController,
