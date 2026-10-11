@@ -1,0 +1,208 @@
+<app-ds-modal
+  [open]="modo() !== null"
+  [title]="titulo()"
+  [width]="940"
+  [hasFooter]="true"
+  (closed)="cerrar()"
+>
+  <div class="flex flex-col gap-4">
+    @if (errores().length) {
+      <div
+        class="flex items-start gap-3 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-ds-sm text-destructive"
+      >
+        <app-ds-icon [img]="LucideCircleAlert" [size]="17" />
+        <div class="min-w-0 flex-1">
+          <p class="font-semibold">Revisa los datos del formulario</p>
+          <p class="mt-1">Falta o es inválido: {{ errores().join(', ') }}.</p>
+        </div>
+      </div>
+    }
+
+    @if (errorApi()) {
+      <div
+        role="alert"
+        class="flex items-start gap-3 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-ds-sm text-destructive"
+      >
+        <app-ds-icon [img]="LucideCircleAlert" [size]="17" />
+        <p class="min-w-0 flex-1">{{ errorApi() }}</p>
+      </div>
+    }
+    <div class="grid grid-cols-2 gap-4">
+      <app-ds-field label="Nombre del producto" [required]="true">
+        <app-ds-input
+          [value]="pf().nombre"
+          (valueChange)="setCampo('nombre', $event)"
+          placeholder="Ej. Chifles clásicos"
+        />
+      </app-ds-field>
+      <app-ds-field label="Categoría" [required]="true">
+        <app-ds-select
+          [value]="pf().categoriaId"
+          (valueChange)="setCampo('categoriaId', $event)"
+          [options]="categoriaOptions()"
+        />
+      </app-ds-field>
+      <div class="col-span-2">
+        <app-ds-field label="Descripción" [required]="true">
+          <app-ds-textarea
+            [rows]="2"
+            placeholder="Descripción comercial del producto"
+            [value]="pf().descripcion"
+            (valueChange)="setCampo('descripcion', $event)"
+          />
+        </app-ds-field>
+      </div>
+    </div>
+
+    <div
+      class="flex flex-wrap items-center gap-4 rounded-lg border border-border bg-muted px-4 py-3"
+    >
+      <app-ds-switch
+        label="Marcar como producto destacado"
+        [checked]="pf().destacado"
+        (checkedChange)="setDestacado($event)"
+      />
+      <span class="min-w-[220px] flex-1 text-ds-sm text-muted-foreground">{{ nota() }}</span>
+    </div>
+
+    <div class="overflow-hidden rounded-lg border border-border">
+      <div
+        class="flex items-center justify-between gap-3 border-b border-border bg-muted px-4 py-3 text-ds-sm text-muted-foreground"
+      >
+        <span>Presentaciones</span>
+        <span
+          >{{ pf().presentaciones.length }}
+          {{ pf().presentaciones.length === 1 ? 'presentación' : 'presentaciones' }}</span
+        >
+      </div>
+
+      @for (p of pf().presentaciones; track $index; let i = $index) {
+        <div class="flex flex-col gap-3.5 border-b border-border p-4">
+          <div class="flex flex-wrap items-center gap-3">
+            <span class="font-medium text-foreground">Presentación {{ i + 1 }}</span>
+            <span class="text-ds-sm tabular-nums text-muted-foreground">{{
+              skuDePresentacion(p)
+            }}</span>
+            <span class="flex-1"></span>
+            @if (puedeQuitar(p)) {
+              <app-ds-icon-button
+                label="Quitar presentación"
+                variant="ghost"
+                size="sm"
+                (clicked)="quitarPres(i)"
+              >
+                <app-ds-icon [img]="LucideTrash2" [size]="16" />
+              </app-ds-icon-button>
+            }
+          </div>
+
+          <div class="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-3.5">
+            <app-ds-field label="Presentación" [required]="true">
+              <app-ds-select
+                [value]="p.presentacionId"
+                (valueChange)="setPres(i, 'presentacionId', $event)"
+                [options]="presentacionOptions(p.presentacionId)"
+                [disabled]="p.productoPresentacionId !== null"
+              />
+            </app-ds-field>
+            <app-ds-field label="Precio unitario" [required]="true">
+              <app-ds-input
+                type="number"
+                [value]="p.precioUnit"
+                (valueChange)="setPres(i, 'precioUnit', $event)"
+              />
+            </app-ds-field>
+            <app-ds-field label="Precio mayorista" [required]="true">
+              <app-ds-input
+                type="number"
+                [value]="p.precioMayor"
+                (valueChange)="setPres(i, 'precioMayor', $event)"
+              />
+            </app-ds-field>
+            <app-ds-field label="Umbral mayorista" [required]="true">
+              <app-ds-input
+                type="number"
+                [value]="p.umbral"
+                (valueChange)="setPres(i, 'umbral', $event)"
+              />
+            </app-ds-field>
+          </div>
+
+          <app-ds-field
+            label="Imagen"
+            hint="Opcional. JPG, PNG o WEBP de hasta 2 MB. Se sube al guardar el producto."
+          >
+            <div class="grid gap-2">
+              @if (p.imagen) {
+                <img
+                  [src]="p.imagen"
+                  [alt]="'Imagen actual de la presentación ' + (i + 1)"
+                  class="h-24 w-24 rounded-md border border-border object-cover"
+                />
+              }
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                [attr.aria-label]="'Imagen de la presentación ' + (i + 1)"
+                class="block w-full text-ds-sm file:mr-3 file:cursor-pointer file:rounded-md file:border file:border-border file:bg-muted file:px-3 file:py-1.5 file:text-ds-sm"
+                (change)="elegirImagen(i, $event)"
+              />
+              @if (p.imagenArchivo; as archivo) {
+                <p class="text-ds-sm text-muted-foreground">
+                  Nueva imagen: {{ archivo.name }} ({{ tamano(archivo) }})
+                </p>
+              }
+            </div>
+          </app-ds-field>
+
+          <div class="grid gap-3.5 rounded-md border border-border bg-muted p-3.5">
+            <app-ds-switch
+              label="Configurar promoción para esta presentación"
+              [checked]="p.promoActiva"
+              (checkedChange)="setPres(i, 'promoActiva', $event)"
+            />
+            @if (p.promoActiva) {
+              <div class="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-3.5">
+                <app-ds-field label="Porcentaje de descuento" [required]="true">
+                  <app-ds-input
+                    type="number"
+                    [value]="p.promoPct"
+                    (valueChange)="setPres(i, 'promoPct', $event)"
+                  />
+                </app-ds-field>
+                <app-ds-field label="Fecha de inicio" [required]="true">
+                  <app-ds-input
+                    type="date"
+                    [value]="p.promoIni"
+                    (valueChange)="setPres(i, 'promoIni', $event)"
+                  />
+                </app-ds-field>
+                <app-ds-field label="Fecha de fin" [required]="true">
+                  <app-ds-input
+                    type="date"
+                    [value]="p.promoFin"
+                    (valueChange)="setPres(i, 'promoFin', $event)"
+                  />
+                </app-ds-field>
+              </div>
+            }
+          </div>
+        </div>
+      }
+
+      <div class="bg-muted px-4 py-3">
+        <app-ds-button variant="secondary" size="sm" (clicked)="agregarPres()">
+          <span icon><app-ds-icon [img]="LucidePlus" [size]="16" /></span>
+          Agregar presentación
+        </app-ds-button>
+      </div>
+    </div>
+  </div>
+
+  <span footer class="flex gap-2">
+    <app-ds-button variant="secondary" (clicked)="cerrar()">Cancelar</app-ds-button>
+    <app-ds-button [disabled]="guardando()" (clicked)="guardar()">{{
+      guardando() ? 'Guardando…' : modo() === 'editar' ? 'Guardar cambios' : 'Registrar producto'
+    }}</app-ds-button>
+  </span>
+</app-ds-modal>

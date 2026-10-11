@@ -48,12 +48,10 @@ export const VENTAS_ROUTES: Routes = [
         path: 'clientes',
         loadChildren: () => import('./clientes/clientes.route').then((m) => m.CLIENTES_ROUTES),
       },
-      // {
-      //   path: 'catalogo',
-      //   loadChildren: () =>
-      //     import('./catalogo/catalogo.route').
-      //   then(m => m.CATALOGO_ROUTES)
-      // },
+      {
+        path: 'catalogo',
+        loadChildren: () => import('./catalogo/catalogo.route').then((m) => m.CATALOGO_ROUTES),
+      },
       // { path: 'pedidos',
       //   loadChildren: () =>
       //     import('./pedidos/pedidos.route').

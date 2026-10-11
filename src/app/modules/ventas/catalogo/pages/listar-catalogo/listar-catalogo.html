@@ -1,0 +1,287 @@
+<div class="flex flex-col gap-5 p-(--page-padding)">
+  <div>
+    <h1 class="text-ds-2xl font-semibold text-foreground">Catálogo de productos</h1>
+    <p class="mt-1 text-ds-base text-muted-foreground">
+      Productos, presentaciones, precios y promociones publicados hacia el Portal B.
+    </p>
+  </div>
+
+  <app-aviso-banner [texto]="aviso().mensaje" [tono]="aviso().tono" (closed)="cerrarAviso()" />
+
+  <app-ds-filter-bar [hasSearch]="true" [hasActions]="true">
+    <app-ds-input
+      search
+      [value]="query()"
+      (valueChange)="setQuery($event)"
+      placeholder="Nombre del producto…"
+      [hasIcon]="true"
+    >
+      <span icon><app-ds-icon [img]="LucideSearch" [size]="16" /></span>
+    </app-ds-input>
+
+    <div filters class="w-[188px]">
+      <app-ds-select
+        [value]="categoriaFiltro()"
+        (valueChange)="setCategoria($event)"
+        [options]="categoriaOptions()"
+        placeholder="Todas las categorías"
+      />
+    </div>
+    <div filters class="w-[188px]">
+      <app-ds-select
+        [value]="presentacionFiltro()"
+        (valueChange)="setPresentacion($event)"
+        [options]="presentacionOptions()"
+        placeholder="Toda presentación"
+      />
+    </div>
+    <div filters class="w-[188px]">
+      <app-ds-select
+        [value]="estadoFiltro()"
+        (valueChange)="setEstado($event)"
+        [options]="estadoOptions"
+        placeholder="Todos los estados"
+      />
+    </div>
+    <div filters class="w-[188px]">
+      <app-ds-select
+        [value]="dispFiltro()"
+        (valueChange)="setDisp($event)"
+        [options]="dispOptions"
+        placeholder="Toda disponibilidad"
+      />
+    </div>
+
+    <span actions class="flex items-center gap-2">
+      <span class="inline-flex items-center gap-1 rounded-lg bg-muted p-1">
+        <app-ds-icon-button
+          label="Tarjetas"
+          size="sm"
+          [variant]="vista() === 'tarjetas' ? 'secondary' : 'ghost'"
+          (clicked)="setVista('tarjetas')"
+        >
+          <app-ds-icon [img]="LucideLayoutGrid" [size]="15" />
+        </app-ds-icon-button>
+        <app-ds-icon-button
+          label="Tabla"
+          size="sm"
+          [variant]="vista() === 'tabla' ? 'secondary' : 'ghost'"
+          (clicked)="setVista('tabla')"
+        >
+          <app-ds-icon [img]="LucideTable" [size]="15" />
+        </app-ds-icon-button>
+      </span>
+      <app-ds-button size="sm" (clicked)="nuevoProducto()">
+        <span icon><app-ds-icon [img]="LucidePlus" [size]="16" /></span>
+        Registrar producto
+      </app-ds-button>
+    </span>
+  </app-ds-filter-bar>
+
+  @if (cargando()) {
+    <p
+      class="rounded-lg border border-border bg-card p-8 text-center text-ds-base text-muted-foreground"
+    >
+      Cargando catálogo…
+    </p>
+  } @else if (errorCarga()) {
+    <div
+      class="flex flex-col items-center gap-3 rounded-lg border border-border bg-card p-8 text-center"
+    >
+      <p class="text-ds-base text-muted-foreground">No se pudo cargar el catálogo de productos.</p>
+      <app-ds-button variant="secondary" (clicked)="cargar()">Reintentar</app-ds-button>
+    </div>
+  } @else if (vista() === 'tarjetas') {
+    @if (filasPagina().length) {
+      <div class="grid grid-cols-[repeat(auto-fill,minmax(244px,1fr))] gap-4">
+        @for (f of filasPagina(); track f.sku) {
+          <article
+            class="flex min-w-0 flex-col overflow-hidden rounded-lg border border-border bg-card shadow-ds-xs"
+          >
+            <div
+              class="relative flex h-[156px] flex-none items-center justify-center bg-muted text-muted-foreground"
+            >
+              @if (f.imagen) {
+                <img
+                  [src]="f.imagen"
+                  [alt]="'Imagen de ' + f.nombre + ' ' + f.presentacion"
+                  loading="lazy"
+                  class="absolute inset-0 h-full w-full object-cover"
+                />
+              } @else {
+                <app-ds-icon [img]="LucidePackage" [size]="40" />
+              }
+              <div class="pointer-events-none absolute left-2.5 top-2.5 flex flex-wrap gap-1.5">
+                @if (f.destacado) {
+                  <app-ds-badge tone="warning">Destacado</app-ds-badge>
+                }
+                @if (f.promo; as promo) {
+                  <app-ds-badge tone="info">Promo -{{ promo.pct }}%</app-ds-badge>
+                }
+              </div>
+              <div class="pointer-events-none absolute bottom-2.5 right-2.5">
+                <app-ds-badge [tone]="estadoTone(f.estado)" [dot]="true">{{
+                  f.estado
+                }}</app-ds-badge>
+              </div>
+            </div>
+
+            <div class="flex min-w-0 flex-1 flex-col gap-2.5 p-3.5">
+              <div class="flex flex-wrap items-center gap-2">
+                <app-ds-badge tone="neutral">{{ f.categoria }}</app-ds-badge>
+                <span class="text-ds-sm text-muted-foreground">{{ f.presentacion }}</span>
+              </div>
+
+              <div class="min-w-0">
+                <p class="font-semibold leading-snug text-foreground">{{ f.nombre }}</p>
+                <p class="mt-[3px] text-ds-sm tabular-nums text-muted-foreground">{{ f.sku }}</p>
+              </div>
+
+              <div class="grid gap-1.5 border-t border-border pt-0.5">
+                <div class="flex items-baseline justify-between gap-2.5 pt-2">
+                  <span class="text-ds-sm text-muted-foreground">Precio unitario</span>
+                  <span class="text-ds-xl font-semibold tabular-nums text-foreground">{{
+                    money(f.precioUnit)
+                  }}</span>
+                </div>
+                <div class="flex items-baseline justify-between gap-2.5">
+                  <span class="text-ds-sm text-muted-foreground"
+                    >Mayorista desde {{ nf(f.umbral) }} {{ unidad }}</span
+                  >
+                  <span class="text-ds-sm font-medium tabular-nums text-primary">{{
+                    money(f.precioMayor)
+                  }}</span>
+                </div>
+              </div>
+
+              <div>
+                <app-ds-badge [tone]="dispTone(f)" [dot]="true">{{ dispTexto(f) }}</app-ds-badge>
+              </div>
+
+              <span class="flex-1"></span>
+              <div class="flex items-center gap-2">
+                <app-ds-button variant="secondary" size="sm" (clicked)="verProducto(f)">
+                  <span icon><app-ds-icon [img]="LucideEye" [size]="16" /></span>
+                  Ver detalle
+                </app-ds-button>
+                <app-ds-icon-button
+                  label="Editar producto"
+                  variant="secondary"
+                  size="sm"
+                  (clicked)="editarProducto(f)"
+                >
+                  <app-ds-icon [img]="LucidePencil" [size]="16" />
+                </app-ds-icon-button>
+              </div>
+            </div>
+          </article>
+        }
+      </div>
+    } @else {
+      <p
+        class="rounded-lg border border-border bg-card p-8 text-center text-ds-base text-muted-foreground"
+      >
+        {{ hayProductos() ? 'Sin resultados' : 'Sin productos registrados' }}
+      </p>
+    }
+  } @else {
+    <app-ds-data-table [columns]="columns()" [rows]="filasPagina()" empty="Sin resultados" />
+  }
+
+  <app-ds-pagination
+    [page]="paginaActual()"
+    [pageCount]="pageCount()"
+    [total]="filasFiltradas().length"
+    [pageSize]="pageSize()"
+    (changed)="page.set($event)"
+  />
+</div>
+
+<ng-template #productoCell let-f>
+  <span class="inline-flex min-w-0 items-center gap-3">
+    <span
+      class="inline-flex size-9 flex-none items-center justify-center rounded-md border border-border bg-muted text-muted-foreground"
+    >
+      <app-ds-icon [img]="LucidePackage" [size]="16" />
+    </span>
+    <span class="min-w-0 leading-snug">
+      <span class="block font-semibold">{{ f.nombre }}</span>
+      <span class="mt-0.5 block text-ds-sm tabular-nums text-muted-foreground">{{ f.sku }}</span>
+    </span>
+  </span>
+</ng-template>
+
+<ng-template #precioCell let-f>
+  <span class="font-semibold">{{ money(f.precioUnit) }}</span>
+</ng-template>
+
+<ng-template #destacadoCell let-f>
+  @if (f.destacado) {
+    <app-ds-badge tone="warning">Destacado</app-ds-badge>
+  } @else {
+    <span class="text-muted-foreground">—</span>
+  }
+</ng-template>
+
+<ng-template #promoCell let-f>
+  @if (f.promo) {
+    <app-ds-badge tone="info">-{{ f.promo.pct }}%</app-ds-badge>
+  } @else {
+    <span class="text-muted-foreground">—</span>
+  }
+</ng-template>
+
+<ng-template #dispCell let-f>
+  <app-ds-badge [tone]="dispTone(f)" [dot]="true">{{ dispLabel(f) }}</app-ds-badge>
+</ng-template>
+
+<ng-template #estadoCell let-f>
+  <app-ds-badge [tone]="estadoTone(f.estado)" [dot]="true">{{ f.estado }}</app-ds-badge>
+</ng-template>
+
+<ng-template #accionesCell let-f>
+  <span class="inline-flex items-center justify-end gap-1.5">
+    <app-ds-icon-button
+      label="Ver detalle"
+      variant="secondary"
+      size="sm"
+      (clicked)="verProducto(f)"
+    >
+      <app-ds-icon [img]="LucideEye" [size]="16" />
+    </app-ds-icon-button>
+    <app-ds-icon-button
+      label="Editar producto"
+      variant="secondary"
+      size="sm"
+      (clicked)="editarProducto(f)"
+    >
+      <app-ds-icon [img]="LucidePencil" [size]="16" />
+    </app-ds-icon-button>
+    <app-ds-icon-button
+      [label]="f.estado === 'Activo' ? 'Desactivar' : 'Reactivar'"
+      variant="secondary"
+      size="sm"
+      (clicked)="alternarEstado(f)"
+    >
+      @if (f.estado === 'Activo') {
+        <app-ds-icon [img]="LucideBan" [size]="15" />
+      } @else {
+        <app-ds-icon [img]="LucideRotateCcw" [size]="15" />
+      }
+    </app-ds-icon-button>
+  </span>
+</ng-template>
+
+<app-producto-form
+  [modo]="formModo()"
+  [producto]="productoEnEdicion()"
+  (closed)="cerrarForm()"
+  (guardado)="mostrarAviso($event)"
+/>
+
+<app-producto-detalle
+  [fila]="filaDetalle()"
+  (closed)="skuDetalle.set(null)"
+  (editar)="editarProducto($event)"
+  (alternarEstado)="alternarEstado($event)"
+/>
