@@ -37,8 +37,10 @@ export const NEGOCIO_ROUTES: Routes = [
       },
       {
         path: 'analisis',
-        loadComponent: () => import('./pages/negocio-home/negocio-home').then((c) => c.NegocioHome),
-        data: { titulo: 'Análisis estratégico' },
+        loadComponent: () =>
+          import('./pages/analisis-estrategico/analisis-estrategico-page').then(
+            (c) => c.AnalisisEstrategicoPage,
+          ),
       },
       {
         path: '',
