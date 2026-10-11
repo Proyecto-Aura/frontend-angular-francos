@@ -123,8 +123,13 @@
       </div>
     }
     @if (tab() === 'categorias') {
-      <app-ds-field [label]="'Nombre de la ' + tabActual().singular" [required]="true">
+      <app-ds-field
+        [label]="'Nombre de la ' + tabActual().singular"
+        htmlFor="cfg-nombre"
+        [required]="true"
+      >
         <app-ds-input
+          id="cfg-nombre"
           [value]="cf().nombre"
           (valueChange)="setCampo('nombre', $event)"
           [placeholder]="tabActual().placeholderNombre"
@@ -134,18 +139,21 @@
       <div class="grid grid-cols-2 gap-4">
         <app-ds-field
           label="Cantidad"
+          htmlFor="cfg-cantidad"
           hint="Número entero. El nombre se arma con la unidad, por ejemplo 500 gr."
           [required]="true"
         >
           <app-ds-input
+            id="cfg-cantidad"
             type="number"
             [value]="cf().cantidad ?? ''"
             (valueChange)="setCampo('cantidad', $event)"
             placeholder="Ej. 500"
           />
         </app-ds-field>
-        <app-ds-field label="Unidad de medida" [required]="true">
+        <app-ds-field label="Unidad de medida" htmlFor="cfg-unidad" [required]="true">
           <app-ds-select
+            id="cfg-unidad"
             [value]="cf().unidad ?? 'gr'"
             (valueChange)="setCampo('unidad', $event)"
             [options]="unidadOptions"
@@ -153,8 +161,9 @@
         </app-ds-field>
       </div>
     }
-    <app-ds-field label="Descripción" [required]="true">
+    <app-ds-field label="Descripción" htmlFor="cfg-descripcion" [required]="true">
       <app-ds-textarea
+        id="cfg-descripcion"
         [rows]="2"
         placeholder="Descripción breve del registro"
         [value]="cf().descripcion"

@@ -265,6 +265,16 @@ describe('ConfiguracionCatalogo', () => {
       expect(document.body.textContent).not.toContain('Nombre de la presentación');
     });
 
+    it('associates every label of the form with its control', () => {
+      page.nuevo();
+      fixture.detectChanges();
+
+      for (const id of ['cfg-cantidad', 'cfg-unidad', 'cfg-descripcion']) {
+        expect(document.body.querySelector(`label[for="${id}"]`)).not.toBeNull();
+        expect(document.body.querySelector(`#${id}`)).not.toBeNull();
+      }
+    });
+
     it('loads quantity and unit of the record when editing', () => {
       page.editar(service.presentacionesCfg()[3]);
 
