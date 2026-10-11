@@ -1,5 +1,15 @@
 import { Routes } from '@angular/router';
-import { LucideBriefcase, LucideMonitor, LucideTarget } from '@lucide/angular';
+import {
+  LucideBriefcase,
+  LucideChartColumn,
+  LucideFlag,
+  LucideFolderOpen,
+  LucideLayoutDashboard,
+  LucideMap,
+  LucideMonitor,
+  LucideRocket,
+  LucideTarget,
+} from '@lucide/angular';
 
 // Nota: label/icon/path hoy estan fijos aca a mano. Cuando exista el backend,
 // esta estructura (y que opciones ve cada usuario) deberia venir de la BD segun su rol.
@@ -12,7 +22,30 @@ export const GESTION_ESTRATEGICA_ROUTES: Routes = [
       sidebarTitle: 'Gestión estratégica',
       sidebarLinks: [
         { label: 'Plan estratégico', path: 'plan-estrategico', icon: LucideTarget },
-        { label: 'Gestión estratégica de negocio', path: 'negocio', icon: LucideBriefcase },
+        {
+          label: 'Gestión estratégica de negocio',
+          icon: LucideBriefcase,
+          children: [
+            {
+              label: 'Gestión de objetivos estratégicos',
+              path: 'negocio/objetivos',
+              icon: LucideFlag,
+            },
+            { label: 'Mapa estratégico', path: 'negocio/mapa', icon: LucideMap },
+            { label: 'Gestionar KPIs', path: 'negocio/kpis', icon: LucideChartColumn },
+            { label: 'Gestionar iniciativas', path: 'negocio/iniciativas', icon: LucideRocket },
+            {
+              label: 'Tablero de control',
+              path: 'negocio/tablero',
+              icon: LucideLayoutDashboard,
+            },
+            {
+              label: 'Análisis estratégico',
+              path: 'negocio/analisis',
+              icon: LucideFolderOpen,
+            },
+          ],
+        },
         { label: 'Gestión estratégica de TI', path: 'ti', icon: LucideMonitor },
       ],
     },

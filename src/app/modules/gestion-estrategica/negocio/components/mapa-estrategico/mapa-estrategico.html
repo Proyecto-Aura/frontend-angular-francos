@@ -1,0 +1,88 @@
+<div class="overflow-x-auto">
+  <div
+    class="relative min-w-full"
+    [style.width.px]="layout().ancho"
+    [style.height.px]="layout().alto"
+  >
+    @for (franja of layout().franjas; track franja.perspectiva.id) {
+      <div
+        class="absolute inset-x-0 flex border-b border-border"
+        [class]="claseFondoFranja(franja.perspectiva.orden)"
+        [style.top.px]="franja.top"
+        [style.height.px]="franja.alto"
+      >
+        <div
+          class="flex shrink-0 items-center justify-center border-r border-border"
+          [style.width.px]="ANCHO_ETIQUETA"
+        >
+          <span
+            class="max-h-35 rotate-180 text-center text-ds-xs font-semibold tracking-[0.06em] uppercase [writing-mode:vertical-rl]"
+            [class]="claseTextoPerspectiva(franja.perspectiva.orden)"
+          >
+            {{ franja.perspectiva.nombre }}
+          </span>
+        </div>
+      </div>
+    }
+
+    <svg
+      class="pointer-events-none absolute top-0 left-0 z-[1] overflow-visible"
+      [attr.width]="layout().ancho"
+      [attr.height]="layout().alto"
+    >
+      <defs>
+        <marker
+          id="mapaFlecha"
+          viewBox="0 0 10 10"
+          refX="5"
+          refY="5"
+          markerWidth="7"
+          markerHeight="7"
+          orient="auto-start-reverse"
+        >
+          <path class="fill-primary" d="M0 0 L10 5 L0 10 z" />
+        </marker>
+      </defs>
+
+      @for (relacion of layout().relaciones; track $index) {
+        <path
+          [attr.d]="relacion.d"
+          class="stroke-primary"
+          fill="none"
+          stroke-dasharray="5 4"
+          marker-end="url(#mapaFlecha)"
+          [attr.stroke-width]="grosorRelacion(relacion)"
+          [attr.opacity]="opacidadRelacion(relacion)"
+        />
+      }
+    </svg>
+
+    @for (tarjeta of layout().tarjetas; track tarjeta.objetivo.id) {
+      <div
+        class="absolute z-[2] box-border flex flex-col justify-between rounded-lg border bg-card px-3.5 py-3 shadow-ds-xs transition-opacity duration-[120ms]"
+        tabindex="0"
+        [class]="claseBordeTarjeta(tarjeta.objetivo.perspectivaOrden)"
+        [class.opacity-35]="tarjetaAtenuada(tarjeta.objetivo.id)"
+        [style.left.px]="tarjeta.x"
+        [style.top.px]="tarjeta.y"
+        [style.width.px]="ANCHO_TARJETA"
+        [style.height.px]="ALTO_TARJETA"
+        [attr.aria-label]="ariaLabel(tarjeta.objetivo)"
+        (mouseenter)="hoverId.set(tarjeta.objetivo.id)"
+        (mouseleave)="hoverId.set(null)"
+        (focus)="hoverId.set(tarjeta.objetivo.id)"
+        (blur)="hoverId.set(null)"
+      >
+        <span
+          class="line-clamp-2 text-ds-sm leading-[1.3] font-medium text-foreground"
+          [title]="tarjeta.objetivo.nombre"
+        >
+          {{ tarjeta.objetivo.nombre }}
+        </span>
+        <span class="text-ds-xs text-muted-foreground">
+          {{ codigoCorto(tarjeta.objetivo.codigo) }}
+        </span>
+      </div>
+    }
+  </div>
+</div>
