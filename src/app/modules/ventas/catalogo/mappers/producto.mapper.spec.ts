@@ -2,6 +2,7 @@ import { formDesdeProducto } from '../interfaces/producto.interface';
 import {
   CATEGORIAS_DTO,
   PRESENTACIONES_DTO,
+  archivoImagen,
   catalogoDto,
   makeFilaDto,
   makeFormValido,
@@ -122,7 +123,6 @@ describe('producto.mapper', () => {
   describe('formulario -> peticiones', () => {
     it('builds the create request with numbers, trimmed text and nested presentations', () => {
       const form = makeFormValido({ nombre: '  Chifles BBQ ', destacado: true });
-      form.presentaciones[0].imagen = ' https://cdn.test/a.jpg ';
 
       expect(toCrearProductoRequest(form)).toEqual({
         categoria_id: 1,
@@ -135,16 +135,21 @@ describe('producto.mapper', () => {
             precio_unitario: 6,
             precio_mayorista: 5,
             umbral_mayorista: 12,
-            imagen_url: 'https://cdn.test/a.jpg',
           },
         ],
       });
     });
 
-    it('omits the image when there is none', () => {
-      const request = toCrearProductoRequest(makeFormValido());
+    it('never sends the image in the request: it is uploaded as a file afterwards', () => {
+      const form = makeFormValido();
+      form.presentaciones[0].imagen = 'https://cdn.test/a.jpg';
+      form.presentaciones[0].imagenArchivo = archivoImagen();
+
+      const request = toCrearProductoRequest(form);
 
       expect(request.producto_presentaciones[0]).not.toHaveProperty('imagen_url');
+      expect(request.producto_presentaciones[0]).not.toHaveProperty('imagen');
+      expect(request.producto_presentaciones[0]).not.toHaveProperty('imagenArchivo');
     });
 
     it('builds the product update request', () => {
@@ -173,7 +178,6 @@ describe('producto.mapper', () => {
         precio_unitario: 5.5,
         precio_mayorista: 4.2,
         umbral_mayorista: 24,
-        imagen_url: null,
       });
     });
 

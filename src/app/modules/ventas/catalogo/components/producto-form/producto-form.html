@@ -129,15 +129,30 @@
           </div>
 
           <app-ds-field
-            label="URL de la imagen"
-            hint="Opcional. Enlace público a la imagen (la subida de archivos aún no está disponible)."
+            label="Imagen"
+            hint="Opcional. JPG, PNG o WEBP de hasta 2 MB. Se sube al guardar el producto."
           >
-            <app-ds-input
-              type="url"
-              placeholder="https://..."
-              [value]="p.imagen"
-              (valueChange)="setPres(i, 'imagen', $event)"
-            />
+            <div class="grid gap-2">
+              @if (p.imagen) {
+                <img
+                  [src]="p.imagen"
+                  [alt]="'Imagen actual de la presentación ' + (i + 1)"
+                  class="h-24 w-24 rounded-md border border-border object-cover"
+                />
+              }
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                [attr.aria-label]="'Imagen de la presentación ' + (i + 1)"
+                class="block w-full text-ds-sm file:mr-3 file:cursor-pointer file:rounded-md file:border file:border-border file:bg-muted file:px-3 file:py-1.5 file:text-ds-sm"
+                (change)="elegirImagen(i, $event)"
+              />
+              @if (p.imagenArchivo; as archivo) {
+                <p class="text-ds-sm text-muted-foreground">
+                  Nueva imagen: {{ archivo.name }} ({{ tamano(archivo) }})
+                </p>
+              }
+            </div>
           </app-ds-field>
 
           <div class="grid gap-3.5 rounded-md border border-border bg-muted p-3.5">

@@ -127,7 +127,10 @@ export interface PresentacionForm {
   precioUnit: string;
   precioMayor: string;
   umbral: string;
+  /** URL de la imagen que ya tiene la presentación ('' si no tiene). Solo se muestra. */
   imagen: string;
+  /** Archivo elegido para subir como nueva imagen (null = no se cambia). */
+  imagenArchivo: File | null;
   /** Id de la promoción que ya existe (null = no tiene). */
   promoId: number | null;
   promoActiva: boolean;
@@ -153,6 +156,7 @@ export const presentacionVacia = (): PresentacionForm => ({
   precioMayor: '',
   umbral: '',
   imagen: '',
+  imagenArchivo: null,
   promoId: null,
   promoActiva: false,
   promoPct: '',
@@ -182,6 +186,7 @@ export function formDesdeProducto(p: Producto): ProductoFormModel {
       precioMayor: pr.precioMayor ? String(pr.precioMayor) : '',
       umbral: pr.umbral ? String(pr.umbral) : '',
       imagen: pr.imagen,
+      imagenArchivo: null,
       promoId: pr.promo ? pr.promo.id : null,
       promoActiva: !!pr.promo,
       promoPct: pr.promo ? String(pr.promo.pct) : '',
@@ -194,14 +199,9 @@ export function formDesdeProducto(p: Producto): ProductoFormModel {
 const DOS_DECIMALES = /^\d+(\.\d{1,2})?$/;
 const ENTERO = /^\d+$/;
 
-const esUrlHttp = (valor: string): boolean => {
-  try {
-    const url = new URL(valor);
-    return url.protocol === 'http:' || url.protocol === 'https:';
-  } catch {
-    return false;
-  }
-};
+/** Tipos y peso máximo que acepta la API para la imagen de una presentación. */
+export const IMAGEN_TIPOS = ['image/jpeg', 'image/png', 'image/webp'];
+export const IMAGEN_MAX_BYTES = 2 * 1024 * 1024;
 
 /** Mismas reglas que valida el backend, con los mensajes del diseño. */
 export function validarProducto(pf: ProductoFormModel): string[] {
@@ -230,8 +230,12 @@ export function validarProducto(pf: ProductoFormModel): string[] {
       e.push('umbral mayorista entero mayor a 0' + n);
     }
 
-    if (p.imagen.trim() && !esUrlHttp(p.imagen.trim())) {
-      e.push('la imagen debe ser una URL válida (http o https)' + n);
+    if (p.imagenArchivo) {
+      if (!IMAGEN_TIPOS.includes(p.imagenArchivo.type)) {
+        e.push('la imagen debe ser JPG, PNG o WEBP' + n);
+      } else if (p.imagenArchivo.size > IMAGEN_MAX_BYTES) {
+        e.push('la imagen no debe superar los 2 MB' + n);
+      }
     }
 
     if (p.promoActiva) {

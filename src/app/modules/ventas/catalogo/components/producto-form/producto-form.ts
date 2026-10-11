@@ -148,6 +148,17 @@ export class ProductoForm {
     }));
   }
 
+  /** Guarda el archivo elegido; se sube a la API cuando se guarda el producto. */
+  protected elegirImagen(idx: number, evento: Event) {
+    const input = evento.target as HTMLInputElement;
+    this.setPres(idx, 'imagenArchivo', input.files?.[0] ?? null);
+  }
+
+  protected tamano(archivo: File): string {
+    const kb = archivo.size / 1024;
+    return kb >= 1024 ? `${(kb / 1024).toFixed(1)} MB` : `${Math.ceil(kb)} KB`;
+  }
+
   protected agregarPres() {
     this.pf.update((f) => ({ ...f, presentaciones: [...f.presentaciones, presentacionVacia()] }));
   }

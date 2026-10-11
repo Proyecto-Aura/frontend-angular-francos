@@ -4,6 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { ResultadoGuardado, formDesdeProducto } from '../interfaces/producto.interface';
 import {
   API,
+  archivoImagen,
   catalogoDto,
   flushCatalogo,
   makeFormValido,
@@ -159,6 +160,52 @@ describe('CatalogoService', () => {
       expect(resultado?.tono).toBe('ok');
     });
 
+    it('uploads the chosen image of each new presentation as a file', () => {
+      const archivo = archivoImagen('chifles.png');
+      const form = makeFormValido();
+      form.presentaciones[0] = { ...form.presentaciones[0], imagenArchivo: archivo };
+
+      service.registrar(form).subscribe((r) => (resultado = r));
+      httpMock.expectOne(API.productos).flush(productoCreado);
+
+      const imagen = httpMock.expectOne(`${API.productoPresentaciones}/81/imagen`);
+      expect(imagen.request.method).toBe('POST');
+      expect(imagen.request.body).toBeInstanceOf(FormData);
+      expect((imagen.request.body as FormData).get('imagen')).toBe(archivo);
+      imagen.flush({ id: 81, imagen_url: 'http://localhost:9000/francos-media/productos/a.png' });
+      flushCatalogo(httpMock);
+
+      expect(resultado?.tono).toBe('ok');
+    });
+
+    it('does not upload anything when no image was chosen', () => {
+      service.registrar(makeFormValido()).subscribe((r) => (resultado = r));
+      httpMock.expectOne(API.productos).flush(productoCreado);
+      flushCatalogo(httpMock);
+
+      httpMock.expectNone(`${API.productoPresentaciones}/81/imagen`);
+      expect(resultado?.tono).toBe('ok');
+    });
+
+    it('reports a rejected image without failing the registration', () => {
+      const form = makeFormValido();
+      form.presentaciones[0] = { ...form.presentaciones[0], imagenArchivo: archivoImagen() };
+
+      service.registrar(form).subscribe((r) => (resultado = r));
+      httpMock.expectOne(API.productos).flush(productoCreado);
+      httpMock
+        .expectOne(`${API.productoPresentaciones}/81/imagen`)
+        .flush(
+          { statusCode: 400, message: 'Validation failed (current file type is image/gif)' },
+          { status: 400, statusText: 'Bad Request' },
+        );
+      flushCatalogo(httpMock);
+
+      expect(resultado?.tono).toBe('error');
+      expect(resultado?.mensaje).toContain('Producto registrado (SKU FR-P8-PR1)');
+      expect(resultado?.mensaje).toContain('la imagen de la presentación');
+    });
+
     it('reports a failed promotion without failing the registration', () => {
       const form = makeFormValido();
       form.presentaciones[0] = {
@@ -233,7 +280,6 @@ describe('CatalogoService', () => {
         precio_unitario: 6.5,
         precio_mayorista: 4.2,
         umbral_mayorista: 24,
-        imagen_url: null,
       });
       presentacion.flush({});
       flushCatalogo(httpMock);
@@ -242,6 +288,35 @@ describe('CatalogoService', () => {
         tono: 'ok',
         mensaje: 'Producto actualizado · el SKU y el slug se mantienen sin cambios.',
       });
+    });
+
+    it('uploads the new image of an existing presentation after saving it', () => {
+      const archivo = archivoImagen('nueva.webp', 'image/webp');
+      const form = formDesdeProducto(makeProducto());
+      form.presentaciones[0].imagenArchivo = archivo;
+
+      service.actualizar(1, form).subscribe((r) => (resultado = r));
+      httpMock.expectOne(`${API.productos}/1`).flush({});
+      httpMock.expectOne(`${API.productoPresentaciones}/11`).flush({});
+
+      const imagen = httpMock.expectOne(`${API.productoPresentaciones}/11/imagen`);
+      expect(imagen.request.method).toBe('POST');
+      expect((imagen.request.body as FormData).get('imagen')).toBe(archivo);
+      imagen.flush({});
+      flushCatalogo(httpMock);
+
+      expect(resultado?.tono).toBe('ok');
+    });
+
+    it('keeps the current image when no new file is chosen', () => {
+      const form = formDesdeProducto(makeProducto());
+
+      service.actualizar(1, form).subscribe((r) => (resultado = r));
+      httpMock.expectOne(`${API.productos}/1`).flush({});
+      httpMock.expectOne(`${API.productoPresentaciones}/11`).flush({});
+      flushCatalogo(httpMock);
+
+      httpMock.expectNone(`${API.productoPresentaciones}/11/imagen`);
     });
 
     it('adds the new presentations to the product', () => {

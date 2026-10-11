@@ -85,14 +85,11 @@ export function toProductos(filas: ProductoPresentacionFilaDto[]): Producto[] {
 // ───────────────────────── Formulario -> peticiones ─────────────────────────
 
 function toPresentacionInline(p: PresentacionForm): CrearProductoPresentacionInlineRequestDto {
-  const imagen = p.imagen.trim();
-
   return {
     presentacion_id: Number(p.presentacionId),
     precio_unitario: Number(p.precioUnit),
     precio_mayorista: Number(p.precioMayor),
     umbral_mayorista: Number(p.umbral),
-    ...(imagen ? { imagen_url: imagen } : {}),
   };
 }
 
@@ -125,17 +122,14 @@ export function toCrearProductoPresentacionRequest(
 }
 
 // El SKU, el slug y la presentación de una presentación ya registrada no cambian:
-// solo se editan los precios, el umbral y la imagen.
+// solo se editan los precios y el umbral (la imagen se sube aparte, como archivo).
 export function toActualizarProductoPresentacionRequest(
   p: PresentacionForm,
 ): ActualizarProductoPresentacionRequestDto {
-  const imagen = p.imagen.trim();
-
   return {
     precio_unitario: Number(p.precioUnit),
     precio_mayorista: Number(p.precioMayor),
     umbral_mayorista: Number(p.umbral),
-    imagen_url: imagen || null,
   };
 }
 

@@ -131,19 +131,33 @@ export class CatalogoService {
   registrar(pf: ProductoFormModel): Observable<ResultadoGuardado> {
     return this.http.post<ProductoCreadoDto>(PRODUCTOS, toCrearProductoRequest(pf)).pipe(
       switchMap((creado) => {
-        const pasos: Paso[] = pf.presentaciones
+        const creadaDe = (p: PresentacionForm) =>
+          creado.producto_presentaciones.find(
+            (pp) => pp.presentacion_id === Number(p.presentacionId),
+          );
+        const noEncontrada = () => throwError(() => new Error('presentación no encontrada'));
+
+        const imagenes: Paso[] = pf.presentaciones
+          .filter((p) => p.imagenArchivo)
+          .map((p) => ({
+            descripcion: `la imagen de la presentación ${this.etiquetaDe(p)}`,
+            run: () => {
+              const creada = creadaDe(p);
+              return creada ? this.subirImagen(creada.id, p.imagenArchivo as File) : noEncontrada();
+            },
+          }));
+        const promociones: Paso[] = pf.presentaciones
           .filter((p) => p.promoActiva)
           .map((p) => ({
             descripcion: `la promoción de la presentación ${this.etiquetaDe(p)}`,
             run: () => {
-              const creada = creado.producto_presentaciones.find(
-                (pp) => pp.presentacion_id === Number(p.presentacionId),
-              );
+              const creada = creadaDe(p);
               return creada
                 ? this.http.post(PROMOCIONES, toCrearPromocionRequest(creada.id, p))
-                : throwError(() => new Error('presentación no encontrada'));
+                : noEncontrada();
             },
           }));
+        const pasos = [...imagenes, ...promociones];
 
         return this.ejecutar(pasos).pipe(
           switchMap((fallo) => this.obtener().pipe(map(() => this.avisoRegistro(creado, fallo)))),
@@ -211,6 +225,13 @@ export class CatalogoService {
 
   // ───────────── Apoyo ─────────────
 
+  /** Sube el archivo como imagen de la presentación (la API guarda solo la key y devuelve la URL). */
+  private subirImagen(productoPresentacionId: number, archivo: File): Observable<unknown> {
+    const datos = new FormData();
+    datos.append('imagen', archivo);
+    return this.http.post(`${PRODUCTO_PRESENTACIONES}/${productoPresentacionId}/imagen`, datos);
+  }
+
   private guardarPresentacion(productoId: number, p: PresentacionForm): Observable<unknown> {
     const productoPresentacionId$: Observable<number> =
       p.productoPresentacionId === null
@@ -228,7 +249,12 @@ export class CatalogoService {
             .pipe(map(() => p.productoPresentacionId as number));
 
     return productoPresentacionId$.pipe(
-      switchMap((productoPresentacionId) => this.guardarPromocion(productoPresentacionId, p)),
+      switchMap((productoPresentacionId) =>
+        (p.imagenArchivo
+          ? this.subirImagen(productoPresentacionId, p.imagenArchivo)
+          : of(null)
+        ).pipe(switchMap(() => this.guardarPromocion(productoPresentacionId, p))),
+      ),
     );
   }
 

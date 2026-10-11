@@ -9,7 +9,7 @@ import {
   ResultadoGuardado,
 } from '../../interfaces/producto.interface';
 import { CatalogoService } from '../../services/catalogo.service';
-import { API, flushCatalogo } from '../../testing/catalogo.fixtures';
+import { API, archivoImagen, flushCatalogo } from '../../testing/catalogo.fixtures';
 import { ProductoForm } from './producto-form';
 
 // Los miembros del componente son `protected`: el spec los consulta mediante esta vista tipada.
@@ -28,6 +28,8 @@ interface ProductoFormApi {
     valor: PresentacionForm[K],
   ): void;
   agregarPres(): void;
+  elegirImagen(idx: number, evento: Event): void;
+  tamano(archivo: File): string;
   quitarPres(idx: number): void;
   puedeQuitar(p: PresentacionForm): boolean;
   skuDePresentacion(p: PresentacionForm): string;
@@ -266,5 +268,78 @@ describe('ProductoForm', () => {
 
     expect(cierres).toBe(1);
     expect(guardados).toEqual([]);
+  });
+
+  describe('imagen de la presentación', () => {
+    const eventoCon = (archivo: File | null) =>
+      ({ target: { files: archivo ? [archivo] : [] } }) as unknown as Event;
+
+    it('offers a file picker that only accepts JPG, PNG and WEBP', () => {
+      abrir('nuevo');
+
+      const input = document.body.querySelector<HTMLInputElement>('input[type="file"]');
+      expect(input).not.toBeNull();
+      expect(input?.accept).toBe('image/jpeg,image/png,image/webp');
+    });
+
+    it('keeps the chosen file of the presentation and clears it when none is chosen', () => {
+      abrir('nuevo');
+      const archivo = archivoImagen('chifles.png');
+
+      api().elegirImagen(0, eventoCon(archivo));
+      expect(api().pf().presentaciones[0].imagenArchivo).toBe(archivo);
+
+      api().elegirImagen(0, eventoCon(null));
+      expect(api().pf().presentaciones[0].imagenArchivo).toBeNull();
+    });
+
+    it('formats the size of the chosen file', () => {
+      expect(api().tamano(archivoImagen('a.png', 'image/png', 500))).toBe('1 KB');
+      expect(api().tamano(archivoImagen('a.png', 'image/png', 300 * 1024))).toBe('300 KB');
+      expect(api().tamano(archivoImagen('a.png', 'image/png', 1.5 * 1024 * 1024))).toBe('1.5 MB');
+    });
+
+    it('shows the current image of a saved presentation', () => {
+      abrir('editar', 1);
+
+      const imagen = document.body.querySelector<HTMLImageElement>(
+        'img[alt="Imagen actual de la presentación 1"]',
+      );
+      expect(imagen?.getAttribute('src')).toBe('https://cdn.test/chifles-100.jpg');
+    });
+
+    it('does not save and lists the error when the chosen file is not allowed', () => {
+      abrir('nuevo');
+      completarFormulario();
+      api().elegirImagen(0, eventoCon(archivoImagen('a.gif', 'image/gif')));
+
+      api().guardar();
+
+      expect(api().errores()).toContain('la imagen debe ser JPG, PNG o WEBP (presentación 1)');
+      httpMock.expectNone(API.productos);
+      expect(cierres).toBe(0);
+    });
+
+    it('creates the product, uploads the chosen image and closes', () => {
+      abrir('nuevo');
+      completarFormulario();
+      const archivo = archivoImagen('chifles.png');
+      api().elegirImagen(0, eventoCon(archivo));
+
+      api().guardar();
+      httpMock
+        .expectOne(API.productos)
+        .flush({
+          id: 8,
+          producto_presentaciones: [{ id: 81, sku: 'FR-P8-PR1', presentacion_id: 1 }],
+        });
+      const subida = httpMock.expectOne(`${API.productoPresentaciones}/81/imagen`);
+      expect((subida.request.body as FormData).get('imagen')).toBe(archivo);
+      subida.flush({});
+      flushCatalogo(httpMock);
+
+      expect(guardados[0].tono).toBe('ok');
+      expect(cierres).toBe(1);
+    });
   });
 });

@@ -1,5 +1,6 @@
 import {
   FilaCatalogo,
+  IMAGEN_MAX_BYTES,
   ProductoFormModel,
   aFilas,
   disponibilidadDe,
@@ -11,7 +12,12 @@ import {
   skuDe,
   validarProducto,
 } from './producto.interface';
-import { makeFormValido, makePresentacion, makeProducto } from '../testing/catalogo.fixtures';
+import {
+  archivoImagen,
+  makeFormValido,
+  makePresentacion,
+  makeProducto,
+} from '../testing/catalogo.fixtures';
 
 function conPresentacion(cambios: Partial<ProductoFormModel['presentaciones'][number]>) {
   const form = makeFormValido();
@@ -155,15 +161,38 @@ describe('producto.interface', () => {
       ]);
     });
 
-    it('validates the image as an http(s) URL only when provided', () => {
+    it('accepts a JPG, PNG or WEBP image of up to 2 MB, or no image at all', () => {
+      expect(validarProducto(conPresentacion({ imagenArchivo: null }))).toEqual([]);
+      for (const tipo of ['image/jpeg', 'image/png', 'image/webp']) {
+        expect(
+          validarProducto(
+            conPresentacion({ imagenArchivo: archivoImagen('a', tipo, IMAGEN_MAX_BYTES) }),
+          ),
+        ).toEqual([]);
+      }
+    });
+
+    it('rejects an image that is not JPG, PNG or WEBP', () => {
+      expect(
+        validarProducto(conPresentacion({ imagenArchivo: archivoImagen('a.gif', 'image/gif') })),
+      ).toContain('la imagen debe ser JPG, PNG o WEBP (presentación 1)');
+      expect(
+        validarProducto(
+          conPresentacion({ imagenArchivo: archivoImagen('a.pdf', 'application/pdf') }),
+        ),
+      ).toContain('la imagen debe ser JPG, PNG o WEBP (presentación 1)');
+    });
+
+    it('rejects an image heavier than 2 MB', () => {
+      const pesada = archivoImagen('a.png', 'image/png', IMAGEN_MAX_BYTES + 1);
+
+      expect(validarProducto(conPresentacion({ imagenArchivo: pesada }))).toContain(
+        'la imagen no debe superar los 2 MB (presentación 1)',
+      );
+    });
+
+    it('does not validate the current image URL, which is only displayed', () => {
       expect(validarProducto(conPresentacion({ imagen: 'https://cdn.test/a.jpg' }))).toEqual([]);
-      expect(validarProducto(conPresentacion({ imagen: '' }))).toEqual([]);
-      expect(validarProducto(conPresentacion({ imagen: 'foto.jpg' }))).toContain(
-        'la imagen debe ser una URL válida (http o https) (presentación 1)',
-      );
-      expect(validarProducto(conPresentacion({ imagen: 'javascript:alert(1)' }))).toContain(
-        'la imagen debe ser una URL válida (http o https) (presentación 1)',
-      );
     });
 
     it('reports the position of the failing presentation', () => {

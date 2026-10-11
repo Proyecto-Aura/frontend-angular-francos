@@ -75,7 +75,6 @@ export interface CrearProductoPresentacionInlineRequestDto {
   precio_unitario: number;
   precio_mayorista?: number;
   umbral_mayorista?: number;
-  imagen_url?: string;
 }
 
 export interface CrearProductoRequestDto {
@@ -106,7 +105,6 @@ export interface ActualizarProductoPresentacionRequestDto {
   precio_unitario: number;
   precio_mayorista: number | null;
   umbral_mayorista: number | null;
-  imagen_url: string | null;
 }
 
 export interface CrearPromocionRequestDto {

@@ -304,6 +304,11 @@ export function makeProducto(overrides: Partial<Producto> = {}): Producto {
   };
 }
 
+/** Archivo de imagen de prueba (tipo y peso configurables). */
+export function archivoImagen(nombre = 'foto.png', tipo = 'image/png', bytes = 1024): File {
+  return new File([new Uint8Array(bytes)], nombre, { type: tipo });
+}
+
 /** Formulario de un producto nuevo, completo y válido. */
 export function makeFormValido(overrides: Partial<ProductoFormModel> = {}): ProductoFormModel {
   return {
