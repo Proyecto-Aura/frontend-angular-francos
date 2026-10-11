@@ -2,7 +2,16 @@ import { existeNombreEnArbol } from './ruta-nodo-tree.util';
 import { RutaNodo } from '../interfaces/ruta-nodo.interface';
 
 function leaf(nombre: string): RutaNodo {
-  return { id: 1, nombre, etiqueta: nombre, icono: 'box', descripcion: null, estado: true, parent_id: 1, children: [] };
+  return {
+    id: 1,
+    nombre,
+    etiqueta: nombre,
+    icono: 'box',
+    descripcion: null,
+    estado: true,
+    parent_id: 1,
+    children: [],
+  };
 }
 
 describe('existeNombreEnArbol', () => {

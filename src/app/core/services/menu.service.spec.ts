@@ -10,12 +10,27 @@ const TREE_URL = `${environment.apiUrl}/rutas/mi-menu`;
 
 function makeTree(): RutaNodo[] {
   return [
-    { id: 1, nombre: 'inventario', etiqueta: 'Inventario', icono: 'package', descripcion: 'Control de stock y productos', estado: true, parent_id: null, children: [] },
+    {
+      id: 1,
+      nombre: 'inventario',
+      etiqueta: 'Inventario',
+      icono: 'package',
+      descripcion: 'Control de stock y productos',
+      estado: true,
+      parent_id: null,
+      children: [],
+    },
   ];
 }
 
 function makeSession(overrides: Partial<AuthSession> = {}): AuthSession {
-  return { accessToken: 't', roles: ['admin'], emailVerificado: true, debeCambiarContrasena: false, ...overrides };
+  return {
+    accessToken: 't',
+    roles: ['admin'],
+    emailVerificado: true,
+    debeCambiarContrasena: false,
+    ...overrides,
+  };
 }
 
 describe('MenuService', () => {
@@ -24,7 +39,9 @@ describe('MenuService', () => {
   let httpMock: HttpTestingController;
 
   beforeEach(() => {
-    TestBed.configureTestingModule({ providers: [provideHttpClient(), provideHttpClientTesting()] });
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(), provideHttpClientTesting()],
+    });
     service = TestBed.inject(MenuService);
     authService = TestBed.inject(AuthService);
     httpMock = TestBed.inject(HttpTestingController);
@@ -34,7 +51,7 @@ describe('MenuService', () => {
   afterEach(() => httpMock.verify());
 
   it('fetches the tree from GET /rutas/mi-menu (already role-filtered server-side)', () => {
-    service.getTree().subscribe(tree => expect(tree).toEqual(makeTree()));
+    service.getTree().subscribe((tree) => expect(tree).toEqual(makeTree()));
     httpMock.expectOne(TREE_URL).flush(makeTree());
   });
 
@@ -43,7 +60,7 @@ describe('MenuService', () => {
     httpMock.expectOne(TREE_URL).flush(makeTree());
 
     let secondResult: RutaNodo[] | undefined;
-    service.getTree().subscribe(tree => (secondResult = tree));
+    service.getTree().subscribe((tree) => (secondResult = tree));
 
     httpMock.expectNone(TREE_URL);
     expect(secondResult).toEqual(makeTree());

@@ -8,15 +8,12 @@ export const MIS_PEDIDOS_ROUTES: Routes = [
     path: 'gestion-pedidos',
     canActivate: [permisoGuard],
     loadComponent: () =>
-      import('./pages/gestion-pedidos/gestion-pedidos')
-        .then(c => c.GestionPedidos),
+      import('./pages/gestion-pedidos/gestion-pedidos').then((c) => c.GestionPedidos),
   },
   {
     path: 'reembolsos',
     canActivate: [permisoGuard],
-    loadComponent: () =>
-      import('./pages/reembolsos/reembolsos')
-        .then(c => c.Reembolsos),
+    loadComponent: () => import('./pages/reembolsos/reembolsos').then((c) => c.Reembolsos),
   },
   {
     path: '',

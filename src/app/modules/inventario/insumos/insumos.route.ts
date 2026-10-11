@@ -8,16 +8,13 @@ export const INSUMOS_ROUTES: Routes = [
   {
     path: 'stock-insumos',
     canActivate: [permisoGuard],
-    loadComponent: () =>
-      import('./pages/stock-insumos/stock-insumos')
-        .then(c => c.StockInsumos),
+    loadComponent: () => import('./pages/stock-insumos/stock-insumos').then((c) => c.StockInsumos),
   },
   {
     path: 'solicitudes-insumos',
     canActivate: [permisoGuard],
     loadComponent: () =>
-      import('./pages/solicitudes-insumos/solicitudes-insumos')
-        .then(c => c.SolicitudesInsumos),
+      import('./pages/solicitudes-insumos/solicitudes-insumos').then((c) => c.SolicitudesInsumos),
   },
   {
     path: '',

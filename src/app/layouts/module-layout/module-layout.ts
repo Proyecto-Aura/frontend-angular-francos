@@ -18,7 +18,8 @@ export class ModuleLayout {
   private menuService = inject(MenuService);
   private authService = inject(AuthService);
 
-  private readonly fallbackLinks = (this.route.snapshot.data['sidebarLinks'] as SidebarLink[]) ?? [];
+  private readonly fallbackLinks =
+    (this.route.snapshot.data['sidebarLinks'] as SidebarLink[]) ?? [];
   private readonly fallbackTitle = (this.route.snapshot.data['sidebarTitle'] as string) ?? null;
   private readonly moduleNombre = this.route.snapshot.data['moduleNombre'] as string | undefined;
 
@@ -37,7 +38,7 @@ export class ModuleLayout {
       .getCurrentUser()
       .pipe(takeUntilDestroyed())
       .subscribe({
-        next: me => {
+        next: (me) => {
           this.userName.set(me.nombre_completo);
           this.userRole.set(me.roles[0] ? capitalize(me.roles[0]) : '');
         },
@@ -50,8 +51,8 @@ export class ModuleLayout {
       .getTree()
       .pipe(takeUntilDestroyed())
       .subscribe({
-        next: tree => {
-          const moduleNode = tree.find(nodo => nodo.nombre === this.moduleNombre);
+        next: (tree) => {
+          const moduleNode = tree.find((nodo) => nodo.nombre === this.moduleNombre);
           if (!moduleNode) return;
           this.links.set(mapRutaNodosToSidebarLinks(moduleNode.children));
           this.sectionLabel.set(moduleNode.etiqueta);

@@ -22,7 +22,7 @@ export class HomePerfil {
       .getCurrentUser()
       .pipe(takeUntilDestroyed())
       .subscribe({
-        next: me => this.userName.set(me.nombre_completo),
+        next: (me) => this.userName.set(me.nombre_completo),
         error: () => undefined,
       });
   }

@@ -9,7 +9,7 @@ import { existeNombreEnArbol } from '../utils/ruta-nodo-tree.util';
 // ruta de pagina real se eligio a proposito igual al "nombre" del backend
 // (ver insumos.route.ts) — si alguna vez dejan de coincidir, este guard deja
 // de poder identificar esa ruta y la bloquea de mas, no de menos.
-export const permisoGuard: CanActivateFn = route => {
+export const permisoGuard: CanActivateFn = (route) => {
   const menuService = inject(MenuService);
   const router = inject(Router);
 
@@ -17,7 +17,7 @@ export const permisoGuard: CanActivateFn = route => {
   if (!nombre) return true;
 
   return menuService.getTree().pipe(
-    map(tree => (existeNombreEnArbol(tree, nombre) ? true : router.createUrlTree(['/home']))),
+    map((tree) => (existeNombreEnArbol(tree, nombre) ? true : router.createUrlTree(['/home']))),
     catchError(() => of(router.createUrlTree(['/auth']))),
   );
 };

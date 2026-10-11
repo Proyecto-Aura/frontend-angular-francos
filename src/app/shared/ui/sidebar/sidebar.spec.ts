@@ -7,7 +7,9 @@ describe('Sidebar', () => {
     TestBed.configureTestingModule({ providers: [provideRouter([])] });
   });
 
-  function navLinks(fixture: ReturnType<typeof TestBed.createComponent<Sidebar>>): NodeListOf<HTMLAnchorElement> {
+  function navLinks(
+    fixture: ReturnType<typeof TestBed.createComponent<Sidebar>>,
+  ): NodeListOf<HTMLAnchorElement> {
     return fixture.nativeElement.querySelector('nav').querySelectorAll('a');
   }
 
@@ -107,7 +109,9 @@ describe('Sidebar', () => {
     expect(navLinks(fixture).length).toBe(0);
     const exitLink: HTMLAnchorElement | null = fixture.nativeElement.querySelector('a');
     expect(exitLink).toBeTruthy();
-    expect(exitLink?.getAttribute('routerLink') ?? exitLink?.getAttribute('ng-reflect-router-link')).toBe('/home');
-    expect((fixture.nativeElement.textContent as string)).toContain('Inicio');
+    expect(
+      exitLink?.getAttribute('routerLink') ?? exitLink?.getAttribute('ng-reflect-router-link'),
+    ).toBe('/home');
+    expect(fixture.nativeElement.textContent as string).toContain('Inicio');
   });
 });

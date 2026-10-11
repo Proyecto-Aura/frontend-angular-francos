@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, provideRouter } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { LucidePackage } from '@lucide/angular';
 import { ModuleLayout } from './module-layout';
 import { SidebarLink } from '../../shared/ui/sidebar/sidebar';
 import { environment } from '../../../environments/environment';
@@ -27,7 +28,11 @@ function makeMe(overrides: Partial<MeResponseDto> = {}): MeResponseDto {
 describe('ModuleLayout', () => {
   let httpMock: HttpTestingController;
 
-  function create(data: { sidebarLinks?: SidebarLink[]; sidebarTitle?: string; moduleNombre?: string }) {
+  function create(data: {
+    sidebarLinks?: SidebarLink[];
+    sidebarTitle?: string;
+    moduleNombre?: string;
+  }) {
     TestBed.configureTestingModule({
       providers: [
         provideRouter([]),
@@ -62,7 +67,10 @@ describe('ModuleLayout', () => {
   });
 
   it('with moduleNombre, replaces the fallback once the API returns a matching module', () => {
-    const fixture = create({ sidebarLinks: [{ label: 'fallback', path: 'x' }], moduleNombre: 'inventario' });
+    const fixture = create({
+      sidebarLinks: [{ label: 'fallback', path: 'x' }],
+      moduleNombre: 'inventario',
+    });
 
     const tree: RutaNodo[] = [
       {
@@ -74,7 +82,16 @@ describe('ModuleLayout', () => {
         estado: true,
         parent_id: null,
         children: [
-          { id: 2, nombre: 'insumos', etiqueta: 'Insumos', icono: 'package', descripcion: null, estado: true, parent_id: 1, children: [] },
+          {
+            id: 2,
+            nombre: 'insumos',
+            etiqueta: 'Insumos',
+            icono: 'package',
+            descripcion: null,
+            estado: true,
+            parent_id: 1,
+            children: [],
+          },
         ],
       },
     ];
@@ -82,15 +99,30 @@ describe('ModuleLayout', () => {
     httpMock.expectOne(ME_URL).flush(makeMe());
 
     expect(fixture.componentInstance.sectionLabel()).toBe('Gestión de Inventario (API)');
-    expect(fixture.componentInstance.links()).toEqual([{ label: 'Insumos', icon: undefined, path: 'insumos' }]);
+    expect(fixture.componentInstance.links()).toEqual([
+      { label: 'Insumos', icon: LucidePackage, path: 'insumos' },
+    ]);
   });
 
   it('keeps the fallback when the API tree has no node matching moduleNombre', () => {
     const fallback: SidebarLink[] = [{ label: 'fallback', path: 'x' }];
-    const fixture = create({ sidebarLinks: fallback, sidebarTitle: 'Fallback title', moduleNombre: 'ventas' });
+    const fixture = create({
+      sidebarLinks: fallback,
+      sidebarTitle: 'Fallback title',
+      moduleNombre: 'ventas',
+    });
 
     httpMock.expectOne(TREE_URL).flush([
-      { id: 1, nombre: 'inventario', etiqueta: 'Inventario', icono: 'package', descripcion: 'Control de stock y productos', estado: true, parent_id: null, children: [] },
+      {
+        id: 1,
+        nombre: 'inventario',
+        etiqueta: 'Inventario',
+        icono: 'package',
+        descripcion: 'Control de stock y productos',
+        estado: true,
+        parent_id: null,
+        children: [],
+      },
     ]);
     httpMock.expectOne(ME_URL).flush(makeMe());
 

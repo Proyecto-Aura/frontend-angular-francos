@@ -124,7 +124,7 @@ describe('AuthService', () => {
   });
 
   it('getCurrentUser fetches GET /auth/me', () => {
-    service.getCurrentUser().subscribe(me => expect(me).toEqual(makeMeResponse()));
+    service.getCurrentUser().subscribe((me) => expect(me).toEqual(makeMeResponse()));
     httpMock.expectOne(`${AUTH_BASE}/me`).flush(makeMeResponse());
   });
 
@@ -144,7 +144,9 @@ describe('AuthService', () => {
     httpMock.expectOne(`${AUTH_BASE}/login`).flush(makeResponse());
 
     service.getCurrentUser().subscribe();
-    httpMock.expectOne(`${AUTH_BASE}/me`).flush(makeMeResponse({ nombre_completo: 'Usuario de Ventas' }));
+    httpMock
+      .expectOne(`${AUTH_BASE}/me`)
+      .flush(makeMeResponse({ nombre_completo: 'Usuario de Ventas' }));
   });
 
   it('getCurrentUser cache is invalidated by logout', () => {

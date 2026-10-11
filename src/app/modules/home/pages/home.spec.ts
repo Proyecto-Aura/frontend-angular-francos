@@ -14,7 +14,9 @@ describe('Home', () => {
     // router machinery from provideRouter — a bare `{ provide: Router, useValue: ... }`
     // stub breaks RouterLink/ActivatedRoute's internal root-route resolution. Spy on the
     // real router instead of replacing it.
-    TestBed.configureTestingModule({ providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()] });
+    TestBed.configureTestingModule({
+      providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()],
+    });
     const router = TestBed.inject(Router);
     vi.spyOn(router, 'navigateByUrl').mockResolvedValue(true);
 

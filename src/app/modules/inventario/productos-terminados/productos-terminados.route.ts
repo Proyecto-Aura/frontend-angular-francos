@@ -7,22 +7,21 @@ export const PRODUCTOS_TERMINADOS_ROUTES: Routes = [
     path: 'stock-productos',
     canActivate: [permisoGuard],
     loadComponent: () =>
-      import('./pages/stock-productos/stock-productos')
-        .then(c => c.StockProductos),
+      import('./pages/stock-productos/stock-productos').then((c) => c.StockProductos),
   },
   {
     path: 'pedidos-por-preparar',
     canActivate: [permisoGuard],
     loadComponent: () =>
-      import('./pages/pedidos-por-preparar/pedidos-por-preparar')
-        .then(c => c.PedidosPorPreparar),
+      import('./pages/pedidos-por-preparar/pedidos-por-preparar').then((c) => c.PedidosPorPreparar),
   },
   {
     path: 'solicitudes-produccion',
     canActivate: [permisoGuard],
     loadComponent: () =>
-      import('./pages/solicitudes-produccion/solicitudes-produccion')
-        .then(c => c.SolicitudesProduccion),
+      import('./pages/solicitudes-produccion/solicitudes-produccion').then(
+        (c) => c.SolicitudesProduccion,
+      ),
   },
   {
     path: '',

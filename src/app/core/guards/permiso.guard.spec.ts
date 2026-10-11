@@ -15,9 +15,27 @@ const TREE: RutaNodo[] = [
     estado: true,
     parent_id: null,
     children: [
-      { id: 2, nombre: 'insumos', etiqueta: 'Insumos', icono: 'box', descripcion: null, estado: true, parent_id: 1, children: [
-        { id: 3, nombre: 'stock-insumos', etiqueta: 'Stock', icono: 'boxes', descripcion: null, estado: true, parent_id: 2, children: [] },
-      ] },
+      {
+        id: 2,
+        nombre: 'insumos',
+        etiqueta: 'Insumos',
+        icono: 'box',
+        descripcion: null,
+        estado: true,
+        parent_id: 1,
+        children: [
+          {
+            id: 3,
+            nombre: 'stock-insumos',
+            etiqueta: 'Stock',
+            icono: 'boxes',
+            descripcion: null,
+            estado: true,
+            parent_id: 2,
+            children: [],
+          },
+        ],
+      },
     ],
   },
 ];
@@ -52,7 +70,9 @@ describe('permisoGuard', () => {
   });
 
   it('redirects to /auth when fetching the menu fails', async () => {
-    const { result$, router, urlTree } = run('stock-insumos', { getTree: () => throwError(() => new Error('network')) });
+    const { result$, router, urlTree } = run('stock-insumos', {
+      getTree: () => throwError(() => new Error('network')),
+    });
     const result = await toPromise(result$);
     expect(router.createUrlTree).toHaveBeenCalledWith(['/auth']);
     expect(result).toBe(urlTree);
@@ -67,7 +87,7 @@ describe('permisoGuard', () => {
 
 function toPromise<T>(value: T | import('rxjs').Observable<T>): Promise<T> {
   if (value && typeof (value as never)['subscribe'] === 'function') {
-    return new Promise(resolve => (value as import('rxjs').Observable<T>).subscribe(resolve));
+    return new Promise((resolve) => (value as import('rxjs').Observable<T>).subscribe(resolve));
   }
   return Promise.resolve(value as T);
 }

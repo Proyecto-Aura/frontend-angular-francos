@@ -7,26 +7,28 @@ import { permisoGuard } from '../../core/guards/permiso.guard';
 export const GESTION_ESTRATEGICA_ROUTES: Routes = [
   {
     path: '',
-    loadComponent: () => import('../../layouts/module-layout/module-layout').then(c => c.ModuleLayout),
+    loadComponent: () =>
+      import('../../layouts/module-layout/module-layout').then((c) => c.ModuleLayout),
     data: {
       moduleNombre: 'estrategico',
     },
     children: [
       {
         path: 'gestion-estrategica-negocio',
-        loadChildren: () => import('./negocio/negocio.route').then(m => m.NEGOCIO_ROUTES),
+        loadChildren: () => import('./negocio/negocio.route').then((m) => m.NEGOCIO_ROUTES),
       },
       {
         path: 'gestion-estrategica-ti',
         canActivate: [permisoGuard],
-        loadChildren: () => import('./ti/ti.route').then(m => m.TI_ROUTES),
+        loadChildren: () => import('./ti/ti.route').then((m) => m.TI_ROUTES),
       },
       {
         path: 'plan-estrategico',
         canActivate: [permisoGuard],
         loadComponent: () =>
-          import('./plan-estrategico/pages/plan-estrategico-home/plan-estrategico-home')
-            .then(c => c.PlanEstrategicoHome),
+          import('./plan-estrategico/pages/plan-estrategico-home/plan-estrategico-home').then(
+            (c) => c.PlanEstrategicoHome,
+          ),
       },
       {
         path: '',

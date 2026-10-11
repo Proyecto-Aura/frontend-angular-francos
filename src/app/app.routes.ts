@@ -28,8 +28,7 @@ export const routes: Routes = [
     path: 'inventario',
     canActivate: [authGuard],
     loadChildren: () =>
-      import('./modules/inventario/inventario.route')
-        .then(m => m.INVENTARIO_ROUTES)
+      import('./modules/inventario/inventario.route').then((m) => m.INVENTARIO_ROUTES),
   },
   {
     path: 'ds-showcase',

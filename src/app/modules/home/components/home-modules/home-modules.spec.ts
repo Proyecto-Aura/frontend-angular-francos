@@ -48,24 +48,40 @@ describe('HomeModules', () => {
     const fixture = create();
     httpMock.expectOne(TREE_URL).flush([
       nodo({ nombre: 'inventario', etiqueta: 'Inventario (API)', descripcion: 'Desc API' }),
-      nodo({ nombre: 'estrategico', etiqueta: 'Gestión Estratégica (API)', descripcion: 'Desc estrategica API' }),
+      nodo({
+        nombre: 'estrategico',
+        etiqueta: 'Gestión Estratégica (API)',
+        descripcion: 'Desc estrategica API',
+      }),
     ]);
     fixture.detectChanges();
 
     const modules = fixture.componentInstance['modules']();
     expect(modules).toEqual([
-      { icon: '/icons/module_inventario.svg', title: 'Inventario (API)', description: 'Desc API', routerLink: '/inventario' },
-      { icon: '/icons/module-gestion-estrategica.png', title: 'Gestión Estratégica (API)', description: 'Desc estrategica API', routerLink: '/gestion-estrategica' },
+      {
+        icon: '/icons/module_inventario.svg',
+        title: 'Inventario (API)',
+        description: 'Desc API',
+        routerLink: '/inventario',
+      },
+      {
+        icon: '/icons/module-gestion-estrategica.png',
+        title: 'Gestión Estratégica (API)',
+        description: 'Desc estrategica API',
+        routerLink: '/gestion-estrategica',
+      },
     ]);
   });
 
   it('reorders the cards to Ventas, Inventario, Gestión Estratégica regardless of the order the API sends them in', () => {
     const fixture = create();
-    httpMock.expectOne(TREE_URL).flush([
-      nodo({ nombre: 'estrategico', etiqueta: 'Gestión Estratégica' }),
-      nodo({ nombre: 'ventas', etiqueta: 'Ventas' }),
-      nodo({ nombre: 'inventario', etiqueta: 'Inventario' }),
-    ]);
+    httpMock
+      .expectOne(TREE_URL)
+      .flush([
+        nodo({ nombre: 'estrategico', etiqueta: 'Gestión Estratégica' }),
+        nodo({ nombre: 'ventas', etiqueta: 'Ventas' }),
+        nodo({ nombre: 'inventario', etiqueta: 'Inventario' }),
+      ]);
     fixture.detectChanges();
 
     const titles = fixture.componentInstance['modules']().map((m: { title: string }) => m.title);
@@ -74,10 +90,12 @@ describe('HomeModules', () => {
 
   it('filters out a module the API returns that has no known MODULE_CARD_INFO entry (no real page yet)', () => {
     const fixture = create();
-    httpMock.expectOne(TREE_URL).flush([
-      nodo({ nombre: 'inventario' }),
-      nodo({ nombre: 'un-modulo-que-no-existe-en-el-front' }),
-    ]);
+    httpMock
+      .expectOne(TREE_URL)
+      .flush([
+        nodo({ nombre: 'inventario' }),
+        nodo({ nombre: 'un-modulo-que-no-existe-en-el-front' }),
+      ]);
     fixture.detectChanges();
 
     expect(fixture.componentInstance['modules']()).toHaveLength(1);

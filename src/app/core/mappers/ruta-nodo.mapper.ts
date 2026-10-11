@@ -7,8 +7,11 @@ import { resolveLucideIcon } from '../utils/lucide-icon-map';
 // propósito que los segmentos de ruta del front calcen con nombre (ver
 // insumos.route.ts). Si en algun momento el path de una pagina deja de
 // coincidir con su "nombre", este mapeo deja de servir para ese nodo.
-export function mapRutaNodosToSidebarLinks(nodos: RutaNodo[], parentPath: string[] = []): SidebarLink[] {
-  return nodos.map(nodo => {
+export function mapRutaNodosToSidebarLinks(
+  nodos: RutaNodo[],
+  parentPath: string[] = [],
+): SidebarLink[] {
+  return nodos.map((nodo) => {
     const path = [...parentPath, nodo.nombre];
     const icon = resolveLucideIcon(nodo.icono);
 

@@ -33,7 +33,10 @@ describe('mapRutaNodosToSidebarLinks', () => {
       descripcion: null,
       estado: true,
       parent_id: 1,
-      children: [makeLeaf(), makeLeaf({ id: 3, nombre: 'solicitudes-insumos', etiqueta: 'Solicitudes de insumos' })],
+      children: [
+        makeLeaf(),
+        makeLeaf({ id: 3, nombre: 'solicitudes-insumos', etiqueta: 'Solicitudes de insumos' }),
+      ],
     };
 
     const [link] = mapRutaNodosToSidebarLinks([parent]);

@@ -2,7 +2,11 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, finalize, shareReplay, tap } from 'rxjs';
 import { environment } from '../../../../environments/environment';
-import { LoginRequestDto, LoginResponseDto, MeResponseDto } from '../interfaces/usuario-dto.interface';
+import {
+  LoginRequestDto,
+  LoginResponseDto,
+  MeResponseDto,
+} from '../interfaces/usuario-dto.interface';
 
 export interface AuthSession {
   accessToken: string;
@@ -31,16 +35,20 @@ export class AuthService {
 
   login(identificador: string, password: string) {
     const body: LoginRequestDto = { identificador, password };
-    return this.http.post<LoginResponseDto>(`${AUTH_BASE}/login`, body, { withCredentials: true }).pipe(
-      tap(response => {
-        this.session.set(this.toSession(response));
-        this.me$ = null;
-      }),
-    );
+    return this.http
+      .post<LoginResponseDto>(`${AUTH_BASE}/login`, body, { withCredentials: true })
+      .pipe(
+        tap((response) => {
+          this.session.set(this.toSession(response));
+          this.me$ = null;
+        }),
+      );
   }
 
   getCurrentUser(): Observable<MeResponseDto> {
-    this.me$ ??= this.http.get<MeResponseDto>(`${AUTH_BASE}/me`).pipe(shareReplay({ bufferSize: 1, refCount: false }));
+    this.me$ ??= this.http
+      .get<MeResponseDto>(`${AUTH_BASE}/me`)
+      .pipe(shareReplay({ bufferSize: 1, refCount: false }));
     return this.me$;
   }
 

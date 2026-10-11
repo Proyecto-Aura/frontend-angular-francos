@@ -19,16 +19,34 @@ interface ModuleCard {
 const MODULE_CARD_INFO: Record<string, { icon: string; routerLink: string }> = {
   ventas: { icon: '/icons/module_ventas.svg', routerLink: '/ventas' },
   inventario: { icon: '/icons/module_inventario.svg', routerLink: '/inventario' },
-  estrategico: { icon: '/icons/module-gestion-estrategica.png', routerLink: '/gestion-estrategica' },
+  estrategico: {
+    icon: '/icons/module-gestion-estrategica.png',
+    routerLink: '/gestion-estrategica',
+  },
 };
 
 // Fallback mientras responde /rutas/mi-menu (o si falla) — solo los modulos
 // que hoy tienen pagina real detras, ya no la lista vieja con Produccion /
 // Configuracion, que nunca tuvieron ruta ni pantalla.
 const FALLBACK_MODULES: ModuleCard[] = [
-  { icon: MODULE_CARD_INFO['ventas'].icon, title: 'Ventas', description: 'Gestión de ventas y pedidos', routerLink: '/ventas' },
-  { icon: MODULE_CARD_INFO['inventario'].icon, title: 'Inventario', description: 'Control de stock y productos', routerLink: '/inventario' },
-  { icon: MODULE_CARD_INFO['estrategico'].icon, title: 'Gestión Estratégica', description: 'Planeamiento y seguimiento estratégico', routerLink: '/gestion-estrategica' },
+  {
+    icon: MODULE_CARD_INFO['ventas'].icon,
+    title: 'Ventas',
+    description: 'Gestión de ventas y pedidos',
+    routerLink: '/ventas',
+  },
+  {
+    icon: MODULE_CARD_INFO['inventario'].icon,
+    title: 'Inventario',
+    description: 'Control de stock y productos',
+    routerLink: '/inventario',
+  },
+  {
+    icon: MODULE_CARD_INFO['estrategico'].icon,
+    title: 'Gestión Estratégica',
+    description: 'Planeamiento y seguimiento estratégico',
+    routerLink: '/gestion-estrategica',
+  },
 ];
 
 // Orden pedido a mano: Ventas, Inventario, Gestion Estrategica, Produccion,
@@ -38,7 +56,14 @@ const FALLBACK_MODULES: ModuleCard[] = [
 // nombre cuando los carguen, hay que ajustar esta lista para que el orden
 // siga funcionando (mientras tanto no tienen efecto: MODULE_CARD_INFO ni
 // los conoce, asi que ni aparecen).
-const MODULE_ORDER = ['ventas', 'inventario', 'estrategico', 'produccion', 'despacho', 'configuracion'];
+const MODULE_ORDER = [
+  'ventas',
+  'inventario',
+  'estrategico',
+  'produccion',
+  'despacho',
+  'configuracion',
+];
 
 function ordenDe(nombre: string): number {
   const index = MODULE_ORDER.indexOf(nombre);
@@ -63,13 +88,18 @@ export class HomeModules {
       .getTree()
       .pipe(takeUntilDestroyed())
       .subscribe({
-        next: tree => {
+        next: (tree) => {
           const cards = tree
-            .filter(nodo => MODULE_CARD_INFO[nodo.nombre])
+            .filter((nodo) => MODULE_CARD_INFO[nodo.nombre])
             .sort((a, b) => ordenDe(a.nombre) - ordenDe(b.nombre))
-            .map(nodo => {
+            .map((nodo) => {
               const info = MODULE_CARD_INFO[nodo.nombre];
-              return { icon: info.icon, title: nodo.etiqueta, description: nodo.descripcion ?? '', routerLink: info.routerLink };
+              return {
+                icon: info.icon,
+                title: nodo.etiqueta,
+                description: nodo.descripcion ?? '',
+                routerLink: info.routerLink,
+              };
             });
           if (cards.length > 0) this.modules.set(cards);
         },

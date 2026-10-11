@@ -19,16 +19,16 @@ export const VENTAS_ROUTES: Routes = [
         path: 'clientes',
         canActivate: [permisoGuard],
         loadComponent: () =>
-          import('./clientes/pages/listar-clientes/listar-clientes')
-            .then(c => c.ListarClientes),
+          import('./clientes/pages/listar-clientes/listar-clientes').then((c) => c.ListarClientes),
       },
       {
         path: 'catalogo',
-        loadChildren: () => import('./catalogo/catalogo.route').then(m => m.CATALOGO_ROUTES),
+        loadChildren: () => import('./catalogo/catalogo.route').then((m) => m.CATALOGO_ROUTES),
       },
       {
         path: 'mis-pedidos',
-        loadChildren: () => import('./mis-pedidos/mis-pedidos.route').then(m => m.MIS_PEDIDOS_ROUTES),
+        loadChildren: () =>
+          import('./mis-pedidos/mis-pedidos.route').then((m) => m.MIS_PEDIDOS_ROUTES),
       },
       {
         path: '',
