@@ -1,1 +1,167 @@
-<p>configuracion-catalogo works!</p>
+<div class="flex flex-col gap-5 p-(--page-padding)">
+  <div>
+    <h1 class="text-ds-2xl font-semibold text-foreground">Configuración del catálogo</h1>
+    <p class="mt-1 text-ds-base text-muted-foreground">
+      Categorías y presentaciones que alimentan los selectores de producto.
+    </p>
+  </div>
+
+  <app-aviso-banner [texto]="aviso()" [tono]="avisoTono()" (closed)="aviso.set('')" />
+
+  <app-ds-tabs [tabs]="tabsDs()" [activeId]="tab()" (changed)="cambiarTab($event)" />
+
+  <app-ds-filter-bar [hasSearch]="true" [hasActions]="true">
+    <app-ds-input
+      search
+      [value]="query()"
+      (valueChange)="query.set($event)"
+      [placeholder]="tabActual().placeholderBuscar"
+    />
+    <div filters class="w-[188px]">
+      <app-ds-select
+        [value]="estadoFiltro()"
+        (valueChange)="estadoFiltro.set($event)"
+        [options]="estadoOptions"
+        placeholder="Todos los estados"
+      />
+    </div>
+    <app-ds-button actions size="sm" (clicked)="nuevo()">
+      <span icon><app-ds-icon [img]="LucidePlus" [size]="16" /></span>
+      {{ tabActual().accion }}
+    </app-ds-button>
+  </app-ds-filter-bar>
+
+  @if (tab() === 'categorias' && cargandoCategorias()) {
+    <p
+      class="rounded-lg border border-border bg-card p-8 text-center text-ds-base text-muted-foreground"
+    >
+      Cargando categorías…
+    </p>
+  } @else if (tab() === 'categorias' && errorCategorias()) {
+    <div
+      class="flex flex-col items-center gap-3 rounded-lg border border-border bg-card p-8 text-center"
+    >
+      <p class="text-ds-base text-muted-foreground">No se pudieron cargar las categorías.</p>
+      <app-ds-button variant="secondary" (clicked)="cargarCategorias()">Reintentar</app-ds-button>
+    </div>
+  } @else {
+    <app-ds-data-table [columns]="columns()" [rows]="filas()" empty="Sin registros" />
+  }
+  <p class="text-ds-sm text-muted-foreground">{{ subtitulo() }}</p>
+</div>
+
+<ng-template #nombreCell let-r>
+  <span class="font-semibold">{{ r.nombre }}</span>
+</ng-template>
+
+<ng-template #descripcionCell let-r>
+  <span class="text-muted-foreground">{{ descripcionDe(r) }}</span>
+</ng-template>
+
+<ng-template #usosCell let-r>
+  <span [class]="usosDe(r) ? 'font-semibold text-foreground' : 'text-muted-foreground'">{{
+    nf(usosDe(r))
+  }}</span>
+</ng-template>
+
+<ng-template #estadoCell let-r>
+  <app-ds-badge [tone]="r.estado === 'Activo' ? 'success' : 'neutral'" [dot]="true">{{
+    r.estado
+  }}</app-ds-badge>
+</ng-template>
+
+<ng-template #accionesCell let-r>
+  <span class="inline-flex items-center justify-end gap-1.5">
+    <app-ds-icon-button label="Editar" variant="secondary" size="sm" (clicked)="editar(r)">
+      <app-ds-icon [img]="LucidePencil" [size]="16" />
+    </app-ds-icon-button>
+    @if (r.estado === 'Activo') {
+      <app-ds-icon-button
+        label="Desactivar"
+        variant="secondary"
+        size="sm"
+        (clicked)="pedirDesactivar(r)"
+      >
+        <app-ds-icon [img]="LucideBan" [size]="16" />
+      </app-ds-icon-button>
+    } @else {
+      <app-ds-icon-button label="Reactivar" variant="secondary" size="sm" (clicked)="alternar(r)">
+        <app-ds-icon [img]="LucideRotateCcw" [size]="16" />
+      </app-ds-icon-button>
+    }
+  </span>
+</ng-template>
+
+<!-- ══════════ Modal: agregar / editar ══════════ -->
+<app-ds-modal
+  [open]="modo() !== null"
+  [title]="(modo() === 'editar' ? 'Editar ' : 'Agregar ') + tabActual().singular"
+  [width]="560"
+  [hasFooter]="true"
+  (closed)="cerrarForm()"
+>
+  <div class="flex flex-col gap-4">
+    @if (errores().length) {
+      <div
+        class="flex items-start gap-3 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-ds-sm text-destructive"
+      >
+        <app-ds-icon [img]="LucideCircleAlert" [size]="17" />
+        <div class="min-w-0 flex-1">
+          <p class="font-semibold">Revisa los datos del formulario</p>
+          <p class="mt-1">Falta o es inválido: {{ errores().join(', ') }}.</p>
+        </div>
+      </div>
+    }
+    @if (errorApi()) {
+      <div
+        class="flex items-start gap-3 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-ds-sm text-destructive"
+      >
+        <app-ds-icon [img]="LucideCircleAlert" [size]="17" />
+        <p class="min-w-0 flex-1">{{ errorApi() }}</p>
+      </div>
+    }
+    <app-ds-field [label]="'Nombre de la ' + tabActual().singular" [required]="true">
+      <app-ds-input
+        [value]="cf().nombre"
+        (valueChange)="setCampo('nombre', $event)"
+        [placeholder]="tabActual().placeholderNombre"
+      />
+    </app-ds-field>
+    <app-ds-field label="Descripción" [required]="true">
+      <app-ds-textarea
+        [rows]="2"
+        placeholder="Descripción breve del registro"
+        [value]="cf().descripcion"
+        (valueChange)="setCampo('descripcion', $event)"
+      />
+    </app-ds-field>
+  </div>
+  <span footer class="flex gap-2">
+    <app-ds-button variant="secondary" (clicked)="cerrarForm()">Cancelar</app-ds-button>
+    <app-ds-button (clicked)="guardar()">{{
+      modo() === 'editar' ? 'Guardar cambios' : 'Agregar'
+    }}</app-ds-button>
+  </span>
+</app-ds-modal>
+
+<!-- ══════════ Modal: confirmar desactivar (lógico) ══════════ -->
+<app-ds-modal
+  [open]="regConfirma() !== null"
+  [title]="'Desactivar ' + (regConfirma()?.nombre ?? '')"
+  [width]="520"
+  [hasFooter]="true"
+  (closed)="cancelarDesactivar()"
+>
+  <div
+    class="flex items-start gap-3 rounded-md border border-warning/30 bg-warning/10 p-3 text-ds-sm text-warning"
+  >
+    <app-ds-icon [img]="LucideTriangleAlert" [size]="17" />
+    <p class="min-w-0 flex-1">{{ textoConfirma() }}</p>
+  </div>
+  <span footer class="flex gap-2">
+    <app-ds-button variant="secondary" (clicked)="cancelarDesactivar()">Cancelar</app-ds-button>
+    @if (regConfirma(); as reg) {
+      <app-ds-button (clicked)="alternar(reg)">Desactivar</app-ds-button>
+    }
+  </span>
+</app-ds-modal>
