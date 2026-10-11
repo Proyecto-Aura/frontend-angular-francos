@@ -17,6 +17,10 @@ export class KpiCard {
 
   toneClass = computed(() => {
     const tone = this.deltaTone();
-    return tone === 'up' ? 'text-success' : tone === 'down' ? 'text-destructive' : 'text-muted-foreground';
+    return tone === 'up'
+      ? 'text-success'
+      : tone === 'down'
+        ? 'text-destructive'
+        : 'text-muted-foreground';
   });
 }

@@ -16,7 +16,11 @@ describe('AuthFormLogin', () => {
   beforeEach(() => {
     router = { navigateByUrl: vi.fn() };
     TestBed.configureTestingModule({
-      providers: [provideHttpClient(), provideHttpClientTesting(), { provide: Router, useValue: router }],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: Router, useValue: router },
+      ],
     });
     httpMock = TestBed.inject(HttpTestingController);
   });
@@ -71,7 +75,10 @@ describe('AuthFormLogin', () => {
 
     const submission = submit(component.loginForm);
     const req = httpMock.expectOne(LOGIN_URL);
-    req.flush({ statusCode: 401, message: 'Credenciales inválidas' }, { status: 401, statusText: 'Unauthorized' });
+    req.flush(
+      { statusCode: 401, message: 'Credenciales inválidas' },
+      { status: 401, statusText: 'Unauthorized' },
+    );
     await submission;
 
     expect(component.loginError()).toBe('Credenciales inválidas');

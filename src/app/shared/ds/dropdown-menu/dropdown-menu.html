@@ -23,7 +23,10 @@
             [class]="itemClasses(item, $index)"
           >
             @if (item.icon) {
-              <ng-container [ngComponentOutlet]="item.icon" [ngComponentOutletInputs]="{ size: 16 }" />
+              <ng-container
+                [ngComponentOutlet]="item.icon"
+                [ngComponentOutletInputs]="{ size: 16 }"
+              />
             }
             <span>{{ item.label }}</span>
           </button>

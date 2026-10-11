@@ -50,17 +50,19 @@ export class AuthService {
   // Nota: el backend solo devuelve access_token nuevo aca, no roles/flags — si ya
   // habia una sesion en memoria se conservan sus roles/flags viejos.
   refresh() {
-    return this.http.post<{ access_token: string }>(`${AUTH_BASE}/refresh`, null, { withCredentials: true }).pipe(
-      tap(response => {
-        const current = this.session();
-        this.session.set({
-          accessToken: response.access_token,
-          roles: current?.roles ?? [],
-          emailVerificado: current?.emailVerificado ?? false,
-          debeCambiarContrasena: current?.debeCambiarContrasena ?? false,
-        });
-      }),
-    );
+    return this.http
+      .post<{ access_token: string }>(`${AUTH_BASE}/refresh`, null, { withCredentials: true })
+      .pipe(
+        tap((response) => {
+          const current = this.session();
+          this.session.set({
+            accessToken: response.access_token,
+            roles: current?.roles ?? [],
+            emailVerificado: current?.emailVerificado ?? false,
+            debeCambiarContrasena: current?.debeCambiarContrasena ?? false,
+          });
+        }),
+      );
   }
 
   logout() {

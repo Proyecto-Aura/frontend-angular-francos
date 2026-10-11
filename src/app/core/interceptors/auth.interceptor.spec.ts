@@ -32,7 +32,12 @@ describe('authInterceptor', () => {
   afterEach(() => httpMock.verify());
 
   it('attaches the Bearer token to a protected request when a session exists', () => {
-    authService.session.set({ accessToken: 'abc', roles: [], emailVerificado: false, debeCambiarContrasena: false });
+    authService.session.set({
+      accessToken: 'abc',
+      roles: [],
+      emailVerificado: false,
+      debeCambiarContrasena: false,
+    });
 
     http.get(PROTECTED_URL).subscribe();
     const req = httpMock.expectOne(PROTECTED_URL);
@@ -48,7 +53,12 @@ describe('authInterceptor', () => {
   });
 
   it('does not attach the Bearer token to the auth endpoints themselves', () => {
-    authService.session.set({ accessToken: 'abc', roles: [], emailVerificado: false, debeCambiarContrasena: false });
+    authService.session.set({
+      accessToken: 'abc',
+      roles: [],
+      emailVerificado: false,
+      debeCambiarContrasena: false,
+    });
 
     http.post(`${AUTH_BASE}/logout`, null).subscribe();
     const req = httpMock.expectOne(`${AUTH_BASE}/logout`);
@@ -57,10 +67,15 @@ describe('authInterceptor', () => {
   });
 
   it('on a 401 from a protected request, refreshes and retries once with the new token', () => {
-    authService.session.set({ accessToken: 'expired', roles: [], emailVerificado: false, debeCambiarContrasena: false });
+    authService.session.set({
+      accessToken: 'expired',
+      roles: [],
+      emailVerificado: false,
+      debeCambiarContrasena: false,
+    });
 
     let result: unknown;
-    http.get(PROTECTED_URL).subscribe(res => (result = res));
+    http.get(PROTECTED_URL).subscribe((res) => (result = res));
 
     httpMock.expectOne(PROTECTED_URL).flush('expired', { status: 401, statusText: 'Unauthorized' });
 
@@ -75,12 +90,19 @@ describe('authInterceptor', () => {
   });
 
   it('when the refresh also fails, clears the session and redirects to /auth', () => {
-    authService.session.set({ accessToken: 'expired', roles: [], emailVerificado: false, debeCambiarContrasena: false });
+    authService.session.set({
+      accessToken: 'expired',
+      roles: [],
+      emailVerificado: false,
+      debeCambiarContrasena: false,
+    });
 
     http.get(PROTECTED_URL).subscribe({ error: () => undefined });
 
     httpMock.expectOne(PROTECTED_URL).flush('expired', { status: 401, statusText: 'Unauthorized' });
-    httpMock.expectOne(`${AUTH_BASE}/refresh`).flush('still invalid', { status: 401, statusText: 'Unauthorized' });
+    httpMock
+      .expectOne(`${AUTH_BASE}/refresh`)
+      .flush('still invalid', { status: 401, statusText: 'Unauthorized' });
 
     expect(authService.session()).toBeNull();
     expect(router.navigateByUrl).toHaveBeenCalledWith('/auth');
@@ -88,7 +110,9 @@ describe('authInterceptor', () => {
 
   it('does not try to refresh when the 401 comes from the login endpoint itself', () => {
     http.post(`${AUTH_BASE}/login`, {}).subscribe({ error: () => undefined });
-    httpMock.expectOne(`${AUTH_BASE}/login`).flush('bad creds', { status: 401, statusText: 'Unauthorized' });
+    httpMock
+      .expectOne(`${AUTH_BASE}/login`)
+      .flush('bad creds', { status: 401, statusText: 'Unauthorized' });
 
     httpMock.verify();
   });

@@ -4,23 +4,25 @@ import { authGuard } from './core/guards/auth.guard';
 export const routes: Routes = [
   {
     path: 'auth',
-    loadChildren: () =>
-      import('./modules/auth/auth.route')
-        .then(c => c.AUTH_ROUTES),
+    loadChildren: () => import('./modules/auth/auth.route').then((c) => c.AUTH_ROUTES),
   },
   {
     path: 'home',
     canActivate: [authGuard],
-    loadComponent: () =>
-      import('./modules/home/pages/home')
-        .then(c => c.Home),
+    loadComponent: () => import('./modules/home/pages/home').then((c) => c.Home),
   },
   {
     path: 'ventas',
     canActivate: [authGuard],
+    loadChildren: () => import('./modules/ventas/ventas.route').then((m) => m.VENTAS_ROUTES),
+  },
+  {
+    path: 'gestion-estrategica',
+    canActivate: [authGuard],
     loadChildren: () =>
-      import('./modules/ventas/ventas.route')
-	      .then(m => m.VENTAS_ROUTES)
+      import('./modules/gestion-estrategica/gestion-estrategica.route').then(
+        (m) => m.GESTION_ESTRATEGICA_ROUTES,
+      ),
   },
   {
     path: 'inventario',
@@ -30,17 +32,8 @@ export const routes: Routes = [
         .then(m => m.INVENTARIO_ROUTES)
   },
   {
-    path: 'gestion-estrategica',
-    canActivate: [authGuard],
-    loadChildren: () =>
-      import('./modules/gestion-estrategica/gestion-estrategica.route')
-        .then(m => m.GESTION_ESTRATEGICA_ROUTES)
-  },
-  {
     path: 'ds-showcase',
-    loadComponent: () =>
-      import('./ds-showcase/ds-showcase')
-        .then(c => c.DsShowcase),
+    loadComponent: () => import('./ds-showcase/ds-showcase').then((c) => c.DsShowcase),
   },
   // {
   //   path: '',
@@ -58,6 +51,6 @@ export const routes: Routes = [
   // },
   {
     path: '**',
-    redirectTo: 'auth'
+    redirectTo: 'auth',
   },
 ];

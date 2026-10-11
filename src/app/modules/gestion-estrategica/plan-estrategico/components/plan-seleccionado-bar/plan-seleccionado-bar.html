@@ -1,0 +1,26 @@
+<div
+  class="flex min-h-14 items-center gap-3 border-b border-border bg-background px-(--page-padding) py-2"
+>
+  <span class="text-ds-sm text-muted-foreground">Plan activo:</span>
+
+  @if (planSeleccionado.plan(); as plan) {
+    <app-ds-dropdown-menu [items]="items()" align="left">
+      <button
+        trigger
+        type="button"
+        class="flex h-10 items-center gap-2.5 rounded-(--radius-field) border border-border bg-card px-3 text-foreground"
+      >
+        <span class="h-1.5 w-1.5 shrink-0 rounded-full" [class]="clasePunto(plan)"></span>
+        <span class="font-semibold">{{ plan.nombre }}</span>
+        <span class="text-ds-sm text-muted-foreground"
+          >{{ plan.anioInicio }}–{{ plan.anioFin }}</span
+        >
+        <app-ds-icon class="text-muted-foreground" [img]="LucideChevronDown" [size]="16" />
+      </button>
+    </app-ds-dropdown-menu>
+
+    <app-ds-badge [tone]="tonoEstado(plan.estadoCodigo)" [dot]="true">
+      {{ plan.estadoNombre }}
+    </app-ds-badge>
+  }
+</div>

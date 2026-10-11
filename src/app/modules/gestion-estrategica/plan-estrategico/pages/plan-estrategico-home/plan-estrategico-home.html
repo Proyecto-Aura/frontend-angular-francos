@@ -1,0 +1,129 @@
+<div class="flex flex-col gap-6 p-(--page-padding)">
+  <div class="flex justify-between gap-4">
+    <div>
+      <h1 class="text-ds-2xl font-medium text-foreground">Planes estratégicos</h1>
+      <p class="mt-1 text-muted-foreground">
+        Define y gestiona los planes estratégicos por rango de años.
+      </p>
+    </div>
+
+    <app-ds-button variant="primary" (clicked)="abrirNuevoPlan()">
+      <span icon><app-ds-icon [img]="LucidePlus" [size]="16" /></span>
+      Nuevo plan
+    </app-ds-button>
+  </div>
+
+  <div class="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4">
+    <app-ds-kpi-card label="Total de planes" [value]="resumen()?.total ?? '–'" [hasIcon]="true">
+      <span icon><app-ds-icon [img]="LucideTarget" [size]="16" /></span>
+    </app-ds-kpi-card>
+
+    <app-ds-kpi-card label="Activos" [value]="resumen()?.activos ?? '–'" [hasIcon]="true">
+      <span icon><app-ds-icon [img]="LucideCircleDot" [size]="16" /></span>
+    </app-ds-kpi-card>
+
+    <app-ds-kpi-card label="Borradores" [value]="resumen()?.borradores ?? '–'" [hasIcon]="true">
+      <span icon><app-ds-icon [img]="LucidePencilLine" [size]="16" /></span>
+    </app-ds-kpi-card>
+
+    <app-ds-kpi-card label="Cerrados" [value]="resumen()?.cerrados ?? '–'" [hasIcon]="true">
+      <span icon><app-ds-icon [img]="LucideLock" [size]="16" /></span>
+    </app-ds-kpi-card>
+  </div>
+
+  <app-ds-card [padded]="false" [hasFooter]="totalPaginas() > 1">
+    @if (cargando()) {
+      <div class="p-12 text-center text-muted-foreground">Cargando…</div>
+    } @else if (errorCarga()) {
+      <div class="flex flex-col items-center gap-3 p-12 text-center">
+        <p class="text-muted-foreground">No se pudieron cargar los planes.</p>
+        <app-ds-button variant="secondary" (clicked)="cargarPlanes()">Reintentar</app-ds-button>
+      </div>
+    } @else {
+      <app-ds-data-table [columns]="columnas()" [rows]="planes()" empty="Sin planes registrados" />
+    }
+
+    @if (totalPaginas() > 1) {
+      <div footer>
+        <app-ds-pagination
+          [page]="pagina()"
+          [pageCount]="totalPaginas()"
+          [total]="total()"
+          [pageSize]="tamanioPagina"
+          (changed)="cambiarPagina($event)"
+        />
+      </div>
+    }
+  </app-ds-card>
+
+  <ng-template #planCell let-plan>
+    <app-ds-cell-stack [primary]="plan.nombre" [secondary]="plan.codigo" />
+  </ng-template>
+
+  <ng-template #aniosCell let-plan>
+    <span>{{ plan.anioInicio }} – {{ plan.anioFin }}</span>
+  </ng-template>
+
+  <ng-template #estadoCell let-plan>
+    <app-ds-badge [tone]="tonoEstado(plan.estadoCodigo)" [dot]="true">
+      {{ plan.estadoNombre }}
+    </app-ds-badge>
+  </ng-template>
+
+  <ng-template #accionesCell let-plan>
+    <div class="flex justify-end gap-2">
+      <app-ds-icon-button
+        label="Editar"
+        variant="secondary"
+        size="md"
+        [disabled]="plan.estadoCodigo !== 'BORRADOR'"
+        (clicked)="abrirEdicion($event, plan)"
+      >
+        <app-ds-icon [img]="LucidePencil" [size]="16" />
+      </app-ds-icon-button>
+
+      @if (plan.estadoCodigo === 'BORRADOR' || plan.estadoCodigo === 'ACTIVO') {
+        <app-ds-icon-button
+          label="Cambiar estado"
+          variant="secondary"
+          size="md"
+          (clicked)="abrirCambioEstado($event, plan)"
+        >
+          <app-ds-icon [img]="LucideRefreshCw" [size]="16" />
+        </app-ds-icon-button>
+      }
+
+      <app-ds-icon-button
+        label="Eliminar"
+        variant="secondary"
+        size="md"
+        [disabled]="plan.estadoCodigo !== 'BORRADOR'"
+        (clicked)="abrirEliminacion($event, plan)"
+      >
+        <app-ds-icon [img]="LucideTrash2" [size]="16" />
+      </app-ds-icon-button>
+    </div>
+  </ng-template>
+
+  <app-plan-estrategico-form-modal
+    [open]="modalActivo() === 'form'"
+    [plan]="planSeleccionado()"
+    (closed)="cerrarModal()"
+    (saved)="planGuardado()"
+  />
+
+  <app-plan-estrategico-estado-modal
+    [open]="modalActivo() === 'estado'"
+    [plan]="planSeleccionado()"
+    [planActivo]="planActivo()"
+    (closed)="cerrarModal()"
+    (saved)="planGuardado()"
+  />
+
+  <app-plan-estrategico-eliminar-modal
+    [open]="modalActivo() === 'eliminar'"
+    [plan]="planSeleccionado()"
+    (closed)="cerrarModal()"
+    (deleted)="planEliminado()"
+  />
+</div>

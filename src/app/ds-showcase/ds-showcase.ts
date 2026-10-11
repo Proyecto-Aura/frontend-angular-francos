@@ -84,8 +84,14 @@ interface PedidoRow {
   templateUrl: './ds-showcase.html',
 })
 export class DsShowcase implements AfterViewInit {
-  @ViewChild('clienteCell', { static: true }) clienteCellTpl!: TemplateRef<{ $implicit: PedidoRow; index: number }>;
-  @ViewChild('estadoCell', { static: true }) estadoCellTpl!: TemplateRef<{ $implicit: PedidoRow; index: number }>;
+  @ViewChild('clienteCell', { static: true }) clienteCellTpl!: TemplateRef<{
+    $implicit: PedidoRow;
+    index: number;
+  }>;
+  @ViewChild('estadoCell', { static: true }) estadoCellTpl!: TemplateRef<{
+    $implicit: PedidoRow;
+    index: number;
+  }>;
 
   readonly LucideUsers = LucideUsers;
   readonly LucidePlus = LucidePlus;
@@ -117,9 +123,27 @@ export class DsShowcase implements AfterViewInit {
   ];
 
   kpis = [
-    { label: 'Ventas del mes', value: 'S/ 148,320', delta: '+12.4%', tone: 'up' as const, caption: 'En miles de soles' },
-    { label: 'Pedidos abiertos', value: 32, delta: '-3', tone: 'down' as const, caption: '240 registros · actualizado hace 2 h' },
-    { label: 'Clientes activos', value: 486, delta: '+8', tone: 'up' as const, caption: 'Últimos 30 días' },
+    {
+      label: 'Ventas del mes',
+      value: 'S/ 148,320',
+      delta: '+12.4%',
+      tone: 'up' as const,
+      caption: 'En miles de soles',
+    },
+    {
+      label: 'Pedidos abiertos',
+      value: 32,
+      delta: '-3',
+      tone: 'down' as const,
+      caption: '240 registros · actualizado hace 2 h',
+    },
+    {
+      label: 'Clientes activos',
+      value: 486,
+      delta: '+8',
+      tone: 'up' as const,
+      caption: 'Últimos 30 días',
+    },
   ];
 
   chartData: BarChartDatum[] = [
@@ -140,8 +164,8 @@ export class DsShowcase implements AfterViewInit {
   ]);
 
   ngAfterViewInit(): void {
-    this.columns.update(cols =>
-      cols.map(col => {
+    this.columns.update((cols) =>
+      cols.map((col) => {
         if (col.key === 'cliente') return { ...col, cellTemplate: this.clienteCellTpl };
         if (col.key === 'estado') return { ...col, cellTemplate: this.estadoCellTpl };
         return col;
@@ -150,11 +174,46 @@ export class DsShowcase implements AfterViewInit {
   }
 
   rows: PedidoRow[] = [
-    { id: 'PED-1042', cliente: 'Comercial Andina S.A.C.', ruc: 'RUC 20548712345', fecha: '05 Sep 2026', total: 'S/ 4,280.00', estado: 'Pagado' },
-    { id: 'PED-1041', cliente: 'Distribuidora Rimac E.I.R.L.', ruc: 'RUC 20487213456', fecha: '04 Sep 2026', total: 'S/ 1,150.50', estado: 'Pendiente' },
-    { id: 'PED-1040', cliente: 'Inversiones del Sur S.A.', ruc: 'RUC 20512345678', fecha: '03 Sep 2026', total: 'S/ 8,940.00', estado: 'Pagado' },
-    { id: 'PED-1039', cliente: 'Grupo Naviero Callao', ruc: 'RUC 20398765432', fecha: '02 Sep 2026', total: 'S/ 620.00', estado: 'Vencido' },
-    { id: 'PED-1038', cliente: 'Textiles Miraflores S.A.C.', ruc: 'RUC 20476543210', fecha: '01 Sep 2026', total: 'S/ 3,075.00', estado: 'Pagado' },
+    {
+      id: 'PED-1042',
+      cliente: 'Comercial Andina S.A.C.',
+      ruc: 'RUC 20548712345',
+      fecha: '05 Sep 2026',
+      total: 'S/ 4,280.00',
+      estado: 'Pagado',
+    },
+    {
+      id: 'PED-1041',
+      cliente: 'Distribuidora Rimac E.I.R.L.',
+      ruc: 'RUC 20487213456',
+      fecha: '04 Sep 2026',
+      total: 'S/ 1,150.50',
+      estado: 'Pendiente',
+    },
+    {
+      id: 'PED-1040',
+      cliente: 'Inversiones del Sur S.A.',
+      ruc: 'RUC 20512345678',
+      fecha: '03 Sep 2026',
+      total: 'S/ 8,940.00',
+      estado: 'Pagado',
+    },
+    {
+      id: 'PED-1039',
+      cliente: 'Grupo Naviero Callao',
+      ruc: 'RUC 20398765432',
+      fecha: '02 Sep 2026',
+      total: 'S/ 620.00',
+      estado: 'Vencido',
+    },
+    {
+      id: 'PED-1038',
+      cliente: 'Textiles Miraflores S.A.C.',
+      ruc: 'RUC 20476543210',
+      fecha: '01 Sep 2026',
+      total: 'S/ 3,075.00',
+      estado: 'Pagado',
+    },
   ];
 
   estadoTone(estado: string): BadgeTone {
@@ -179,9 +238,7 @@ export class DsShowcase implements AfterViewInit {
   sidebarSections: DsSidebarSection[] = [
     {
       label: 'Principal',
-      items: [
-        { id: 'dashboard', label: 'Panel', icon: LucideLayoutDashboard },
-      ],
+      items: [{ id: 'dashboard', label: 'Panel', icon: LucideLayoutDashboard }],
     },
     {
       label: 'Ventas',

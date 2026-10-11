@@ -5,7 +5,13 @@
   [class.cursor-not-allowed]="disabled()"
   [class.opacity-50]="disabled()"
 >
-  <input type="checkbox" [checked]="checked()" [disabled]="disabled()" (change)="onChange($event)" class="absolute h-0 w-0 opacity-0" />
+  <input
+    type="checkbox"
+    [checked]="checked()"
+    [disabled]="disabled()"
+    (change)="onChange($event)"
+    class="absolute h-0 w-0 opacity-0"
+  />
   <span
     class="inline-flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-md leading-none text-primary-foreground transition-[background,border-color] duration-[120ms] ease-linear"
     [class.mt-px]="!!description()"
@@ -16,11 +22,30 @@
     [class.bg-primary]="on()"
   >
     @if (indeterminate()) {
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true">
+      <svg
+        width="14"
+        height="14"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="3"
+        stroke-linecap="round"
+        aria-hidden="true"
+      >
         <path d="M5 12h14" />
       </svg>
     } @else if (checked()) {
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <svg
+        width="14"
+        height="14"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="3"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
         <path d="m20 6-11 11-5-5" />
       </svg>
     }

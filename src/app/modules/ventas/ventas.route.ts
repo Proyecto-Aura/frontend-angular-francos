@@ -9,7 +9,8 @@ import { permisoGuard } from '../../core/guards/permiso.guard';
 export const VENTAS_ROUTES: Routes = [
   {
     path: '',
-    loadComponent: () => import('../../layouts/module-layout/module-layout').then(c => c.ModuleLayout),
+    loadComponent: () =>
+      import('../../layouts/module-layout/module-layout').then((c) => c.ModuleLayout),
     data: {
       moduleNombre: 'ventas',
     },

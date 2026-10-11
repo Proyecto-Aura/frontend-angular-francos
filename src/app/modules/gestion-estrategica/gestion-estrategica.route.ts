@@ -19,16 +19,14 @@ export const GESTION_ESTRATEGICA_ROUTES: Routes = [
       {
         path: 'gestion-estrategica-ti',
         canActivate: [permisoGuard],
-        loadComponent: () =>
-          import('./ti/pages/gestion-estrategica-ti/gestion-estrategica-ti')
-            .then(c => c.GestionEstrategicaTi),
+        loadChildren: () => import('./ti/ti.route').then(m => m.TI_ROUTES),
       },
       {
         path: 'plan-estrategico',
         canActivate: [permisoGuard],
         loadComponent: () =>
-          import('./plan-estrategico/pages/plan-estrategico/plan-estrategico')
-            .then(c => c.PlanEstrategico),
+          import('./plan-estrategico/pages/plan-estrategico-home/plan-estrategico-home')
+            .then(c => c.PlanEstrategicoHome),
       },
       {
         path: '',
