@@ -1,0 +1,268 @@
+<app-ds-modal
+  [open]="open()"
+  [title]="titulo()"
+  [description]="plan().nombre"
+  [hasFooter]="true"
+  [width]="880"
+  (closed)="cerrar()"
+>
+  <div class="flex flex-col gap-6">
+    @if (plan().estadoCodigo !== 'BORRADOR') {
+      <div class="flex items-center gap-2.5 rounded-lg border border-border bg-muted px-4 py-3">
+        <app-ds-icon class="shrink-0" [img]="LucideLock" [size]="16" />
+        <span>
+          El plan está {{ plan().estadoNombre }}: metas y semáforo ya no se pueden modificar.
+        </span>
+      </div>
+    }
+
+    <section class="flex flex-col gap-4">
+      <h2 class="text-ds-lg font-medium text-foreground">1. Datos generales</h2>
+
+      <app-ds-field
+        label="Objetivo estratégico"
+        htmlFor="kpi-objetivo"
+        [required]="true"
+        [error]="errores().objetivoId ?? null"
+      >
+        <app-ds-select
+          id="kpi-objetivo"
+          [(value)]="objetivoId"
+          [options]="opcionesObjetivo()"
+          placeholder="Seleccione un objetivo"
+          [disabled]="modoSoloLectura()"
+          [invalid]="!!errores().objetivoId"
+        />
+      </app-ds-field>
+
+      @if (objetivoSeleccionado(); as objetivo) {
+        <div class="grid gap-4 md:grid-cols-2">
+          <app-ds-field label="Perspectiva BSC" hint="Heredada del objetivo estratégico">
+            <div class="flex min-h-11 items-center">
+              <app-ds-badge [tone]="tonoPerspectiva()" [dot]="true">
+                {{ objetivo.perspectivaNombre }}
+              </app-ds-badge>
+            </div>
+          </app-ds-field>
+
+          <app-ds-field
+            label="Responsable"
+            hint="Se toma automáticamente del objetivo estratégico."
+            htmlFor="kpi-responsable"
+          >
+            <app-ds-input id="kpi-responsable" [value]="objetivo.responsable" [disabled]="true" />
+          </app-ds-field>
+        </div>
+      }
+
+      <app-ds-field
+        label="Nombre"
+        htmlFor="kpi-nombre"
+        [required]="true"
+        [error]="errores().nombre ?? null"
+      >
+        <app-ds-input
+          id="kpi-nombre"
+          [(value)]="nombre"
+          placeholder="Ej. Margen operativo"
+          [disabled]="modoSoloLectura()"
+          [invalid]="!!errores().nombre"
+        />
+      </app-ds-field>
+
+      <app-ds-field
+        label="Fórmula"
+        hint="Descriptiva. El sistema no la calcula automáticamente."
+        htmlFor="kpi-formula"
+        [required]="true"
+        [error]="errores().formula ?? null"
+      >
+        <app-ds-textarea
+          id="kpi-formula"
+          [(value)]="formula"
+          [rows]="3"
+          placeholder="Ej. Utilidad operativa / Ventas netas × 100"
+          [disabled]="modoSoloLectura()"
+          [invalid]="!!errores().formula"
+        />
+      </app-ds-field>
+
+      <div class="grid gap-4 md:grid-cols-2">
+        <app-ds-field
+          label="Frecuencia"
+          htmlFor="kpi-frecuencia"
+          [required]="true"
+          [error]="errores().frecuenciaId ?? null"
+        >
+          <app-ds-select
+            id="kpi-frecuencia"
+            [(value)]="frecuenciaId"
+            [options]="opcionesFrecuencia()"
+            placeholder="Seleccione una frecuencia"
+            [disabled]="modoSoloLectura() || cargandoCatalogos()"
+            [invalid]="!!errores().frecuenciaId"
+          />
+        </app-ds-field>
+
+        <app-ds-field
+          label="Unidad de medida"
+          htmlFor="kpi-unidad"
+          [required]="true"
+          [error]="errores().unidadId ?? null"
+        >
+          <app-ds-select
+            id="kpi-unidad"
+            [(value)]="unidadId"
+            [options]="opcionesUnidad()"
+            placeholder="Seleccione una unidad"
+            [disabled]="modoSoloLectura() || cargandoCatalogos()"
+            [invalid]="!!errores().unidadId"
+          />
+        </app-ds-field>
+      </div>
+    </section>
+
+    <section class="flex flex-col gap-3">
+      <div>
+        <h2 class="text-ds-lg font-medium text-foreground">2. Metas y semáforo por año</h2>
+        <p class="mt-1 text-ds-sm text-muted-foreground">
+          El verde usa la meta anual y el rojo se calcula automáticamente.
+        </p>
+      </div>
+
+      <div class="overflow-x-auto rounded-lg border border-border">
+        <table class="min-w-180 w-full border-collapse text-ds-sm">
+          <thead>
+            <tr class="border-b border-border bg-table-header text-left text-muted-foreground">
+              <th class="px-3 py-3 font-normal">Año</th>
+              <th class="px-3 py-3 font-normal">Meta</th>
+              <th class="px-3 py-3 font-normal">
+                <span class="flex items-center gap-1.5">
+                  <span class="size-2 shrink-0 rounded-full bg-success" aria-hidden="true"></span>
+                  Verde
+                </span>
+              </th>
+              <th class="px-3 py-3 font-normal">
+                <span class="flex items-center gap-1.5">
+                  <span class="size-2 shrink-0 rounded-full bg-warning" aria-hidden="true"></span>
+                  Amarillo
+                </span>
+              </th>
+              <th class="px-3 py-3 font-normal">
+                <span class="flex items-center gap-1.5">
+                  <span
+                    class="size-2 shrink-0 rounded-full bg-destructive"
+                    aria-hidden="true"
+                  ></span>
+                  Rojo
+                </span>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (fila of filas(); track fila.anio) {
+              <tr class="border-b border-border last:border-b-0">
+                <td class="px-3 py-3 font-medium text-foreground">{{ fila.anio }}</td>
+                <td class="w-36 px-3 py-3">
+                  <app-ds-input
+                    [id]="'kpi-meta-' + fila.anio"
+                    type="number"
+                    size="sm"
+                    [value]="fila.meta"
+                    [disabled]="modoSoloLectura()"
+                    [invalid]="erroresDeAnio(fila.anio).length > 0"
+                    (valueChange)="actualizarMeta(fila.anio, 'meta', $event)"
+                  />
+                </td>
+                <td class="px-3 py-3">
+                  <div class="flex min-w-44 items-center gap-2">
+                    <div class="w-20">
+                      <app-ds-select
+                        size="sm"
+                        [value]="fila.operador"
+                        [options]="opcionesOperador"
+                        [disabled]="modoSoloLectura()"
+                        (valueChange)="actualizarOperador($event)"
+                      />
+                    </div>
+                    <span class="flex items-center gap-1 text-muted-foreground">
+                      <app-ds-icon [img]="LucideLock" [size]="14" />
+                      {{ fila.meta || 'meta' }}
+                    </span>
+                  </div>
+                  <span class="mt-1 block text-ds-xs text-muted-foreground">Igual a la meta</span>
+                </td>
+                <td class="px-3 py-3">
+                  <div class="flex min-w-44 items-center gap-2">
+                    <div class="w-20">
+                      <app-ds-select
+                        size="sm"
+                        [value]="fila.operador"
+                        [options]="opcionesOperador"
+                        [disabled]="true"
+                      />
+                    </div>
+                    <app-ds-input
+                      [id]="'kpi-amarillo-' + fila.anio"
+                      type="number"
+                      size="sm"
+                      [value]="fila.valorAmarillo"
+                      [disabled]="modoSoloLectura()"
+                      [invalid]="erroresDeAnio(fila.anio).length > 0"
+                      (valueChange)="actualizarMeta(fila.anio, 'valorAmarillo', $event)"
+                    />
+                  </div>
+                </td>
+                <td class="px-3 py-3 text-muted-foreground">
+                  <span class="block text-foreground">{{ textoRojo(fila) }}</span>
+                  <span class="mt-1 block text-ds-xs">Automático</span>
+                </td>
+              </tr>
+              @if (erroresDeAnio(fila.anio).length > 0) {
+                <tr class="border-b border-border last:border-b-0">
+                  <td colspan="5" class="px-3 pb-3 text-destructive">
+                    {{ erroresDeAnio(fila.anio).join(' ') }}
+                  </td>
+                </tr>
+              }
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="flex flex-col gap-2">
+      <h2 class="text-ds-lg font-medium text-foreground">3. Meta final</h2>
+      <div class="rounded-lg border border-border bg-muted px-4 py-3">
+        <span class="text-ds-sm text-muted-foreground">Meta de {{ plan().anioFin }}</span>
+        <p class="mt-1 font-semibold text-foreground">{{ metaFinalFormateada() }}</p>
+      </div>
+    </section>
+
+    @if (errorGeneral()) {
+      <div class="rounded-lg bg-destructive/10 px-3.5 py-3 text-ds-sm text-destructive">
+        {{ errorGeneral() }}
+      </div>
+    }
+  </div>
+
+  <span footer class="flex gap-2">
+    <app-ds-button variant="secondary" (clicked)="cerrar()">
+      {{ modoSoloLectura() ? 'Cerrar' : 'Cancelar' }}
+    </app-ds-button>
+    @if (!modoSoloLectura()) {
+      <app-ds-button
+        variant="primary"
+        [disabled]="guardando() || cargandoCatalogos()"
+        (clicked)="guardar()"
+      >
+        @if (!guardando()) {
+          <span icon>
+            <app-ds-icon [img]="modoEdicion() ? LucideCheck : LucidePlus" [size]="16" />
+          </span>
+        }
+        {{ guardando() ? 'Guardando…' : modoEdicion() ? 'Guardar cambios' : 'Crear KPI' }}
+      </app-ds-button>
+    }
+  </span>
+</app-ds-modal>

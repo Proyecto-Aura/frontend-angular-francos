@@ -1,0 +1,144 @@
+<app-ds-modal
+  [open]="open()"
+  title="Registrar valor"
+  [description]="kpi()?.nombre ?? ''"
+  [hasFooter]="true"
+  [width]="640"
+  (closed)="cerrar()"
+>
+  @if (kpi(); as kpiActual) {
+    <div class="flex flex-col gap-5">
+      <div class="rounded-lg border border-border bg-muted px-4 py-3">
+        <p class="font-medium text-foreground">{{ kpiActual.nombre }}</p>
+        <p class="mt-1 text-ds-sm text-muted-foreground">
+          {{ kpiActual.objetivoNombre }} · {{ kpiActual.frecuenciaNombre }} · Meta final:
+          {{ kpiActual.metaFinal === null ? 'Sin definir' : formatear(kpiActual.metaFinal) }}
+        </p>
+      </div>
+
+      @if (cargando()) {
+        <div class="py-10 text-center text-muted-foreground">Cargando…</div>
+      } @else if (errorCarga()) {
+        <div class="flex flex-col items-center gap-3 py-8 text-center">
+          <p class="text-muted-foreground">No se pudieron cargar los periodos y el historial.</p>
+          <app-ds-button variant="secondary" (clicked)="reintentar()">Reintentar</app-ds-button>
+        </div>
+      } @else {
+        <div class="grid gap-4 md:grid-cols-2">
+          <app-ds-field label="Periodo" htmlFor="kpi-valor-periodo" [required]="true">
+            <app-ds-select
+              id="kpi-valor-periodo"
+              [(value)]="periodoSeleccionado"
+              [options]="opcionesSelect()"
+              placeholder="Seleccione un periodo"
+              [disabled]="guardando()"
+            />
+          </app-ds-field>
+
+          <app-ds-field
+            [label]="
+              'Valor' + (kpiActual.unidadSimbolo ? ' (' + kpiActual.unidadSimbolo + ')' : '')
+            "
+            htmlFor="kpi-valor"
+            [required]="true"
+            [error]="errorValor()"
+          >
+            <app-ds-input
+              id="kpi-valor"
+              type="number"
+              [(value)]="valor"
+              placeholder="0"
+              [disabled]="guardando()"
+              [invalid]="!!errorValor()"
+            />
+          </app-ds-field>
+        </div>
+
+        @if (valorExistente(); as existente) {
+          <div class="rounded-lg border border-border bg-muted px-4 py-3 text-ds-sm">
+            Este periodo ya tiene un valor registrado ({{ formatear(existente.valor) }}). Se
+            reemplazará.
+          </div>
+        }
+
+        @if (metaSeleccionada(); as meta) {
+          @if (valorNumerico() !== null && colorPrevio(); as color) {
+            <div class="grid grid-cols-3 gap-3 rounded-lg border border-border p-4">
+              <div>
+                <span class="text-ds-sm text-muted-foreground">Meta del año</span>
+                <p class="mt-1 font-medium text-foreground">{{ formatear(meta.meta) }}</p>
+              </div>
+              <div>
+                <span class="text-ds-sm text-muted-foreground">Cumplimiento</span>
+                <p class="mt-1 font-medium text-foreground">
+                  {{ formatearCumplimiento(cumplimientoPrevio()) }}
+                </p>
+              </div>
+              <div>
+                <span class="text-ds-sm text-muted-foreground">Semáforo</span>
+                <div class="mt-1">
+                  <app-ds-badge [tone]="tonoColor(color)" [dot]="true">
+                    {{ nombreColor(color) }}
+                  </app-ds-badge>
+                </div>
+              </div>
+            </div>
+          }
+        }
+
+        <section>
+          <h2 class="text-ds-lg font-medium text-foreground">Historial</h2>
+          @if (historialOrdenado().length === 0) {
+            <div
+              class="mt-3 rounded-lg border border-border px-4 py-6 text-center text-muted-foreground"
+            >
+              Sin registros
+            </div>
+          } @else {
+            <div class="mt-3 overflow-hidden rounded-lg border border-border">
+              @for (registro of historialOrdenado(); track registro.id) {
+                <div
+                  class="flex items-center justify-between gap-4 border-b border-border px-4 py-3 last:border-b-0"
+                >
+                  <div class="min-w-0">
+                    <p class="truncate font-medium text-foreground">
+                      {{ registro.periodoNombre }} {{ registro.anio }}
+                    </p>
+                    <p class="mt-1 text-ds-sm text-muted-foreground">
+                      {{ formatear(registro.valor) }} / Meta
+                      {{
+                        metaDeAnio(registro.anio) === null
+                          ? 'sin definir'
+                          : formatear(metaDeAnio(registro.anio)!)
+                      }}
+                    </p>
+                  </div>
+                  <app-ds-badge [tone]="tonoColor(registro.color)" [dot]="true">
+                    {{ nombreColor(registro.color) }}
+                  </app-ds-badge>
+                </div>
+              }
+            </div>
+          }
+        </section>
+      }
+
+      @if (errorGeneral()) {
+        <div class="rounded-lg bg-destructive/10 px-3.5 py-3 text-ds-sm text-destructive">
+          {{ errorGeneral() }}
+        </div>
+      }
+    </div>
+  }
+
+  <span footer class="flex gap-2">
+    <app-ds-button variant="secondary" (clicked)="cerrar()">Cerrar</app-ds-button>
+    <app-ds-button
+      variant="primary"
+      [disabled]="cargando() || errorCarga() || guardando() || plan().estadoCodigo !== 'ACTIVO'"
+      (clicked)="registrar()"
+    >
+      {{ guardando() ? 'Registrando…' : 'Registrar' }}
+    </app-ds-button>
+  </span>
+</app-ds-modal>

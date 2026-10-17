@@ -29,8 +29,8 @@ export const NEGOCIO_ROUTES: Routes = [
       {
         path: 'gestionar-kpis',
         canActivate: [permisoGuard],
-        loadComponent: () => import('./pages/negocio-home/negocio-home').then((c) => c.NegocioHome),
-        data: { titulo: 'Gestionar KPIs' },
+        loadComponent: () =>
+          import('./pages/gestionar-kpis/gestionar-kpis-page').then((c) => c.GestionarKpisPage),
       },
       {
         path: 'gestionar-iniciativas',
