@@ -1,0 +1,29 @@
+<app-ds-modal
+  [open]="open()"
+  title="Eliminar KPI"
+  [hasFooter]="true"
+  [width]="480"
+  (closed)="cerrar()"
+>
+  @if (kpi(); as kpiActual) {
+    <div class="flex flex-col gap-4">
+      <p class="text-ds-base text-foreground">
+        Se eliminará «{{ kpiActual.nombre }}» ({{ kpiActual.codigo }}). Esta acción no se puede
+        deshacer.
+      </p>
+
+      @if (errorGeneral()) {
+        <div class="rounded-lg bg-destructive/10 px-3.5 py-3 text-ds-sm text-destructive">
+          {{ errorGeneral() }}
+        </div>
+      }
+    </div>
+  }
+
+  <span footer class="flex gap-2">
+    <app-ds-button variant="secondary" (clicked)="cerrar()">Cancelar</app-ds-button>
+    <app-ds-button variant="destructive" [disabled]="eliminando()" (clicked)="eliminar()">
+      {{ eliminando() ? 'Eliminando…' : 'Eliminar' }}
+    </app-ds-button>
+  </span>
+</app-ds-modal>
