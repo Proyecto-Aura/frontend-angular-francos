@@ -12,6 +12,9 @@ const HEIGHTS: Record<FieldSize, string> = { sm: '36px', md: '44px', lg: '48px' 
   imports: [],
   selector: 'app-ds-select',
   templateUrl: './select.html',
+  // El id va solo en el control nativo: si también quedara en el host, el
+  // <label for> apuntaría al host y la etiqueta no quedaría asociada.
+  host: { '[attr.id]': 'null' },
 })
 export class Select {
   value = model('');
