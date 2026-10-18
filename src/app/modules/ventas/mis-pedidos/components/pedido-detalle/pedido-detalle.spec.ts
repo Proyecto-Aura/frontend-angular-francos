@@ -1,6 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ResultadoGuardado } from '../../interfaces/pedido.interface';
 import { API, makeDetalleDto } from '../../testing/pedidos.fixtures';
 import { PedidoDetalle } from './pedido-detalle';
 
@@ -72,5 +73,70 @@ describe('PedidoDetalle', () => {
     fixture.detectChanges();
 
     expect(texto()).toContain('Pedido no encontrado');
+  });
+
+  describe('move to "En espera de inventario" (HU-A-010)', () => {
+    const boton = () =>
+      Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button')).find((b) =>
+        b.textContent?.includes('Pasar a En espera de inventario'),
+      );
+
+    let avisos: ResultadoGuardado[];
+
+    beforeEach(() => {
+      avisos = [];
+      fixture.componentInstance.estadoCambiado.subscribe((a) => avisos.push(a));
+    });
+
+    it('changes the status right away, keeps the detail open and emits the notice', () => {
+      abrir(1);
+      httpMock.expectOne(`${API}/pedidos/1`).flush(makeDetalleDto());
+      fixture.detectChanges();
+
+      boton()?.click();
+
+      const req = httpMock.expectOne(`${API}/pedidos/1/estado`);
+      expect(req.request.method).toBe('PATCH');
+      expect(req.request.body).toEqual({ estado: 'en_espera_inventario' });
+      req.flush(makeDetalleDto({ estado: 'en_espera_inventario' }));
+      fixture.detectChanges();
+
+      expect(avisos).toEqual([
+        {
+          tono: 'ok',
+          mensaje: 'Pedido PED-000001 pasó a En espera de inventario · visible para Inventario.',
+        },
+      ]);
+      expect(texto()).toContain('En espera de inventario');
+      expect(boton()).toBeUndefined();
+    });
+
+    it('is not offered when the order is no longer confirmed', () => {
+      abrir(1);
+      httpMock
+        .expectOne(`${API}/pedidos/1`)
+        .flush(makeDetalleDto({ estado: 'en_espera_inventario' }));
+      fixture.detectChanges();
+
+      expect(boton()).toBeUndefined();
+    });
+
+    it('emits the API message when the change is rejected', () => {
+      abrir(1);
+      httpMock.expectOne(`${API}/pedidos/1`).flush(makeDetalleDto());
+      fixture.detectChanges();
+
+      boton()?.click();
+      httpMock
+        .expectOne(`${API}/pedidos/1/estado`)
+        .flush(
+          { statusCode: 409, message: 'El pedido PED-000001 cambió de estado mientras tanto' },
+          { status: 409, statusText: 'Conflict' },
+        );
+
+      expect(avisos).toEqual([
+        { tono: 'error', mensaje: 'El pedido PED-000001 cambió de estado mientras tanto' },
+      ]);
+    });
   });
 });

@@ -10,7 +10,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { LucideCreditCard, LucideFileText, LucidePackage } from '@lucide/angular';
-import { Subscription } from 'rxjs';
+import { Subscription, finalize } from 'rxjs';
 
 import { Badge } from '../../../../../shared/ds/badge/badge';
 import { Button } from '../../../../../shared/ds/button/button';
@@ -18,6 +18,7 @@ import { Icon } from '../../../../../shared/ds/icon/icon';
 import { Modal } from '../../../../../shared/ds/modal/modal';
 import {
   PedidoDetalle as Detalle,
+  ResultadoGuardado,
   estadoLabel,
   estadoTone,
   fechaHora,
@@ -45,6 +46,8 @@ export class PedidoDetalle {
   /** null = cerrado. */
   pedidoId = input<number | null>(null);
   closed = output<void>();
+  /** HU-A-010: avisa a la pantalla el resultado de cambiar el estado del pedido. */
+  estadoCambiado = output<ResultadoGuardado>();
 
   readonly LucideFileText = LucideFileText;
   readonly LucidePackage = LucidePackage;
@@ -58,6 +61,7 @@ export class PedidoDetalle {
   protected detalle = signal<Detalle | null>(null);
   protected cargando = signal(false);
   protected error = signal('');
+  protected cambiandoEstado = signal(false);
 
   private peticion: Subscription | null = null;
 
@@ -87,6 +91,40 @@ export class PedidoDetalle {
           this.error.set(mensajeDeErrorPedido(error, 'No se pudo cargar el pedido.'));
           this.cargando.set(false);
         },
+      });
+  }
+
+  /**
+   * HU-A-010 (RF-A038): pasa el pedido confirmado a "en espera de inventario"
+   * para que lo vea el operador de productos terminados. El detalle sigue
+   * abierto con el estado nuevo, como en el prototipo.
+   */
+  protected pasarAEnEsperaDeInventario(d: Detalle) {
+    if (this.cambiandoEstado()) return;
+
+    this.cambiandoEstado.set(true);
+    this.pedidosService
+      .enviarAInventario(d.id)
+      .pipe(
+        finalize(() => this.cambiandoEstado.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (actualizado) => {
+          this.detalle.set(actualizado);
+          this.estadoCambiado.emit({
+            tono: 'ok',
+            mensaje: `Pedido ${d.codigo} pasó a En espera de inventario · visible para Inventario.`,
+          });
+        },
+        error: (error: unknown) =>
+          this.estadoCambiado.emit({
+            tono: 'error',
+            mensaje: mensajeDeErrorPedido(
+              error,
+              `No se pudo pasar el pedido ${d.codigo} a En espera de inventario.`,
+            ),
+          }),
       });
   }
 

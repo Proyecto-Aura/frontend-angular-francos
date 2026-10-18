@@ -65,6 +65,11 @@ export interface PedidoDetalleDto {
 }
 
 /** Cuerpo de POST /pedidos (RF-A032). */
+/** Cuerpo de PATCH /pedidos/:id/estado (HU-A-010, RF-A038). */
+export interface ActualizarEstadoPedidoRequest {
+  estado: EstadoPedidoDto;
+}
+
 export interface CrearPedidoRequest {
   cliente_id: string;
   items: { producto_presentacion_id: number; cantidad: number }[];
