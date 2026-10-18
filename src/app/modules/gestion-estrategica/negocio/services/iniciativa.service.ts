@@ -41,10 +41,15 @@ export class IniciativaService {
       .pipe(map(toIniciativa));
   }
 
-  cambiarEstado(id: number, estadoCodigo: EstadoIniciativaCodigo): Observable<Iniciativa> {
+  cambiarEstado(
+    id: number,
+    estadoCodigo: EstadoIniciativaCodigo,
+    motivo?: string,
+  ): Observable<Iniciativa> {
     const body: ActualizarEstadoIniciativaRequestDto = {
       estado_codigo: estadoCodigo as ActualizarEstadoIniciativaRequestDto['estado_codigo'],
     };
+    if (estadoCodigo === 'CANCELADA') body.motivo_cancelacion = motivo?.trim() ?? '';
     return this.http
       .patch<IniciativaDto>(`${this.baseUrl}/${id}/estado`, body)
       .pipe(map(toIniciativa));

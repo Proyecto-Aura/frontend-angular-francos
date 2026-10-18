@@ -5,15 +5,17 @@ import { LucideArrowRight } from '@lucide/angular';
 import { finalize } from 'rxjs';
 import { Badge } from '../../../../../shared/ds/badge/badge';
 import { Button } from '../../../../../shared/ds/button/button';
+import { Field } from '../../../../../shared/ds/field/field';
 import { Icon } from '../../../../../shared/ds/icon/icon';
 import { Modal } from '../../../../../shared/ds/modal/modal';
+import { Textarea } from '../../../../../shared/ds/textarea/textarea';
 import { IniciativaApiErrorDto } from '../../interfaces/iniciativa-dto.interface';
 import { Iniciativa } from '../../interfaces/iniciativa.interface';
 import { IniciativaService } from '../../services/iniciativa.service';
-import { tonoEstado } from '../iniciativa-form-modal/iniciativa.reglas';
+import { tonoEstado, validarMotivoCancelacion } from '../iniciativa-form-modal/iniciativa.reglas';
 
 @Component({
-  imports: [Badge, Button, Icon, Modal],
+  imports: [Badge, Button, Field, Icon, Modal, Textarea],
   selector: 'app-iniciativa-cancelar-modal',
   templateUrl: './iniciativa-cancelar-modal.html',
 })
@@ -30,6 +32,8 @@ export class IniciativaCancelarModal {
 
   readonly LucideArrowRight = LucideArrowRight;
   readonly guardando = signal(false);
+  readonly motivo = signal('');
+  readonly errorMotivo = signal<string | null>(null);
   readonly errorGeneral = signal<string | null>(null);
   readonly tonoEstado = tonoEstado;
 
@@ -38,6 +42,8 @@ export class IniciativaCancelarModal {
       const estaAbierto = this.open();
       if (estaAbierto && !this.estabaAbierto) {
         this.guardando.set(false);
+        this.motivo.set('');
+        this.errorMotivo.set(null);
         this.errorGeneral.set(null);
         this.recargarAlCerrar = false;
       }
@@ -56,10 +62,14 @@ export class IniciativaCancelarModal {
   cancelar(): void {
     const iniciativa = this.iniciativa();
     if (!iniciativa || this.guardando()) return;
-    this.guardando.set(true);
+    const errorMotivo = validarMotivoCancelacion(this.motivo());
+    this.errorMotivo.set(errorMotivo);
     this.errorGeneral.set(null);
+    if (errorMotivo) return;
+
+    this.guardando.set(true);
     this.iniciativaService
-      .cambiarEstado(iniciativa.id, 'CANCELADA')
+      .cambiarEstado(iniciativa.id, 'CANCELADA', this.motivo())
       .pipe(
         finalize(() => this.guardando.set(false)),
         takeUntilDestroyed(this.destroyRef),
@@ -90,6 +100,8 @@ export class IniciativaCancelarModal {
       this.errorGeneral.set('La iniciativa ya no existe.');
       this.recargarAlCerrar = true;
     } else if (error.status === 409) {
+      this.errorGeneral.set(mensaje || 'No se pudo actualizar el estado. Intente nuevamente.');
+    } else if (error.status === 400) {
       this.errorGeneral.set(mensaje || 'No se pudo actualizar el estado. Intente nuevamente.');
     } else if (error.status === 401 || error.status === 403) {
       this.errorGeneral.set('No tiene permisos para gestionar iniciativas.');

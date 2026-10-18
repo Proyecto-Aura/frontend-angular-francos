@@ -47,6 +47,7 @@ export class IniciativaFormModal {
   readonly descripcion = signal('');
   readonly objetivoId = signal('');
   readonly responsable = signal('');
+  readonly presupuesto = signal('');
   readonly fechaInicio = signal('');
   readonly fechaFin = signal('');
   readonly guardando = signal(false);
@@ -57,7 +58,10 @@ export class IniciativaFormModal {
   readonly titulo = computed(() => (this.modoEdicion() ? 'Editar iniciativa' : 'Nueva iniciativa'));
   readonly opcionesObjetivo = computed<SelectOption[]>(() =>
     this.objetivos()
-      .filter((objetivo) => objetivo.estadoCodigo !== 'CANCELADO')
+      .filter(
+        (objetivo) =>
+          objetivo.estadoCodigo !== 'CANCELADO' || objetivo.id === this.iniciativa()?.objetivoId,
+      )
       .map((objetivo) => ({
         value: String(objetivo.id),
         label: `${objetivo.codigo} · ${objetivo.nombre}`,
@@ -119,6 +123,9 @@ export class IniciativaFormModal {
           : String(this.objetivoIdInicial()),
     );
     this.responsable.set(iniciativa?.responsable ?? '');
+    this.presupuesto.set(
+      iniciativa?.presupuesto === null ? '' : String(iniciativa?.presupuesto ?? ''),
+    );
     this.fechaInicio.set(iniciativa?.fechaInicio ?? '');
     this.fechaFin.set(iniciativa?.fechaFin ?? '');
     this.guardando.set(false);
@@ -132,6 +139,7 @@ export class IniciativaFormModal {
       descripcion: this.descripcion(),
       objetivoId: this.objetivoId() ? Number(this.objetivoId()) : null,
       responsable: this.responsable(),
+      presupuesto: this.presupuesto(),
       fechaInicio: this.fechaInicio(),
       fechaFin: this.fechaFin(),
     };
@@ -159,7 +167,7 @@ export class IniciativaFormModal {
       }));
       return;
     }
-    if (error.status === 409 || error.status === 400) {
+    if (error.status === 409 || error.status === 404 || error.status === 400) {
       this.errorGeneral.set(mensaje || 'No se pudo guardar la iniciativa. Intente nuevamente.');
       return;
     }

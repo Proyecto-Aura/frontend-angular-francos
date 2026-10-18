@@ -41,7 +41,6 @@
         [(value)]="objetivoId"
         [options]="opcionesObjetivo()"
         placeholder="Selecciona un objetivo"
-        [disabled]="modoEdicion()"
         [invalid]="!!errores().objetivoId"
       />
     </app-ds-field>
@@ -57,6 +56,21 @@
         [(value)]="responsable"
         placeholder="Nombre del responsable"
         [invalid]="!!errores().responsable"
+      />
+    </app-ds-field>
+
+    <app-ds-field
+      label="Presupuesto"
+      hint="Opcional (S/)"
+      htmlFor="iniciativa-presupuesto"
+      [error]="errores().presupuesto ?? null"
+    >
+      <app-ds-input
+        id="iniciativa-presupuesto"
+        type="number"
+        [(value)]="presupuesto"
+        placeholder="0.00"
+        [invalid]="!!errores().presupuesto"
       />
     </app-ds-field>
 

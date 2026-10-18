@@ -22,6 +22,8 @@ export interface Iniciativa {
   responsable: string;
   fechaInicio: string;
   fechaFin: string;
+  presupuesto: number | null;
+  motivoCancelacion: string | null;
   estadoCodigo: EstadoIniciativaCodigo;
   estadoNombre: string;
   objetivoId: number;
@@ -37,4 +39,5 @@ export interface IniciativaForm {
   responsable: string;
   fechaInicio: string;
   fechaFin: string;
+  presupuesto: string;
 }

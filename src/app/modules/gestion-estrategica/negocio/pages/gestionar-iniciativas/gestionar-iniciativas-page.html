@@ -196,8 +196,25 @@
       </span>
     </ng-template>
 
+    <ng-template #presupuestoCell let-iniciativa>
+      <span
+        class="ml-auto block w-28 truncate"
+        [title]="formatearPresupuesto(iniciativa.presupuesto)"
+      >
+        {{ formatearPresupuesto(iniciativa.presupuesto) }}
+      </span>
+    </ng-template>
+
     <ng-template #estadoCell let-iniciativa>
-      <app-ds-badge [tone]="tonoEstado(iniciativa.estadoCodigo)" [dot]="true">
+      <app-ds-badge
+        [tone]="tonoEstado(iniciativa.estadoCodigo)"
+        [dot]="true"
+        [attr.title]="
+          iniciativa.estadoCodigo === 'CANCELADA' && iniciativa.motivoCancelacion
+            ? iniciativa.motivoCancelacion
+            : null
+        "
+      >
         {{ iniciativa.estadoNombre }}
       </app-ds-badge>
     </ng-template>

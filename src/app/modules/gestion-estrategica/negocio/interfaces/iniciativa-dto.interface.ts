@@ -8,6 +8,8 @@ export interface IniciativaDto {
   responsable: string;
   fecha_inicio: string;
   fecha_fin: string;
+  presupuesto: number | null;
+  motivo_cancelacion: string | null;
   estado: boolean;
   estado_iniciativa: {
     id: number;
@@ -31,18 +33,22 @@ export interface CrearIniciativaRequestDto {
   responsable: string;
   fecha_inicio: string;
   fecha_fin: string;
+  presupuesto?: number;
 }
 
 export interface ActualizarIniciativaRequestDto {
+  objetivo_estrategico_id?: number;
   nombre: string;
   descripcion?: string;
   responsable: string;
   fecha_inicio: string;
   fecha_fin: string;
+  presupuesto?: number;
 }
 
 export interface ActualizarEstadoIniciativaRequestDto {
   estado_codigo: 'EN_PROCESO' | 'COMPLETADA' | 'CANCELADA';
+  motivo_cancelacion?: string;
 }
 
 export interface IniciativaApiErrorDto {

@@ -36,6 +36,7 @@ import { IniciativaEstadoModal } from '../../components/iniciativa-estado-modal/
 import { IniciativaFormModal } from '../../components/iniciativa-form-modal/iniciativa-form-modal';
 import {
   formatearFecha,
+  formatearPresupuesto,
   puedeCancelar,
   siguienteEstado,
   tonoEstado,
@@ -87,6 +88,9 @@ export class GestionarIniciativasPage implements AfterViewInit {
   @ViewChild('finCell', { static: true })
   finCellTpl!: TemplateRef<{ $implicit: Iniciativa; index: number }>;
 
+  @ViewChild('presupuestoCell', { static: true })
+  presupuestoCellTpl!: TemplateRef<{ $implicit: Iniciativa; index: number }>;
+
   @ViewChild('estadoCell', { static: true })
   estadoCellTpl!: TemplateRef<{ $implicit: Iniciativa; index: number }>;
 
@@ -110,14 +114,16 @@ export class GestionarIniciativasPage implements AfterViewInit {
   readonly LucideTrash2 = LucideTrash2;
   readonly estados = ESTADOS_INICIATIVA;
   readonly formatearFecha = formatearFecha;
+  readonly formatearPresupuesto = formatearPresupuesto;
   readonly tonoEstado = tonoEstado;
 
   readonly columnas = signal<DsColumn[]>([
-    { key: 'iniciativa', header: 'Iniciativa', width: '330px' },
-    { key: 'responsable', header: 'Responsable', width: '190px' },
-    { key: 'inicio', header: 'Inicio', width: '135px' },
-    { key: 'fin', header: 'Fin', width: '135px' },
-    { key: 'estado', header: 'Estado', width: '140px' },
+    { key: 'iniciativa', header: 'Iniciativa', width: '290px' },
+    { key: 'responsable', header: 'Responsable', width: '170px' },
+    { key: 'inicio', header: 'Inicio', width: '125px' },
+    { key: 'fin', header: 'Fin', width: '125px' },
+    { key: 'presupuesto', header: 'Presupuesto', align: 'right', width: '145px' },
+    { key: 'estado', header: 'Estado', width: '130px' },
     { key: 'acciones', header: 'Acciones', align: 'right', width: '220px' },
   ]);
   readonly objetivos = signal<ObjetivoEstrategico[]>([]);
@@ -180,6 +186,9 @@ export class GestionarIniciativasPage implements AfterViewInit {
         }
         if (columna.key === 'inicio') return { ...columna, cellTemplate: this.inicioCellTpl };
         if (columna.key === 'fin') return { ...columna, cellTemplate: this.finCellTpl };
+        if (columna.key === 'presupuesto') {
+          return { ...columna, cellTemplate: this.presupuestoCellTpl };
+        }
         if (columna.key === 'estado') return { ...columna, cellTemplate: this.estadoCellTpl };
         if (columna.key === 'acciones') {
           return { ...columna, cellTemplate: this.accionesCellTpl };

@@ -19,6 +19,15 @@ export function validarFormularioIniciativa(
   else if (responsable.length > 200) {
     errores.responsable = 'El responsable admite hasta 200 caracteres.';
   }
+  const presupuesto = form.presupuesto.trim();
+  if (presupuesto) {
+    const valor = Number(presupuesto);
+    if (!Number.isFinite(valor) || valor < 0) {
+      errores.presupuesto = 'El presupuesto debe ser un número mayor o igual a 0.';
+    } else if (!/^\d{1,10}(?:\.\d{1,2})?$/.test(presupuesto)) {
+      errores.presupuesto = 'Máximo 10 enteros y 2 decimales.';
+    }
+  }
   if (!form.fechaInicio) errores.fechaInicio = 'La fecha de inicio es obligatoria.';
   else if (!fechaEnRango(form.fechaInicio, plan)) {
     errores.fechaInicio = 'Fuera del rango del plan.';
@@ -29,6 +38,13 @@ export function validarFormularioIniciativa(
     errores.fechaFin = 'Debe ser posterior a la fecha de inicio.';
   }
   return errores;
+}
+
+export function validarMotivoCancelacion(motivo: string): string | null {
+  const motivoLimpio = motivo.trim();
+  if (!motivoLimpio) return 'El motivo de cancelación es obligatorio.';
+  if (motivoLimpio.length > 500) return 'El motivo admite hasta 500 caracteres.';
+  return null;
 }
 
 export function formatearFecha(iso: string): string {
@@ -50,6 +66,11 @@ export function formatearFecha(iso: string): string {
   const indiceMes = Number(mes) - 1;
   if (!anio || !dia || indiceMes < 0 || indiceMes >= meses.length) return iso;
   return `${Number(dia)} ${meses[indiceMes]} ${anio}`;
+}
+
+export function formatearPresupuesto(valor: number | null): string {
+  if (valor === null) return '—';
+  return `S/ ${new Intl.NumberFormat('es-PE', { maximumFractionDigits: 2 }).format(valor)}`;
 }
 
 export function siguienteEstado(codigo: EstadoIniciativaCodigo): EstadoIniciativaCodigo | null {

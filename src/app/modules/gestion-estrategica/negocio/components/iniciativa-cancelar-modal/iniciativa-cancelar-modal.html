@@ -18,6 +18,21 @@
         <app-ds-icon class="text-muted-foreground" [img]="LucideArrowRight" [size]="18" />
         <app-ds-badge tone="danger" [dot]="true">Cancelada</app-ds-badge>
       </div>
+      <app-ds-field
+        label="Motivo de cancelación"
+        hint="Máximo 500 caracteres"
+        htmlFor="iniciativa-motivo-cancelacion"
+        [required]="true"
+        [error]="errorMotivo()"
+      >
+        <app-ds-textarea
+          id="iniciativa-motivo-cancelacion"
+          [(value)]="motivo"
+          [rows]="3"
+          placeholder="Ej. Se reasignó el presupuesto a otra iniciativa"
+          [invalid]="!!errorMotivo()"
+        />
+      </app-ds-field>
       <p class="text-ds-sm text-muted-foreground">
         Una vez cancelada, la iniciativa no puede reactivarse ni editarse.
       </p>

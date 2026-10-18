@@ -14,6 +14,8 @@ export function toIniciativa(dto: IniciativaDto): Iniciativa {
     responsable: dto.responsable,
     fechaInicio: dto.fecha_inicio.slice(0, 10),
     fechaFin: dto.fecha_fin.slice(0, 10),
+    presupuesto: dto.presupuesto,
+    motivoCancelacion: dto.motivo_cancelacion,
     estadoCodigo: dto.estado_iniciativa.codigo,
     estadoNombre: dto.estado_iniciativa.nombre,
     objetivoId: dto.objetivo.id,
@@ -37,6 +39,8 @@ export function toCrearIniciativaRequest(form: IniciativaForm): CrearIniciativaR
   };
   const descripcion = form.descripcion.trim();
   if (descripcion) request.descripcion = descripcion;
+  const presupuesto = form.presupuesto.trim();
+  if (presupuesto) request.presupuesto = Number(presupuesto);
   return request;
 }
 
@@ -44,11 +48,14 @@ export function toActualizarIniciativaRequest(
   form: IniciativaForm,
 ): ActualizarIniciativaRequestDto {
   const request: ActualizarIniciativaRequestDto = {
+    objetivo_estrategico_id: form.objetivoId as number,
     nombre: form.nombre.trim(),
     descripcion: form.descripcion.trim(),
     responsable: form.responsable.trim(),
     fecha_inicio: form.fechaInicio,
     fecha_fin: form.fechaFin,
   };
+  const presupuesto = form.presupuesto.trim();
+  if (presupuesto) request.presupuesto = Number(presupuesto);
   return request;
 }
