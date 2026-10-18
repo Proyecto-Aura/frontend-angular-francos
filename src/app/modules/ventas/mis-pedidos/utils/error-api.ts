@@ -11,3 +11,13 @@ export function mensajeDeErrorPedido(error: unknown, porDefecto: string): string
   // 503: Culqi no está configurado o no respondió. En ambos casos el pedido no se registró.
   return mensajesDeError(error).join(' ') || porDefecto;
 }
+
+/** Mensaje listo para mostrar al usuario ante un error de la API de reembolsos. */
+export function mensajeDeErrorReembolso(error: unknown, porDefecto: string): string {
+  if (error instanceof HttpErrorResponse && (error.status === 401 || error.status === 403)) {
+    return 'No tiene permisos para gestionar los reembolsos.';
+  }
+
+  // 409: la solicitud no está en el estado esperado o no tiene evidencia; la API dice cuál.
+  return mensajesDeError(error).join(' ') || porDefecto;
+}

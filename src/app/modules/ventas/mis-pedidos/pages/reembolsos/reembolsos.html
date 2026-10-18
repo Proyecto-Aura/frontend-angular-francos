@@ -1,1 +1,134 @@
-<p>reembolsos works!</p>
+<div class="flex flex-col gap-5 p-(--page-padding)">
+  <div>
+    <h1 class="text-ds-2xl font-semibold text-foreground">Reembolsos</h1>
+    <p class="mt-1 text-ds-base text-muted-foreground">
+      Solicitudes de reembolso enviadas por los clientes.
+    </p>
+  </div>
+
+  <app-aviso-banner [texto]="aviso().mensaje" [tono]="aviso().tono" (closed)="cerrarAviso()" />
+
+  <app-ds-filter-bar [hasActions]="true">
+    <div filters class="w-[280px]">
+      <app-ds-field label="Buscar" htmlFor="reembolsos-q">
+        <app-ds-input
+          id="reembolsos-q"
+          placeholder="Solicitud, pedido o cliente..."
+          [value]="filtros().q"
+          (valueChange)="setQ($event)"
+        />
+      </app-ds-field>
+    </div>
+    <div filters class="w-[200px]">
+      <app-ds-field label="Estado" htmlFor="reembolsos-estado">
+        <app-ds-select
+          id="reembolsos-estado"
+          [value]="filtros().estado"
+          (valueChange)="setEstado($event)"
+          [options]="estadoOptions"
+          placeholder="Todos los estados"
+        />
+      </app-ds-field>
+    </div>
+    <div filters class="w-[180px]">
+      <app-ds-field label="Fecha" htmlFor="reembolsos-fecha">
+        <app-ds-input
+          id="reembolsos-fecha"
+          type="date"
+          [value]="filtros().fecha"
+          (valueChange)="setFecha($event)"
+        />
+      </app-ds-field>
+    </div>
+
+    <span actions class="flex items-center gap-2">
+      @if (hayFiltros()) {
+        <app-ds-button variant="ghost" size="sm" (clicked)="limpiarFiltros()"
+          >Limpiar filtros</app-ds-button
+        >
+      }
+    </span>
+  </app-ds-filter-bar>
+
+  <p class="text-ds-sm text-muted-foreground">{{ resumen() }}</p>
+
+  @if (cargando()) {
+    <p
+      class="rounded-lg border border-border bg-card p-8 text-center text-ds-base text-muted-foreground"
+    >
+      Cargando solicitudes…
+    </p>
+  } @else if (errorCarga()) {
+    <div
+      class="flex flex-col items-center gap-3 rounded-lg border border-border bg-card p-8 text-center"
+    >
+      <p class="text-ds-base text-muted-foreground">
+        No se pudieron cargar las solicitudes de reembolso.
+      </p>
+      <app-ds-button variant="secondary" (clicked)="cargar()">Reintentar</app-ds-button>
+    </div>
+  } @else {
+    <app-ds-data-table
+      [columns]="columns()"
+      [rows]="solicitudes()"
+      [empty]="hayFiltros() ? 'Sin solicitudes con estos filtros' : 'Aún no hay solicitudes'"
+    />
+  }
+
+  <app-ds-pagination
+    [page]="page()"
+    [pageCount]="pageCount()"
+    [total]="total()"
+    [pageSize]="pageSize"
+    (changed)="cambiarPagina($event)"
+  />
+</div>
+
+<ng-template #solicitudCell let-r>
+  <span class="block leading-snug">
+    <span class="block font-semibold tabular-nums">{{ r.codigo }}</span>
+    <span class="mt-0.5 block text-ds-sm text-muted-foreground">{{ r.metodoLabel }}</span>
+  </span>
+</ng-template>
+
+<ng-template #pedidoCell let-r>
+  <span class="text-muted-foreground tabular-nums">{{ r.pedido }}</span>
+</ng-template>
+
+<ng-template #clienteCell let-r>
+  <span class="inline-flex min-w-0 items-center gap-2.5">
+    <app-ds-avatar [name]="r.cliente" size="sm" />
+    {{ r.cliente }}
+  </span>
+</ng-template>
+
+<ng-template #importeCell let-r>
+  <span class="font-semibold tabular-nums">{{ money(r.monto) }}</span>
+</ng-template>
+
+<ng-template #estadoCell let-r>
+  <app-ds-badge [tone]="estadoTone(r.estado)" [dot]="true" size="md">{{
+    estadoLabel(r.estado)
+  }}</app-ds-badge>
+</ng-template>
+
+<ng-template #fechaCell let-r>
+  <span class="tabular-nums">{{ fechaDia(r.fecha) }}</span>
+</ng-template>
+
+<ng-template #accionesCell let-r>
+  <app-ds-icon-button
+    [label]="'Ver solicitud ' + r.codigo"
+    variant="secondary"
+    size="sm"
+    (clicked)="verSolicitud(r)"
+  >
+    <app-ds-icon [img]="LucideEye" [size]="16" />
+  </app-ds-icon-button>
+</ng-template>
+
+<app-reembolso-detalle
+  [reembolsoId]="reembolsoDetalleId()"
+  (closed)="reembolsoDetalleId.set(null)"
+  (cambio)="cambio($event)"
+/>
