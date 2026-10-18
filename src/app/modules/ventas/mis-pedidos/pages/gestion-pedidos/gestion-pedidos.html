@@ -141,4 +141,8 @@
   (registrado)="pedidoRegistrado($event)"
 />
 
-<app-pedido-detalle [pedidoId]="pedidoDetalleId()" (closed)="pedidoDetalleId.set(null)" />
+<app-pedido-detalle
+  [pedidoId]="pedidoDetalleId()"
+  (closed)="pedidoDetalleId.set(null)"
+  (estadoCambiado)="estadoCambiado($event)"
+/>

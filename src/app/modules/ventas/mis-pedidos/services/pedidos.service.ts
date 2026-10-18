@@ -4,6 +4,7 @@ import { Observable, finalize, forkJoin, map, of, switchMap } from 'rxjs';
 import { environment } from '../../../../../environments/environment';
 import { ProductoPresentacionFilaDto } from '../../catalogo/interfaces/producto-dto.interface';
 import {
+  ActualizarEstadoPedidoRequest,
   ClienteDto,
   PageDto,
   PedidoDetalleDto,
@@ -100,6 +101,17 @@ export class PedidosService {
   registrar(form: PedidoFormModel, culqiToken: string | null = null): Observable<PedidoDetalle> {
     return this.http
       .post<PedidoDetalleDto>(PEDIDOS, toCrearPedidoRequest(form, culqiToken))
+      .pipe(map(toPedidoDetalle));
+  }
+
+  /**
+   * HU-A-010 (RF-A038): pasa un pedido confirmado a "en espera de inventario"
+   * para que lo vea el operador de productos terminados.
+   */
+  enviarAInventario(id: number): Observable<PedidoDetalle> {
+    const cuerpo: ActualizarEstadoPedidoRequest = { estado: 'en_espera_inventario' };
+    return this.http
+      .patch<PedidoDetalleDto>(`${PEDIDOS}/${id}/estado`, cuerpo)
       .pipe(map(toPedidoDetalle));
   }
 

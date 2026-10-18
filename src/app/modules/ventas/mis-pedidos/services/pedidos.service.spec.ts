@@ -94,4 +94,16 @@ describe('PedidosService', () => {
     expect(opciones?.clientes).toHaveLength(2);
     expect(opciones?.presentaciones.map((p) => p.id)).toEqual([10, 11]);
   });
+
+  it('sends an order to inventory with PATCH /estado (HU-A-010, RF-A038)', () => {
+    let estado = '';
+    service.enviarAInventario(7).subscribe((d) => (estado = d.estado));
+
+    const req = httpMock.expectOne(`${API}/pedidos/7/estado`);
+    expect(req.request.method).toBe('PATCH');
+    expect(req.request.body).toEqual({ estado: 'en_espera_inventario' });
+    req.flush(makeDetalleDto({ id: 7, estado: 'en_espera_inventario' }));
+
+    expect(estado).toBe('en_espera_inventario');
+  });
 });

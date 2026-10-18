@@ -23,6 +23,7 @@ interface GestionPedidosApi {
   verPedido(fila: PedidoFila): void;
   nuevoPedido(): void;
   pedidoRegistrado(resultado: ResultadoGuardado): void;
+  estadoCambiado(resultado: ResultadoGuardado): void;
 }
 
 describe('GestionPedidos', () => {
@@ -129,5 +130,28 @@ describe('GestionPedidos', () => {
     expect((fixture.nativeElement as HTMLElement).textContent).toContain(
       'No se pudieron cargar los pedidos.',
     );
+  });
+
+  it('shows the status change notice and reloads the list (HU-A-010)', () => {
+    esperarListado().flush(pagina([]));
+
+    pagina$.estadoCambiado({
+      tono: 'ok',
+      mensaje: 'Pedido PED-000001 pasó a En espera de inventario · visible para Inventario.',
+    });
+
+    expect(pagina$.aviso().mensaje).toBe(
+      'Pedido PED-000001 pasó a En espera de inventario · visible para Inventario.',
+    );
+    esperarListado().flush(pagina([]));
+  });
+
+  it('shows the error without reloading when the status change fails', () => {
+    esperarListado().flush(pagina([]));
+
+    pagina$.estadoCambiado({ tono: 'error', mensaje: 'No se pudo pasar el pedido' });
+
+    expect(pagina$.aviso().tono).toBe('error');
+    httpMock.expectNone((r) => r.url === `${API}/pedidos`);
   });
 });

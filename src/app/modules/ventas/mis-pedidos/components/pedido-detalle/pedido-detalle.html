@@ -107,5 +107,13 @@
 
   <span footer class="flex gap-2">
     <app-ds-button variant="secondary" (clicked)="closed.emit()">Cerrar</app-ds-button>
+    @if (detalle(); as d) {
+      @if (d.estado === 'confirmado') {
+        <app-ds-button [disabled]="cambiandoEstado()" (clicked)="pasarAEnEsperaDeInventario(d)">
+          <span icon><app-ds-icon [img]="LucidePackage" [size]="16" /></span>
+          Pasar a En espera de inventario
+        </app-ds-button>
+      }
+    }
   </span>
 </app-ds-modal>

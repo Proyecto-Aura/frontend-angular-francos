@@ -201,4 +201,10 @@ export class GestionPedidos implements AfterViewInit, OnInit {
   protected cerrarAviso() {
     this.aviso.set(SIN_AVISO);
   }
+
+  /** HU-A-010: aviso del cambio de estado hecho desde el detalle; si salió bien, el listado se recarga. */
+  protected estadoCambiado(resultado: ResultadoGuardado) {
+    this.aviso.set(resultado);
+    if (resultado.tono === 'ok') this.cargar();
+  }
 }
