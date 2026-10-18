@@ -35,8 +35,10 @@ export const NEGOCIO_ROUTES: Routes = [
       {
         path: 'gestionar-iniciativas',
         canActivate: [permisoGuard],
-        loadComponent: () => import('./pages/negocio-home/negocio-home').then((c) => c.NegocioHome),
-        data: { titulo: 'Gestionar iniciativas' },
+        loadComponent: () =>
+          import('./pages/gestionar-iniciativas/gestionar-iniciativas-page').then(
+            (c) => c.GestionarIniciativasPage,
+          ),
       },
       {
         path: 'tablero-control',
