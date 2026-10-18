@@ -43,8 +43,8 @@ export const NEGOCIO_ROUTES: Routes = [
       {
         path: 'tablero-control',
         canActivate: [permisoGuard],
-        loadComponent: () => import('./pages/negocio-home/negocio-home').then((c) => c.NegocioHome),
-        data: { titulo: 'Tablero de control' },
+        loadComponent: () =>
+          import('./pages/tablero-control/tablero-control-page').then((c) => c.TableroControlPage),
       },
       {
         path: 'analisis-estrategico',
