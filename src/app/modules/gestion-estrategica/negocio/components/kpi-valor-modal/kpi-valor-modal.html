@@ -132,13 +132,13 @@
   }
 
   <span footer class="flex gap-2">
-    <app-ds-button variant="secondary" (clicked)="cerrar()">Cerrar</app-ds-button>
+    <app-ds-button variant="secondary" (clicked)="cerrar()">Cancelar</app-ds-button>
     <app-ds-button
       variant="primary"
       [disabled]="cargando() || errorCarga() || guardando() || plan().estadoCodigo !== 'ACTIVO'"
       (clicked)="registrar()"
     >
-      {{ guardando() ? 'Registrando…' : 'Registrar' }}
+      {{ guardando() ? 'Guardando…' : valorExistente() ? 'Actualizar valor' : 'Registrar valor' }}
     </app-ds-button>
   </span>
 </app-ds-modal>

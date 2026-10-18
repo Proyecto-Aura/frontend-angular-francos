@@ -238,6 +238,7 @@ export class GestionarKpisPage implements AfterViewInit {
   }
 
   valorGuardado(): void {
+    this.cerrarModal();
     this.cargarKpis();
   }
 

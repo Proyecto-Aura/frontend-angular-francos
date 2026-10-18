@@ -156,9 +156,9 @@ export class KpiValorModal {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: () => {
-          this.valor.set('');
+          this.guardando.set(false);
           this.saved.emit();
-          this.recargarHistorial(kpi.id);
+          this.closed.emit();
         },
         error: (error: unknown) => {
           this.guardando.set(false);
@@ -222,21 +222,6 @@ export class KpiValorModal {
           this.periodos.set([]);
           this.historial.set([]);
           this.errorCarga.set(true);
-        },
-      });
-  }
-
-  private recargarHistorial(kpiId: number): void {
-    this.kpiService
-      .listarValores(kpiId)
-      .pipe(
-        finalize(() => this.guardando.set(false)),
-        takeUntilDestroyed(this.destroyRef),
-      )
-      .subscribe({
-        next: (historial) => this.historial.set(historial),
-        error: () => {
-          this.errorGeneral.set('El valor se registró, pero no se pudo actualizar el historial.');
         },
       });
   }

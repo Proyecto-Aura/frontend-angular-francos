@@ -215,20 +215,24 @@ export class KpiFormModal {
     this.objetivoId.set(kpi ? String(kpi.objetivoId) : '');
     this.frecuenciaId.set(kpi ? String(kpi.frecuenciaId) : '');
     this.unidadId.set(kpi ? String(kpi.unidadId) : '');
+    const operadorKpi = kpi?.metas[0]?.operador ?? '>=';
     this.filas.set(
-      kpi
-        ? kpi.metas.map((meta) => ({
-            anio: meta.anio,
-            meta: String(meta.meta),
-            operador: meta.operador,
-            valorAmarillo: String(meta.valorAmarillo),
-          }))
-        : this.aniosDelPlan().map((anio) => ({
-            anio,
-            meta: '',
-            operador: '>=' as const,
-            valorAmarillo: '',
-          })),
+      this.aniosDelPlan().map((anio) => {
+        const metaExistente = kpi?.metas.find((meta) => meta.anio === anio);
+        return metaExistente
+          ? {
+              anio,
+              meta: String(metaExistente.meta),
+              operador: metaExistente.operador,
+              valorAmarillo: String(metaExistente.valorAmarillo),
+            }
+          : {
+              anio,
+              meta: '',
+              operador: operadorKpi,
+              valorAmarillo: '',
+            };
+      }),
     );
     this.errores.set({});
     this.erroresMetas.set({ porAnio: {}, general: null });
