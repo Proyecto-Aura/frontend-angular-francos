@@ -1,1 +1,144 @@
-<p>gestion-pedidos works!</p>
+<div class="flex flex-col gap-5 p-(--page-padding)">
+  <div>
+    <h1 class="text-ds-2xl font-semibold text-foreground">Gestión de pedidos</h1>
+    <p class="mt-1 text-ds-base text-muted-foreground">
+      Pedidos del portal del cliente y registrados manualmente, en orden de llegada.
+    </p>
+  </div>
+
+  <app-aviso-banner [texto]="aviso().mensaje" [tono]="aviso().tono" (closed)="cerrarAviso()" />
+
+  <app-ds-filter-bar [hasActions]="true">
+    <div filters class="w-[210px]">
+      <label for="pedidos-estado" class="sr-only">Estado de entrega</label>
+      <app-ds-select
+        id="pedidos-estado"
+        [value]="filtros().estado"
+        (valueChange)="setEstado($event)"
+        [options]="estadoOptions"
+        placeholder="Todos los estados"
+      />
+    </div>
+    <div filters class="w-[160px]">
+      <label for="pedidos-origen" class="sr-only">Origen</label>
+      <app-ds-select
+        id="pedidos-origen"
+        [value]="filtros().origen"
+        (valueChange)="setOrigen($event)"
+        [options]="origenOptions"
+        placeholder="Todo origen"
+      />
+    </div>
+    <div filters class="flex items-center gap-2 text-ds-sm text-muted-foreground">
+      <label for="pedidos-desde">Desde</label>
+      <span class="w-[160px]">
+        <app-ds-input
+          id="pedidos-desde"
+          type="date"
+          [value]="filtros().desde"
+          (valueChange)="setDesde($event)"
+          [invalid]="rangoInvalido()"
+        />
+      </span>
+    </div>
+    <div filters class="flex items-center gap-2 text-ds-sm text-muted-foreground">
+      <label for="pedidos-hasta">Hasta</label>
+      <span class="w-[160px]">
+        <app-ds-input
+          id="pedidos-hasta"
+          type="date"
+          [value]="filtros().hasta"
+          (valueChange)="setHasta($event)"
+          [invalid]="rangoInvalido()"
+        />
+      </span>
+    </div>
+
+    <span actions class="flex items-center gap-2">
+      @if (hayFiltros()) {
+        <app-ds-button variant="ghost" size="sm" (clicked)="limpiarFiltros()"
+          >Limpiar filtros</app-ds-button
+        >
+      }
+      <app-ds-button size="sm" (clicked)="nuevoPedido()">
+        <span icon><app-ds-icon [img]="LucidePlus" [size]="16" /></span>
+        Registrar pedido
+      </app-ds-button>
+    </span>
+  </app-ds-filter-bar>
+
+  @if (rangoInvalido()) {
+    <p role="alert" class="text-ds-sm text-destructive">
+      La fecha "Desde" no puede ser posterior a la fecha "Hasta".
+    </p>
+  }
+
+  @if (cargando()) {
+    <p
+      class="rounded-lg border border-border bg-card p-8 text-center text-ds-base text-muted-foreground"
+    >
+      Cargando pedidos…
+    </p>
+  } @else if (errorCarga()) {
+    <div
+      class="flex flex-col items-center gap-3 rounded-lg border border-border bg-card p-8 text-center"
+    >
+      <p class="text-ds-base text-muted-foreground">No se pudieron cargar los pedidos.</p>
+      <app-ds-button variant="secondary" (clicked)="cargar()">Reintentar</app-ds-button>
+    </div>
+  } @else {
+    <app-ds-data-table
+      [columns]="columns()"
+      [rows]="pedidos()"
+      [empty]="hayFiltros() ? 'Ningún pedido coincide con los filtros' : 'Aún no hay pedidos'"
+    />
+  }
+
+  <app-ds-pagination
+    [page]="page()"
+    [pageCount]="pageCount()"
+    [total]="total()"
+    [pageSize]="pageSize"
+    (changed)="cambiarPagina($event)"
+  />
+</div>
+
+<ng-template #codigoCell let-p>
+  <span class="block leading-snug">
+    <span class="block font-semibold tabular-nums">{{ p.codigo }}</span>
+    <span class="mt-0.5 block text-ds-sm text-muted-foreground">{{ p.origen }}</span>
+  </span>
+</ng-template>
+
+<ng-template #totalCell let-p>
+  <span class="font-semibold tabular-nums">{{ money(p.total) }}</span>
+</ng-template>
+
+<ng-template #estadoCell let-p>
+  <app-ds-badge [tone]="estadoTone(p.estado)" [dot]="true">{{
+    estadoLabel(p.estado)
+  }}</app-ds-badge>
+</ng-template>
+
+<ng-template #fechaCell let-p>
+  <span class="tabular-nums">{{ fechaHora(p.creado) }}</span>
+</ng-template>
+
+<ng-template #accionesCell let-p>
+  <app-ds-icon-button
+    [label]="'Ver pedido ' + p.codigo"
+    variant="secondary"
+    size="sm"
+    (clicked)="verPedido(p)"
+  >
+    <app-ds-icon [img]="LucideEye" [size]="16" />
+  </app-ds-icon-button>
+</ng-template>
+
+<app-pedido-form
+  [abierto]="formAbierto()"
+  (closed)="formAbierto.set(false)"
+  (registrado)="pedidoRegistrado($event)"
+/>
+
+<app-pedido-detalle [pedidoId]="pedidoDetalleId()" (closed)="pedidoDetalleId.set(null)" />

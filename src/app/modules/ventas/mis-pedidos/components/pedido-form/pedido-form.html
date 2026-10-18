@@ -1,0 +1,197 @@
+<app-ds-modal
+  [open]="abierto()"
+  title="Registrar pedido"
+  description="Pedido manual · el código PED-000000 se genera al registrar"
+  [width]="880"
+  [hasFooter]="true"
+  (closed)="cerrar()"
+>
+  @if (cargandoOpciones()) {
+    <p class="p-6 text-center text-ds-base text-muted-foreground">Cargando clientes y productos…</p>
+  } @else if (errorOpciones()) {
+    <div class="flex flex-col items-center gap-3 p-6 text-center">
+      <p role="alert" class="text-ds-base text-muted-foreground">
+        No se pudieron cargar los clientes y productos.
+      </p>
+      <app-ds-button variant="secondary" (clicked)="cargarOpciones()">Reintentar</app-ds-button>
+    </div>
+  } @else {
+    <div class="flex flex-col gap-5">
+      @if (errores().length) {
+        <div
+          role="alert"
+          class="flex items-start gap-3 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-ds-sm text-destructive"
+        >
+          <app-ds-icon [img]="LucideCircleAlert" [size]="17" />
+          <div class="min-w-0 flex-1">
+            <p class="font-semibold">Revisa los datos del pedido</p>
+            <p class="mt-1">Falta o es inválido: {{ errores().join(', ') }}.</p>
+          </div>
+        </div>
+      }
+
+      @if (errorApi()) {
+        <div
+          role="alert"
+          class="flex items-start gap-3 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-ds-sm text-destructive"
+        >
+          <app-ds-icon [img]="LucideCircleAlert" [size]="17" />
+          <p class="min-w-0 flex-1">{{ errorApi() }}</p>
+        </div>
+      }
+
+      <app-ds-field label="Cliente" [required]="true" htmlFor="pedido-cliente">
+        <app-ds-select
+          id="pedido-cliente"
+          [value]="pf().clienteId"
+          (valueChange)="setCliente($event)"
+          [options]="clienteOptions()"
+          placeholder="Seleccionar cliente"
+        />
+      </app-ds-field>
+
+      <div class="overflow-hidden rounded-lg border border-border">
+        <div
+          class="flex items-center justify-between gap-3 border-b border-border bg-muted px-4 py-3 text-ds-sm text-muted-foreground"
+        >
+          <span>Productos</span>
+          <span
+            >{{ pf().items.length }} {{ pf().items.length === 1 ? 'producto' : 'productos' }}</span
+          >
+        </div>
+
+        @for (item of pf().items; track $index; let i = $index) {
+          <div
+            class="grid grid-cols-[minmax(0,1fr)_120px_150px_auto] items-end gap-3 border-b border-border p-4"
+          >
+            <app-ds-field [label]="'Producto ' + (i + 1)" [htmlFor]="'pedido-item-' + i">
+              <app-ds-select
+                [id]="'pedido-item-' + i"
+                [value]="item.presentacionId"
+                (valueChange)="setItem(i, 'presentacionId', $event)"
+                [options]="presentacionOptions(i)"
+                placeholder="Seleccionar producto"
+              />
+            </app-ds-field>
+            <app-ds-field label="Cantidad" [htmlFor]="'pedido-cantidad-' + i">
+              <app-ds-input
+                [id]="'pedido-cantidad-' + i"
+                type="number"
+                [value]="item.cantidad"
+                (valueChange)="setItem(i, 'cantidad', $event)"
+              />
+            </app-ds-field>
+            <div class="pb-2.5 text-right">
+              @if (lineaDe(item); as linea) {
+                <span class="block font-semibold tabular-nums">{{ money(linea.subtotal) }}</span>
+                <span class="block text-ds-sm tabular-nums text-muted-foreground"
+                  >{{ money(linea.precio) }} c/u{{ linea.mayorista ? ' · mayorista' : '' }}</span
+                >
+              } @else {
+                <span class="text-muted-foreground">—</span>
+              }
+            </div>
+            <div class="pb-1">
+              <app-ds-icon-button
+                label="Quitar producto"
+                variant="secondary"
+                size="sm"
+                [disabled]="pf().items.length === 1"
+                (clicked)="quitarItem(i)"
+              >
+                <app-ds-icon [img]="LucideTrash2" [size]="15" />
+              </app-ds-icon-button>
+            </div>
+          </div>
+        }
+
+        <div class="p-3">
+          <app-ds-button variant="ghost" size="sm" (clicked)="agregarItem()">
+            <span icon><app-ds-icon [img]="LucidePlus" [size]="16" /></span>
+            Agregar producto
+          </app-ds-button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4">
+        <app-ds-field label="Tipo de entrega" [required]="true" htmlFor="pedido-entrega">
+          <app-ds-select
+            id="pedido-entrega"
+            [value]="pf().tipoEntrega"
+            (valueChange)="setTipoEntrega($event)"
+            [options]="tipoEntregaOptions"
+          />
+        </app-ds-field>
+        <app-ds-field
+          label="Método de pago"
+          [required]="true"
+          htmlFor="pedido-pago"
+          [hint]="
+            culqiDisponible
+              ? null
+              : 'El pago con Culqi (modo de pruebas) no está configurado en este entorno.'
+          "
+        >
+          <app-ds-select
+            id="pedido-pago"
+            [value]="pf().metodoPago"
+            (valueChange)="setMetodoPago($event)"
+            [options]="metodoPagoOptions"
+          />
+        </app-ds-field>
+        @if (pf().tipoEntrega === 'delivery') {
+          <div class="col-span-2">
+            <app-ds-field
+              label="Dirección de entrega"
+              [required]="true"
+              htmlFor="pedido-direccion"
+              hint="Se propone la dirección registrada del cliente"
+            >
+              <app-ds-input
+                id="pedido-direccion"
+                [value]="pf().direccion"
+                (valueChange)="setDireccion($event)"
+                placeholder="Ej. Av. La Marina 1450, San Miguel"
+              />
+            </app-ds-field>
+          </div>
+        }
+      </div>
+
+      <div
+        class="flex flex-wrap items-baseline justify-between gap-3 rounded-lg border border-border bg-muted px-4 py-3"
+      >
+        <span class="text-ds-sm text-muted-foreground">
+          Total estimado · el sistema lo confirma al registrar
+        </span>
+        <span class="text-ds-xl font-semibold tabular-nums text-foreground">{{
+          money(total())
+        }}</span>
+      </div>
+
+      @if (pf().metodoPago === 'efectivo') {
+        <p class="text-ds-sm text-muted-foreground">
+          Registra el pedido solo cuando ya recibiste el efectivo: queda como pagado y confirmado.
+        </p>
+      } @else {
+        <p
+          role="note"
+          class="rounded-md border border-border bg-muted px-3 py-2 text-ds-sm text-muted-foreground"
+        >
+          <span class="font-semibold text-foreground">Culqi en modo de pruebas:</span> no se cobra
+          dinero real. Usa las tarjetas o el Yape de prueba de la documentación de Culqi.
+        </p>
+      }
+    </div>
+  }
+
+  <span footer class="flex gap-2">
+    <app-ds-button variant="secondary" (clicked)="cerrar()">Cancelar</app-ds-button>
+    <app-ds-button
+      [disabled]="guardando() || cargandoOpciones() || errorOpciones()"
+      (clicked)="guardar()"
+    >
+      {{ guardando() ? 'Registrando…' : textoBoton() }}
+    </app-ds-button>
+  </span>
+</app-ds-modal>
