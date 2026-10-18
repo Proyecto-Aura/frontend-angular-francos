@@ -1,5 +1,12 @@
+import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Input } from './input';
+
+@Component({
+  imports: [Input],
+  template: `<label for="campo">Etiqueta</label><app-ds-input id="campo" />`,
+})
+class LabelHost {}
 
 describe('Input', () => {
   function create() {
@@ -35,5 +42,14 @@ describe('Input', () => {
     fixture.detectChanges();
     const native = fixture.nativeElement.querySelector('input');
     expect(native.id).toBe('auth-input-0');
+  });
+
+  it('lets a <label for> target the native control', () => {
+    const fixture = TestBed.createComponent(LabelHost);
+    fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+
+    expect(root.querySelectorAll('#campo')).toHaveLength(1);
+    expect(root.querySelector('label')?.control?.tagName).toBe('INPUT');
   });
 });

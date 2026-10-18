@@ -4,6 +4,9 @@ import { Component, computed, input, model, signal } from '@angular/core';
   imports: [],
   selector: 'app-ds-textarea',
   templateUrl: './textarea.html',
+  // El id va solo en el control nativo: si también quedara en el host, el
+  // <label for> apuntaría al host y la etiqueta no quedaría asociada.
+  host: { '[attr.id]': 'null' },
 })
 export class Textarea {
   value = model('');
