@@ -3,6 +3,7 @@ import { By } from '@angular/platform-browser';
 import { Subject, of, throwError } from 'rxjs';
 import { Badge } from '../../../../../shared/ds/badge/badge';
 import { Button } from '../../../../../shared/ds/button/button';
+import { CARGADOR_CHART_JS } from '../../chart/chartjs.loader';
 import {
   Cumplimiento,
   SeguimientoKpi,
@@ -15,21 +16,12 @@ import { KpiTendenciaChart } from '../kpi-tendencia-chart/kpi-tendencia-chart';
 import { TableroGraficos } from './tablero-graficos';
 
 class FakeChart {
-  static readonly register = vi.fn();
   readonly destroy = vi.fn();
 }
 
-class FakeChartPart {}
-
-vi.mock('chart.js', () => ({
-  Chart: FakeChart,
-  CategoryScale: FakeChartPart,
-  LineController: FakeChartPart,
-  LineElement: FakeChartPart,
-  LinearScale: FakeChartPart,
-  PointElement: FakeChartPart,
-  Tooltip: FakeChartPart,
-}));
+function cargadorFalso(): Promise<typeof FakeChart> {
+  return Promise.resolve(FakeChart);
+}
 
 function makeCumplimiento(overrides: Partial<Cumplimiento> = {}): Cumplimiento {
   return {
@@ -124,7 +116,10 @@ describe('TableroGraficos', () => {
     seguimientoService.obtener.mockReset();
     seguimientoService.obtener.mockReturnValue(of(makeSeguimiento()));
     TestBed.configureTestingModule({
-      providers: [{ provide: SeguimientoKpisService, useValue: seguimientoService }],
+      providers: [
+        { provide: SeguimientoKpisService, useValue: seguimientoService },
+        { provide: CARGADOR_CHART_JS, useValue: cargadorFalso },
+      ],
     });
   });
 

@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { CARGADOR_CHART_JS } from '../../chart/chartjs.loader';
 import { SeguimientoPunto } from '../../interfaces/seguimiento-kpis.interface';
 import { KpiTendenciaChart } from './kpi-tendencia-chart';
 
@@ -27,27 +28,12 @@ interface ChartConfig {
   };
 }
 
-const chartModuleState = vi.hoisted(() => {
-  let resolveModule!: (module: unknown) => void;
-  const modulePromise = new Promise<unknown>((resolve) => {
-    resolveModule = resolve;
-  });
-  return {
-    modulePromise,
-    resolveModule: (module: unknown) => resolveModule(module),
-    loads: 0,
-  };
-});
-
-vi.mock('chart.js', async () => {
-  chartModuleState.loads += 1;
-  return chartModuleState.modulePromise;
-});
-
 const chartInstances: FakeChart[] = [];
+let cargas = 0;
+let cargaDiferida = false;
+let liberarCarga: (() => void) | null = null;
 
 class FakeChart {
-  static readonly register = vi.fn();
   readonly destroy = vi.fn();
 
   constructor(
@@ -58,18 +44,12 @@ class FakeChart {
   }
 }
 
-class FakeChartPart {}
-
-function fakeChartModule() {
-  return {
-    Chart: FakeChart,
-    CategoryScale: FakeChartPart,
-    LineController: FakeChartPart,
-    LineElement: FakeChartPart,
-    LinearScale: FakeChartPart,
-    PointElement: FakeChartPart,
-    Tooltip: FakeChartPart,
-  };
+function cargadorFalso(): Promise<typeof FakeChart> {
+  cargas += 1;
+  if (!cargaDiferida) return Promise.resolve(FakeChart);
+  return new Promise((resolve) => {
+    liberarCarga = () => resolve(FakeChart);
+  });
 }
 
 function makePunto(overrides: Partial<SeguimientoPunto> = {}): SeguimientoPunto {
@@ -95,6 +75,9 @@ function ultimaConfiguracion(): ChartConfig {
 describe('KpiTendenciaChart', () => {
   beforeEach(() => {
     chartInstances.length = 0;
+    cargas = 0;
+    cargaDiferida = false;
+    liberarCarga = null;
     const tokens: Record<string, string> = {
       '--color-primary': 'crimson',
       '--color-muted-foreground': 'gray',
@@ -107,7 +90,9 @@ describe('KpiTendenciaChart', () => {
     for (const [token, value] of Object.entries(tokens)) {
       document.documentElement.style.setProperty(token, value);
     }
-    TestBed.configureTestingModule({});
+    TestBed.configureTestingModule({
+      providers: [{ provide: CARGADOR_CHART_JS, useValue: cargadorFalso }],
+    });
   });
 
   async function create(
@@ -136,10 +121,11 @@ describe('KpiTendenciaChart', () => {
     const fixture = await create([makePunto({ valor: null }), makePunto({ valor: null })]);
     expect(fixture.nativeElement.textContent).toContain('Sin registros de valor');
     expect(fixture.nativeElement.querySelector('canvas')).toBeNull();
-    expect(chartModuleState.loads).toBe(0);
+    expect(cargas).toBe(0);
   });
 
   it('does not create a chart when loading resolves after component destruction', async () => {
+    cargaDiferida = true;
     const fixture = TestBed.createComponent(KpiTendenciaChart);
     fixture.componentRef.setInput('serie', [makePunto()]);
     fixture.componentRef.setInput('unidadSimbolo', '%');
@@ -148,11 +134,11 @@ describe('KpiTendenciaChart', () => {
     await Promise.resolve();
     await vi.waitFor(() => {
       fixture.detectChanges();
-      expect(chartModuleState.loads).toBe(1);
+      expect(cargas).toBe(1);
     });
     fixture.destroy();
-    chartModuleState.resolveModule(fakeChartModule());
-    await vi.waitFor(() => expect(FakeChart.register).toHaveBeenCalledTimes(1));
+    liberarCarga?.();
+    await new Promise((resolve) => setTimeout(resolve, 0));
     expect(chartInstances).toHaveLength(0);
   });
 

@@ -1,3 +1,5 @@
+import { InjectionToken } from '@angular/core';
+
 let promesaChartJs: ReturnType<typeof importarChartJs> | null = null;
 
 export function cargarChartJs() {
@@ -20,3 +22,8 @@ function importarChartJs() {
     },
   );
 }
+
+export const CARGADOR_CHART_JS = new InjectionToken<() => ReturnType<typeof cargarChartJs>>(
+  'CARGADOR_CHART_JS',
+  { providedIn: 'root', factory: () => cargarChartJs },
+);

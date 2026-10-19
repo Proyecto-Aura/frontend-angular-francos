@@ -8,7 +8,7 @@ import {
   input,
   viewChild,
 } from '@angular/core';
-import { cargarChartJs } from '../../chart/chartjs.loader';
+import { CARGADOR_CHART_JS } from '../../chart/chartjs.loader';
 import { formatearValor } from '../kpi-form-modal/kpi.reglas';
 import { SeguimientoPunto } from '../../interfaces/seguimiento-kpis.interface';
 import {
@@ -24,6 +24,7 @@ import {
 })
 export class KpiTendenciaChart {
   private destroyRef = inject(DestroyRef);
+  private cargarChartJs = inject(CARGADOR_CHART_JS);
   private canvas = viewChild<ElementRef<HTMLCanvasElement>>('canvas');
   private grafico: { destroy(): void } | null = null;
   private renderActual = 0;
@@ -57,7 +58,7 @@ export class KpiTendenciaChart {
     this.destruirGrafico();
     if (!canvas || !serie.some((punto) => punto.valor !== null)) return;
 
-    const Chart = await cargarChartJs();
+    const Chart = await this.cargarChartJs();
     if (this.destruido || render !== this.renderActual) return;
 
     const estilosRaiz = getComputedStyle(document.documentElement);
