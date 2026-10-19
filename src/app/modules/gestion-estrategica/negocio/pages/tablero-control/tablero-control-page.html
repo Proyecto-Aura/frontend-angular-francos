@@ -37,20 +37,55 @@
             </p>
           </div>
 
-          <div class="flex flex-wrap items-center gap-x-4 gap-y-2 text-ds-sm text-muted-foreground">
-            <span class="text-foreground">Iniciativas:</span>
-            <span class="flex items-center gap-1.5">
-              <span class="h-2 w-2 rounded-full bg-muted-foreground"></span>Pendiente
-            </span>
-            <span class="flex items-center gap-1.5">
-              <span class="h-2 w-2 rounded-full bg-warning"></span>En proceso
-            </span>
-            <span class="flex items-center gap-1.5">
-              <span class="h-2 w-2 rounded-full bg-success"></span>Completada
-            </span>
-            <span class="flex items-center gap-1.5">
-              <span class="h-2 w-2 rounded-full bg-destructive"></span>Cancelada
-            </span>
+          <div class="flex flex-col items-start gap-3 lg:items-end">
+            <div class="flex rounded-lg border border-border bg-muted p-1">
+              <button
+                type="button"
+                class="flex h-8 items-center gap-2 rounded-md px-3 text-ds-sm font-medium transition-[background,color,box-shadow]"
+                [class.bg-card]="modo() === 'tabla'"
+                [class.shadow-ds-xs]="modo() === 'tabla'"
+                [class.text-foreground]="modo() === 'tabla'"
+                [class.text-muted-foreground]="modo() !== 'tabla'"
+                [attr.aria-pressed]="modo() === 'tabla'"
+                (click)="modo.set('tabla')"
+              >
+                <app-ds-icon [img]="LucideLayoutGrid" [size]="16" />
+                Tabla
+              </button>
+              <button
+                type="button"
+                class="flex h-8 items-center gap-2 rounded-md px-3 text-ds-sm font-medium transition-[background,color,box-shadow]"
+                [class.bg-card]="modo() === 'graficos'"
+                [class.shadow-ds-xs]="modo() === 'graficos'"
+                [class.text-foreground]="modo() === 'graficos'"
+                [class.text-muted-foreground]="modo() !== 'graficos'"
+                [attr.aria-pressed]="modo() === 'graficos'"
+                (click)="modo.set('graficos')"
+              >
+                <app-ds-icon [img]="LucideChartColumn" [size]="16" />
+                Gráficos
+              </button>
+            </div>
+
+            @if (modo() === 'tabla') {
+              <div
+                class="flex flex-wrap items-center gap-x-4 gap-y-2 text-ds-sm text-muted-foreground"
+              >
+                <span class="text-foreground">Iniciativas:</span>
+                <span class="flex items-center gap-1.5">
+                  <span class="h-2 w-2 rounded-full bg-muted-foreground"></span>Pendiente
+                </span>
+                <span class="flex items-center gap-1.5">
+                  <span class="h-2 w-2 rounded-full bg-warning"></span>En proceso
+                </span>
+                <span class="flex items-center gap-1.5">
+                  <span class="h-2 w-2 rounded-full bg-success"></span>Completada
+                </span>
+                <span class="flex items-center gap-1.5">
+                  <span class="h-2 w-2 rounded-full bg-destructive"></span>Cancelada
+                </span>
+              </div>
+            }
           </div>
         </div>
 
@@ -69,7 +104,9 @@
           </app-ds-kpi-card>
         </div>
 
-        @if (filas().length === 0) {
+        @if (modo() === 'graficos') {
+          <app-tablero-graficos [planId]="datos.planId" />
+        } @else if (filas().length === 0) {
           <app-ds-card [padded]="false">
             <div class="px-5 py-11 text-center text-muted-foreground">
               Este plan no registra KPIs.
