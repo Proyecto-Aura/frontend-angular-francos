@@ -1,7 +1,14 @@
 import { RouterLink } from '@angular/router';
 import { Component, DestroyRef, computed, effect, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { LucideCircleAlert, LucideCircleCheck, LucideCircleX, LucideGauge } from '@lucide/angular';
+import {
+  LucideChartColumn,
+  LucideCircleAlert,
+  LucideCircleCheck,
+  LucideCircleX,
+  LucideGauge,
+  LucideLayoutGrid,
+} from '@lucide/angular';
 import { finalize } from 'rxjs';
 import { Badge } from '../../../../../shared/ds/badge/badge';
 import { Button } from '../../../../../shared/ds/button/button';
@@ -10,6 +17,7 @@ import { Icon } from '../../../../../shared/ds/icon/icon';
 import { KpiCard } from '../../../../../shared/ds/kpi-card/kpi-card';
 import { PlanSeleccionadoService } from '../../../plan-estrategico/services/plan-seleccionado.service';
 import { formatearValor } from '../../components/kpi-form-modal/kpi.reglas';
+import { TableroGraficos } from '../../components/tablero-graficos/tablero-graficos';
 import { EstadoIniciativaCodigo } from '../../interfaces/iniciativa.interface';
 import {
   TableroAnio,
@@ -19,6 +27,8 @@ import {
 } from '../../interfaces/tablero-control.interface';
 import { TableroControlService } from '../../services/tablero-control.service';
 import {
+  clasePuntoPerspectiva,
+  claseTextoPerspectiva,
   etiquetaPeriodo,
   nombreSemaforo,
   resumenSemaforo,
@@ -26,7 +36,7 @@ import {
 } from './tablero-control.reglas';
 
 @Component({
-  imports: [Badge, Button, Card, Icon, KpiCard, RouterLink],
+  imports: [Badge, Button, Card, Icon, KpiCard, RouterLink, TableroGraficos],
   selector: 'app-tablero-control-page',
   templateUrl: './tablero-control-page.html',
 })
@@ -36,16 +46,21 @@ export class TableroControlPage {
   private solicitudActual = 0;
 
   readonly planSeleccionado = inject(PlanSeleccionadoService);
+  readonly LucideChartColumn = LucideChartColumn;
   readonly LucideCircleAlert = LucideCircleAlert;
   readonly LucideCircleCheck = LucideCircleCheck;
   readonly LucideCircleX = LucideCircleX;
   readonly LucideGauge = LucideGauge;
+  readonly LucideLayoutGrid = LucideLayoutGrid;
+  readonly clasePuntoPerspectiva = clasePuntoPerspectiva;
+  readonly claseTextoPerspectiva = claseTextoPerspectiva;
   readonly etiquetaPeriodo = etiquetaPeriodo;
   readonly formatearValor = formatearValor;
   readonly nombreSemaforo = nombreSemaforo;
   readonly tonoSemaforo = tonoSemaforo;
 
   readonly tablero = signal<TableroControl | null>(null);
+  readonly modo = signal<'tabla' | 'graficos'>('tabla');
   readonly cargando = signal(false);
   readonly errorCarga = signal(false);
 
@@ -107,31 +122,11 @@ export class TableroControlPage {
     return fila.anios.find((valor) => valor.anio === anio) ?? null;
   }
 
-  clasePuntoPerspectiva(orden: number): string {
-    if (orden === 1) return 'bg-success';
-    if (orden === 2) return 'bg-info';
-    if (orden === 3) return 'bg-warning';
-    return 'bg-muted-foreground';
-  }
-
   claseFondoPerspectiva(orden: number): string {
     if (orden === 1) return 'bg-success/8';
     if (orden === 2) return 'bg-info/7';
     if (orden === 3) return 'bg-warning/8';
     return 'bg-muted-foreground/7';
-  }
-
-  claseTextoPerspectiva(orden: number): string {
-    if (orden === 1) {
-      return 'text-[color-mix(in_srgb,var(--color-success)_70%,var(--color-foreground))]';
-    }
-    if (orden === 2) {
-      return 'text-[color-mix(in_srgb,var(--color-info)_70%,var(--color-foreground))]';
-    }
-    if (orden === 3) {
-      return 'text-[color-mix(in_srgb,var(--color-warning)_70%,var(--color-foreground))]';
-    }
-    return 'text-[color-mix(in_srgb,var(--color-muted-foreground)_70%,var(--color-foreground))]';
   }
 
   clasePuntoIniciativa(estado: EstadoIniciativaCodigo): string {

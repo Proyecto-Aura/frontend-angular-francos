@@ -60,3 +60,23 @@ export function tonoPerspectiva(orden: number): BadgeTone {
   if (orden === 3) return 'warning';
   return 'neutral';
 }
+
+export function clasePuntoPerspectiva(orden: number): string {
+  if (orden === 1) return 'bg-success';
+  if (orden === 2) return 'bg-info';
+  if (orden === 3) return 'bg-warning';
+  return 'bg-muted-foreground';
+}
+
+export function claseTextoPerspectiva(orden: number): string {
+  if (orden === 1) {
+    return 'text-[color-mix(in_srgb,var(--color-success)_70%,var(--color-foreground))]';
+  }
+  if (orden === 2) {
+    return 'text-[color-mix(in_srgb,var(--color-info)_70%,var(--color-foreground))]';
+  }
+  if (orden === 3) {
+    return 'text-[color-mix(in_srgb,var(--color-warning)_70%,var(--color-foreground))]';
+  }
+  return 'text-[color-mix(in_srgb,var(--color-muted-foreground)_70%,var(--color-foreground))]';
+}
