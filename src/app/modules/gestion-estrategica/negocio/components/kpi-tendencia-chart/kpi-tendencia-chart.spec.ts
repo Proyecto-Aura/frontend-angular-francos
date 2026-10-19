@@ -124,7 +124,10 @@ describe('KpiTendenciaChart', () => {
     fixture.detectChanges();
     await fixture.whenStable();
     if (serie.some((punto) => punto.valor !== null)) {
-      await vi.waitFor(() => expect(chartInstances.length).toBeGreaterThan(0));
+      await vi.waitFor(() => {
+        fixture.detectChanges();
+        expect(chartInstances.length).toBeGreaterThan(0);
+      });
     }
     return fixture;
   }
@@ -143,8 +146,10 @@ describe('KpiTendenciaChart', () => {
     fixture.componentRef.setInput('descripcion', 'Descripción');
     fixture.detectChanges();
     await Promise.resolve();
-    fixture.detectChanges();
-    await vi.waitFor(() => expect(chartModuleState.loads).toBe(1));
+    await vi.waitFor(() => {
+      fixture.detectChanges();
+      expect(chartModuleState.loads).toBe(1);
+    });
     fixture.destroy();
     chartModuleState.resolveModule(fakeChartModule());
     await vi.waitFor(() => expect(FakeChart.register).toHaveBeenCalledTimes(1));
