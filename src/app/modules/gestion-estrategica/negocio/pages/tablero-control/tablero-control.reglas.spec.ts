@@ -1,5 +1,7 @@
 import { TableroAnio, TableroKpiFila } from '../../interfaces/tablero-control.interface';
 import {
+  clasePuntoPerspectiva,
+  claseTextoPerspectiva,
   etiquetaPeriodo,
   nombreSemaforo,
   resumenSemaforo,
@@ -156,5 +158,23 @@ describe('tablero control reglas', () => {
     [4, 'neutral'],
   ] as const)('maps perspective order %s', (order, tone) => {
     expect(tonoPerspectiva(order)).toBe(tone);
+  });
+
+  it.each([
+    [1, 'bg-success'],
+    [2, 'bg-info'],
+    [3, 'bg-warning'],
+    [4, 'bg-muted-foreground'],
+  ] as const)('maps perspective point class for order %s', (order, expected) => {
+    expect(clasePuntoPerspectiva(order)).toBe(expected);
+  });
+
+  it.each([
+    [1, 'text-[color-mix(in_srgb,var(--color-success)_70%,var(--color-foreground))]'],
+    [2, 'text-[color-mix(in_srgb,var(--color-info)_70%,var(--color-foreground))]'],
+    [3, 'text-[color-mix(in_srgb,var(--color-warning)_70%,var(--color-foreground))]'],
+    [4, 'text-[color-mix(in_srgb,var(--color-muted-foreground)_70%,var(--color-foreground))]'],
+  ] as const)('maps perspective text class for order %s', (order, expected) => {
+    expect(claseTextoPerspectiva(order)).toBe(expected);
   });
 });

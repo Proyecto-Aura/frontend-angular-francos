@@ -8,6 +8,7 @@ import { Button } from '../../../../../shared/ds/button/button';
 import { KpiCard } from '../../../../../shared/ds/kpi-card/kpi-card';
 import { PlanEstrategico } from '../../../plan-estrategico/interfaces/plan-estrategico.interface';
 import { PlanSeleccionadoService } from '../../../plan-estrategico/services/plan-seleccionado.service';
+import { TableroGraficos } from '../../components/tablero-graficos/tablero-graficos';
 import { Iniciativa } from '../../interfaces/iniciativa.interface';
 import {
   TableroAnio,
@@ -16,6 +17,7 @@ import {
   TableroPerspectiva,
 } from '../../interfaces/tablero-control.interface';
 import { TableroControlService } from '../../services/tablero-control.service';
+import { SeguimientoKpisService } from '../../services/seguimiento-kpis.service';
 import { TableroControlPage } from './tablero-control-page';
 
 function makePlan(overrides: Partial<PlanEstrategico> = {}): PlanEstrategico {
@@ -120,6 +122,24 @@ describe('TableroControlPage', () => {
       return of(makeTablero());
     }),
   };
+  const seguimientoService = {
+    obtener: vi.fn((id: number) =>
+      of({
+        planId: id,
+        planNombre: `Plan ${id}`,
+        cumplimientoGeneral: {
+          porcentaje: null,
+          evaluados: 0,
+          total: 0,
+          verde: 0,
+          amarillo: 0,
+          rojo: 0,
+          sinDato: 0,
+        },
+        perspectivas: [],
+      }),
+    ),
+  };
   const planService = {
     planId: selectedPlanId,
     plan: computed(() => selectedPlan()),
@@ -132,11 +152,13 @@ describe('TableroControlPage', () => {
     planLoading.set(false);
     tableroService.obtener.mockReset();
     tableroService.obtener.mockReturnValue(of(makeTablero()));
+    seguimientoService.obtener.mockClear();
     TestBed.configureTestingModule({
       providers: [
         provideRouter([]),
         { provide: PlanSeleccionadoService, useValue: planService },
         { provide: TableroControlService, useValue: tableroService },
+        { provide: SeguimientoKpisService, useValue: seguimientoService },
       ],
     });
   });
@@ -377,5 +399,79 @@ describe('TableroControlPage', () => {
         component.clasePuntoIniciativa(state as Iniciativa['estadoCodigo']),
       ),
     ).toEqual(['bg-muted-foreground', 'bg-warning', 'bg-success', 'bg-destructive']);
+  });
+
+  it('starts in Table mode with its table, initiative legend and pressed state', () => {
+    const fixture = create();
+    const buttons = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>('button'),
+    );
+    const tableButton = buttons.find((button) => button.textContent.includes('Tabla'))!;
+    const chartsButton = buttons.find((button) => button.textContent.includes('Gráficos'))!;
+    expect(fixture.componentInstance.modo()).toBe('tabla');
+    expect(fixture.nativeElement.querySelector('table')).not.toBeNull();
+    expect(normalizedText(fixture)).toContain('Iniciativas:');
+    expect(fixture.debugElement.query(By.directive(TableroGraficos))).toBeNull();
+    expect(tableButton.getAttribute('aria-pressed')).toBe('true');
+    expect(chartsButton.getAttribute('aria-pressed')).toBe('false');
+    expect(seguimientoService.obtener).not.toHaveBeenCalled();
+  });
+
+  it('switches to Charts while keeping summary cards and passing the dashboard plan id', () => {
+    const fixture = create();
+    const chartsButton = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>('button'),
+    ).find((button) => button.textContent.includes('Gráficos'))!;
+    chartsButton.click();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.modo()).toBe('graficos');
+    expect(fixture.nativeElement.querySelector('table')).toBeNull();
+    expect(normalizedText(fixture)).not.toContain('Iniciativas:');
+    const charts = fixture.debugElement.query(By.directive(TableroGraficos))
+      .componentInstance as TableroGraficos;
+    expect(charts.planId()).toBe(5);
+    expect(fixture.debugElement.queryAll(By.directive(KpiCard))).toHaveLength(4);
+    expect(chartsButton.getAttribute('aria-pressed')).toBe('true');
+    const tableButton = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>('button'),
+    ).find((button) => button.textContent.includes('Tabla'))!;
+    expect(tableButton.getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('returns to Table mode and only loads tracking while Charts is active', () => {
+    const fixture = create();
+    const modeButton = (label: string) =>
+      Array.from(
+        (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>('button'),
+      ).find((button) => button.textContent.includes(label))!;
+    expect(seguimientoService.obtener).not.toHaveBeenCalled();
+    modeButton('Gráficos').click();
+    fixture.detectChanges();
+    expect(seguimientoService.obtener).toHaveBeenCalledTimes(1);
+    modeButton('Tabla').click();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('table')).not.toBeNull();
+    expect(normalizedText(fixture)).toContain('Iniciativas:');
+  });
+
+  it('keeps the selected mode when the active plan changes', () => {
+    tableroService.obtener.mockImplementation((id: number) =>
+      of(makeTablero({ planId: id, planNombre: `Plan ${id}` })),
+    );
+    const fixture = create();
+    const chartsButton = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>('button'),
+    ).find((button) => button.textContent.includes('Gráficos'))!;
+    chartsButton.click();
+    fixture.detectChanges();
+
+    selectedPlan.set(makePlan({ id: 6, nombre: 'Plan 6' }));
+    selectedPlanId.set(6);
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.modo()).toBe('graficos');
+    expect(fixture.debugElement.query(By.directive(TableroGraficos))).not.toBeNull();
+    expect(seguimientoService.obtener).toHaveBeenCalledWith(6);
   });
 });
