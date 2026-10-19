@@ -1,0 +1,42 @@
+<div class="relative flex w-full items-center">
+  @if (hasIcon()) {
+    <span
+      class="pointer-events-none absolute left-[14px] flex transition-colors duration-[120ms] ease-linear"
+      [class]="iconColorClass()"
+    >
+      <ng-content select="[icon]" />
+    </span>
+  }
+  <select
+    [id]="id()"
+    [name]="name()"
+    [disabled]="disabled()"
+    [value]="value()"
+    (change)="onChange($event)"
+    (focus)="focused.set(true)"
+    (blur)="focused.set(false)"
+    [class]="shellClasses()"
+    [style.height]="height()"
+  >
+    @if (placeholder()) {
+      <option value="" [selected]="value() === ''">{{ placeholder() }}</option>
+    }
+    @for (opt of options(); track opt.value) {
+      <option [value]="opt.value" [selected]="opt.value === value()">{{ opt.label }}</option>
+    }
+  </select>
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    aria-hidden="true"
+    class="pointer-events-none absolute right-[14px] text-muted-foreground"
+  >
+    <path d="m6 9 6 6 6-6" />
+  </svg>
+</div>

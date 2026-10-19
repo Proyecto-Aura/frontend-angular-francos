@@ -1,0 +1,160 @@
+<div class="flex min-h-full flex-col">
+  <div class="flex flex-col gap-4 p-(--page-padding)">
+    @if (planSeleccionado.cargando()) {
+      <div class="py-12 text-center text-muted-foreground">Cargando…</div>
+    } @else if (!planSeleccionado.plan()) {
+      <app-ds-card>
+        <div class="flex flex-col items-center gap-3 py-10 text-center">
+          <p class="text-muted-foreground">No hay planes estratégicos registrados.</p>
+          <a
+            routerLink="/gestion-estrategica/plan-estrategico"
+            class="font-medium text-primary hover:underline"
+          >
+            Ir a Plan estratégico
+          </a>
+        </div>
+      </app-ds-card>
+    } @else if (planSeleccionado.plan(); as plan) {
+      <div class="flex justify-between gap-4">
+        <div>
+          <h1 class="text-ds-2xl font-medium text-foreground">Análisis estratégico</h1>
+          <p class="mt-1 text-muted-foreground">
+            {{ total() }} {{ total() === 1 ? 'documento' : 'documentos' }} en el plan
+            <span class="text-foreground">{{ plan.nombre }}</span>
+          </p>
+        </div>
+        <app-ds-button
+          variant="primary"
+          [disabled]="plan.estadoCodigo !== 'BORRADOR'"
+          (clicked)="abrirSubida()"
+        >
+          <span icon><app-ds-icon [img]="LucideUpload" [size]="16" /></span>
+          Subir documento
+        </app-ds-button>
+      </div>
+
+      @if (plan.estadoCodigo !== 'BORRADOR') {
+        <div class="flex items-center gap-2.5 rounded-lg border border-border bg-muted px-4 py-3">
+          <app-ds-icon class="shrink-0" [img]="LucideLock" [size]="16" />
+          <span>Este plan no está en Borrador. Los documentos solo pueden consultarse.</span>
+        </div>
+      }
+
+      @if (errorCarga()) {
+        <app-ds-card>
+          <div class="flex flex-col items-center gap-3 py-10 text-center">
+            <p class="text-muted-foreground">No se pudieron cargar los documentos.</p>
+            <app-ds-button variant="secondary" (clicked)="cargarDocumentos()"
+              >Reintentar</app-ds-button
+            >
+          </div>
+        </app-ds-card>
+      } @else if (cargando()) {
+        <app-ds-card [padded]="false">
+          <div class="p-12 text-center text-muted-foreground">Cargando…</div>
+        </app-ds-card>
+      } @else if (documentos().length > 0) {
+        <app-ds-card [padded]="false">
+          <app-ds-data-table
+            [columns]="columnas()"
+            [rows]="documentos()"
+            (rowClicked)="abrirVistaDesdeFila($event)"
+          />
+          @if (totalPaginas() > 1) {
+            <div class="border-t border-border px-5 py-4">
+              <app-ds-pagination
+                [page]="pagina()"
+                [pageCount]="totalPaginas()"
+                [total]="total()"
+                [pageSize]="limite()"
+                (changed)="cambiarPagina($event)"
+              />
+            </div>
+          }
+        </app-ds-card>
+      } @else {
+        <app-ds-card [padded]="false">
+          <div class="flex flex-col items-center gap-3.5 px-5 py-11 text-center">
+            <span
+              class="flex h-13 w-13 items-center justify-center rounded-full bg-accent text-primary"
+            >
+              <app-ds-icon [img]="LucideFolderOpen" [size]="20" />
+            </span>
+            <div>
+              <h2 class="text-ds-lg font-medium text-foreground">No hay documentos aún</h2>
+              <p class="mt-1.5 text-muted-foreground">
+                {{
+                  plan.estadoCodigo === 'BORRADOR'
+                    ? 'Sube el primero con "Subir documento".'
+                    : 'Este plan no registra documentos.'
+                }}
+              </p>
+            </div>
+          </div>
+        </app-ds-card>
+      }
+    }
+
+    <ng-template #documentoCell let-documento>
+      <div class="w-120 max-w-120 leading-[1.35]">
+        <span class="block truncate font-semibold text-foreground" [title]="documento.nombre">{{
+          documento.nombre
+        }}</span>
+        <span
+          class="mt-[3px] block truncate text-ds-sm text-muted-foreground"
+          [title]="documento.nombreOriginal"
+          >{{ documento.nombreOriginal }}</span
+        >
+      </div>
+    </ng-template>
+
+    <ng-template #tipoCell let-documento>
+      <app-ds-badge tone="neutral">{{ documento.tipo }}</app-ds-badge>
+    </ng-template>
+
+    <ng-template #fechaCell let-documento>
+      <span class="text-muted-foreground">{{ formatearFecha(documento.fechaSubida) }}</span>
+    </ng-template>
+
+    <ng-template #accionesCell let-documento>
+      <div class="flex justify-end gap-2">
+        <app-ds-icon-button
+          label="Ver"
+          variant="secondary"
+          size="md"
+          (clicked)="abrirVista(documento); $event.stopPropagation()"
+        >
+          <app-ds-icon [img]="LucideEye" [size]="16" />
+        </app-ds-icon-button>
+        <app-ds-icon-button
+          label="Eliminar"
+          variant="secondary"
+          size="md"
+          [disabled]="planSeleccionado.plan()?.estadoCodigo !== 'BORRADOR'"
+          (clicked)="abrirEliminacion($event, documento)"
+        >
+          <app-ds-icon [img]="LucideTrash2" [size]="16" />
+        </app-ds-icon-button>
+      </div>
+    </ng-template>
+
+    <app-documento-estrategico-subir-modal
+      [open]="modalActivo() === 'subir'"
+      [planId]="planSeleccionado.planId()"
+      [planNombre]="planSeleccionado.plan()?.nombre ?? ''"
+      (closed)="cerrarModal()"
+      (saved)="documentoSubido()"
+    />
+    <app-documento-estrategico-ver-modal
+      [open]="modalActivo() === 'ver'"
+      [documento]="documentoSeleccionado()"
+      (closed)="cerrarModal()"
+    />
+    <app-documento-estrategico-eliminar-modal
+      [open]="modalActivo() === 'eliminar'"
+      [documento]="documentoSeleccionado()"
+      (closed)="cerrarModal()"
+      (deleted)="documentoEliminado()"
+    />
+  </div>
+</div>

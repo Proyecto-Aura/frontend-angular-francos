@@ -1,0 +1,27 @@
+<label
+  class="inline-flex cursor-pointer items-center gap-3"
+  [class.cursor-not-allowed]="disabled()"
+  [class.opacity-50]="disabled()"
+>
+  <input
+    type="checkbox"
+    [checked]="checked()"
+    [disabled]="disabled()"
+    (change)="onChange($event)"
+    class="absolute h-0 w-0 opacity-0"
+  />
+  <span
+    class="box-border inline-flex h-[28px] w-[48px] shrink-0 rounded-full p-[3px] transition-[background] duration-[160ms] ease-linear"
+    [class.bg-primary]="checked()"
+    [class.bg-switch-background]="!checked()"
+    [class.justify-end]="checked()"
+    [class.justify-start]="!checked()"
+  >
+    <span
+      class="h-[22px] w-[22px] rounded-full bg-white shadow-[0_1px_3px_rgba(33,33,33,0.22)]"
+    ></span>
+  </span>
+  @if (label()) {
+    <span class="text-ds-base text-foreground">{{ label() }}</span>
+  }
+</label>

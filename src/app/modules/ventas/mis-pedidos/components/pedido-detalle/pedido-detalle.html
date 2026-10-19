@@ -1,0 +1,119 @@
+<app-ds-modal
+  [open]="pedidoId() !== null"
+  [title]="detalle() ? 'Pedido ' + detalle()?.codigo : 'Detalle del pedido'"
+  [width]="820"
+  [hasFooter]="true"
+  (closed)="closed.emit()"
+>
+  @if (cargando()) {
+    <p class="p-6 text-center text-ds-base text-muted-foreground">Cargando pedido…</p>
+  } @else if (error()) {
+    <div class="flex flex-col items-center gap-3 p-6 text-center">
+      <p role="alert" class="text-ds-base text-muted-foreground">{{ error() }}</p>
+      <app-ds-button variant="secondary" (clicked)="cargar()">Reintentar</app-ds-button>
+    </div>
+  } @else if (detalle(); as d) {
+    <div class="flex flex-col gap-5">
+      <div>
+        <app-ds-badge [tone]="estadoTone(d.estado)" [dot]="true" size="md">{{
+          estadoLabel(d.estado)
+        }}</app-ds-badge>
+      </div>
+
+      <section class="flex flex-col gap-3">
+        <h4 class="flex items-center gap-2 font-semibold text-foreground">
+          <app-ds-icon [img]="LucideFileText" [size]="16" /> Información del pedido
+        </h4>
+        <div class="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-x-5 gap-y-4">
+          @for (c of camposPedido(d); track c.label) {
+            <div class="min-w-0">
+              <div class="text-ds-sm text-muted-foreground">{{ c.label }}</div>
+              <div class="mt-1 font-medium text-foreground">{{ c.value }}</div>
+            </div>
+          }
+        </div>
+      </section>
+
+      <section class="flex flex-col gap-3">
+        <h4 class="flex items-center gap-2 font-semibold text-foreground">
+          <app-ds-icon [img]="LucidePackage" [size]="16" /> Productos del pedido
+          <span class="text-ds-sm font-normal text-muted-foreground"
+            >{{ d.items.length }} {{ d.items.length === 1 ? 'producto' : 'productos' }}</span
+          >
+        </h4>
+        <div class="overflow-x-auto rounded-lg border border-border">
+          <table class="w-full text-ds-sm">
+            <thead class="bg-muted text-left text-muted-foreground">
+              <tr>
+                <th class="px-3 py-2 font-medium">Producto</th>
+                <th class="px-3 py-2 text-right font-medium">Cantidad</th>
+                <th class="px-3 py-2 text-right font-medium">Precio unitario</th>
+                <th class="px-3 py-2 text-right font-medium">Subtotal</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (i of d.items; track i.sku) {
+                <tr class="border-t border-border">
+                  <td class="px-3 py-2">
+                    <span class="block font-medium text-foreground">{{ i.nombre }}</span>
+                    <span class="block tabular-nums text-muted-foreground">{{ i.sku }}</span>
+                  </td>
+                  <td class="px-3 py-2 text-right tabular-nums">{{ nf(i.cantidad) }}</td>
+                  <td class="px-3 py-2 text-right tabular-nums">
+                    {{ money(i.precioAplicado) }}
+                    @if (i.precioAplicado !== i.precioUnit) {
+                      <span class="block text-muted-foreground"
+                        >Mayorista · normal {{ money(i.precioUnit) }}</span
+                      >
+                    }
+                  </td>
+                  <td class="px-3 py-2 text-right font-medium tabular-nums">
+                    {{ money(i.subtotal) }}
+                  </td>
+                </tr>
+              }
+            </tbody>
+            <tfoot>
+              <tr class="border-t border-border">
+                <td colspan="3" class="px-3 py-2 text-right font-semibold">Total del pedido</td>
+                <td class="px-3 py-2 text-right text-ds-base font-semibold tabular-nums">
+                  {{ money(d.total) }}
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </section>
+
+      <section class="flex flex-col gap-3">
+        <h4 class="flex items-center gap-2 font-semibold text-foreground">
+          <app-ds-icon [img]="LucideCreditCard" [size]="16" /> Información de pago
+        </h4>
+        @if (d.pago) {
+          <div class="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-x-5 gap-y-4">
+            @for (c of camposPago(d); track c.label) {
+              <div class="min-w-0">
+                <div class="text-ds-sm text-muted-foreground">{{ c.label }}</div>
+                <div class="mt-1 font-medium break-words text-foreground">{{ c.value }}</div>
+              </div>
+            }
+          </div>
+        } @else {
+          <p class="text-ds-sm text-muted-foreground">Sin pago registrado.</p>
+        }
+      </section>
+    </div>
+  }
+
+  <span footer class="flex gap-2">
+    <app-ds-button variant="secondary" (clicked)="closed.emit()">Cerrar</app-ds-button>
+    @if (detalle(); as d) {
+      @if (d.estado === 'confirmado') {
+        <app-ds-button [disabled]="cambiandoEstado()" (clicked)="pasarAEnEsperaDeInventario(d)">
+          <span icon><app-ds-icon [img]="LucidePackage" [size]="16" /></span>
+          Pasar a En espera de inventario
+        </app-ds-button>
+      }
+    }
+  </span>
+</app-ds-modal>

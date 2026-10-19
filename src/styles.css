@@ -1,2 +1,173 @@
 /* You can add global styles to this file, and also import other style files */
 @import 'tailwindcss';
+
+/*
+ * Franco's Portal Empresarial - Design System tokens, ported verbatim from the
+ * franco-s-portal-empresarial-design-syste... folder's tokens directory.
+ *
+ * These MUST live in this file's own @theme block: Angular's esbuild-based style pipeline
+ * does not run Tailwind's @theme-to-utility compilation on a plain @import-ed partial, only
+ * on the entry stylesheet - a nested design-tokens.css produced dead custom properties with
+ * no generated utility classes (bg-primary, text-foreground, etc. never existed). Verified via
+ * a throwaway class in an unrelated file before/after moving these here.
+ */
+@theme {
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-heading: 'Montserrat', ui-sans-serif, system-ui, sans-serif;
+  --font-body: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-nunito: 'Nunito', ui-sans-serif, system-ui, sans-serif;
+
+  /* Base ramp */
+  --color-ds-red-600: #d22b2b;
+  --color-ds-red-500: #e53935;
+  --color-ds-neutral-000: #ffffff;
+  --color-ds-neutral-050: #f5f5f5;
+  --color-ds-neutral-200: #e0e0e0;
+  --color-ds-neutral-500: #757575;
+  --color-ds-neutral-900: #212121;
+  --color-ds-blue-600: #1e88e5;
+  --color-ds-green-600: #43a047;
+  --color-ds-yellow-500: #fdd835;
+  --color-ds-orange-600: #fb8c00;
+
+  /* Semantic — surfaces & text */
+  --color-background: #f5f5f5;
+  --color-foreground: #212121;
+  --color-card: #ffffff;
+  --color-card-foreground: #212121;
+  --color-popover: #ffffff;
+  --color-popover-foreground: #212121;
+  --color-secondary: #f5f5f5;
+  --color-secondary-foreground: #212121;
+  --color-muted: #f5f5f5;
+  --color-muted-foreground: #757575;
+
+  /* Semantic — brand & state */
+  --color-primary: #d22b2b;
+  --color-primary-foreground: #ffffff;
+  --color-primary-hover: #b92525;
+  --color-primary-active: #a32020;
+  --color-accent: rgba(210, 43, 43, 0.08);
+  --color-accent-foreground: #d22b2b;
+  --color-destructive: #e53935;
+  --color-destructive-foreground: #ffffff;
+  --color-success: #43a047;
+  --color-warning: #fb8c00;
+  --color-info: #1e88e5;
+
+  /* Tables */
+  --color-table-header: #fafafa;
+  --color-table-row-hover: #fafafa;
+  --color-table-row-alt: #fcfcfc;
+
+  /* Lines, fields, focus */
+  --color-border: #e0e0e0;
+  --color-input: #ffffff;
+  --color-input-background: #ffffff;
+  --color-switch-background: #e0e0e0;
+  --color-ring: rgba(210, 43, 43, 0.3);
+
+  /* Charts */
+  --color-chart-1: #d22b2b;
+  --color-chart-2: #1e88e5;
+  --color-chart-3: #43a047;
+  --color-chart-4: #fdd835;
+  --color-chart-5: #fb8c00;
+
+  /* Sidebar */
+  --color-sidebar-foreground: #ffffff;
+  --color-sidebar-foreground-muted: rgba(255, 255, 255, 0.72);
+  --color-sidebar-primary: #ffffff;
+  --color-sidebar-primary-foreground: #d22b2b;
+  --color-sidebar-accent: rgba(255, 255, 255, 0.16);
+  --color-sidebar-accent-hover: rgba(255, 255, 255, 0.1);
+  --color-sidebar-accent-foreground: #ffffff;
+  --color-sidebar-icon-well: rgba(255, 255, 255, 0.14);
+  --color-sidebar-border: rgba(255, 255, 255, 0.16);
+  --color-sidebar-ring: rgba(255, 255, 255, 0.5);
+
+  /* Type scale — namespaced (text-ds-*) so it never overrides the app's default Tailwind scale */
+  --text-ds-xs: 11px;
+  --text-ds-sm: 12px;
+  --text-ds-base: 14px;
+  --text-ds-lg: 16px;
+  --text-ds-xl: 18px;
+  --text-ds-2xl: 21px;
+  --text-ds-3xl: 26px;
+
+  /* Radii — matches Tailwind's own defaults almost exactly, kept explicit for the design system */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-field: 10px;
+
+  /* Layout constants */
+  --sidebar-width: 256px;
+  --sidebar-header-height: 100px;
+  --sidebar-width-collapsed: 64px;
+  --topbar-height: 60px;
+  --page-padding: 24px;
+  --card-padding: 20px;
+  --control-height-sm: 32px;
+  --control-height: 36px;
+  --control-height-lg: 40px;
+  --field-height-sm: 36px;
+  --field-height: 44px;
+  --field-height-lg: 48px;
+
+  /* Shadows — namespaced (shadow-ds-*) to avoid overriding Tailwind's own shadow scale elsewhere */
+  --shadow-ds-xs: 0 1px 2px rgba(33, 33, 33, 0.04);
+  --shadow-ds-sm: 0 1px 3px rgba(33, 33, 33, 0.06);
+  --shadow-ds-md: 0 4px 12px rgba(33, 33, 33, 0.08);
+  --shadow-ds-lg: 0 12px 32px rgba(33, 33, 33, 0.12);
+  --shadow-ds-field: 0 1px 2px rgba(33, 33, 33, 0.03);
+}
+
+/* Values that don't fit a single @theme key (gradient, computed focus ring, dark scope). */
+:root {
+  --sidebar: linear-gradient(180deg, #e23a3a 0%, #d22b2b 55%, #c42222 100%);
+  --shadow-focus: 0 0 0 3px var(--color-ring);
+}
+
+/* Dark mode — defined verbatim from the design system, not the default, not exercised unless .dark is applied. */
+.dark {
+  --color-background: oklch(0.145 0 0);
+  --color-foreground: oklch(0.985 0 0);
+  --color-card: oklch(0.145 0 0);
+  --color-card-foreground: oklch(0.985 0 0);
+  --color-popover: oklch(0.145 0 0);
+  --color-popover-foreground: oklch(0.985 0 0);
+  --color-primary: oklch(0.985 0 0);
+  --color-primary-foreground: oklch(0.205 0 0);
+  --color-secondary: oklch(0.269 0 0);
+  --color-secondary-foreground: oklch(0.985 0 0);
+  --color-muted: oklch(0.269 0 0);
+  --color-muted-foreground: oklch(0.708 0 0);
+  --color-accent: oklch(0.269 0 0);
+  --color-accent-foreground: oklch(0.985 0 0);
+  --color-destructive: oklch(0.396 0.141 25.723);
+  --color-destructive-foreground: oklch(0.637 0.237 25.331);
+  --color-border: oklch(0.269 0 0);
+  --color-input: oklch(0.269 0 0);
+  --color-ring: oklch(0.439 0 0);
+  --color-chart-1: oklch(0.488 0.243 264.376);
+  --color-chart-2: oklch(0.696 0.17 162.48);
+  --color-chart-3: oklch(0.769 0.188 70.08);
+  --color-chart-4: oklch(0.627 0.265 303.9);
+  --color-chart-5: oklch(0.645 0.246 16.439);
+  --sidebar: oklch(0.205 0 0);
+  --color-sidebar-foreground: oklch(0.985 0 0);
+  --color-sidebar-primary: oklch(0.488 0.243 264.376);
+  --color-sidebar-primary-foreground: oklch(0.985 0 0);
+  --color-sidebar-accent: oklch(0.269 0 0);
+  --color-sidebar-accent-foreground: oklch(0.985 0 0);
+  --color-sidebar-border: oklch(0.269 0 0);
+  --color-sidebar-ring: oklch(0.439 0 0);
+}
+
+@layer base {
+  body {
+    font-family: var(--font-sans);
+  }
+}

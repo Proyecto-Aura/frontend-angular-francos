@@ -1,0 +1,21 @@
+<div
+  class="flex flex-wrap items-center gap-3"
+  [class.p-4]="!bare()"
+  [class.bg-card]="!bare()"
+  [class.border]="!bare()"
+  [class.border-border]="!bare()"
+  [class.rounded-lg]="!bare()"
+>
+  @if (hasSearch()) {
+    <div class="max-w-[520px] min-w-[220px] flex-[1_1_280px]">
+      <ng-content select="[search]" />
+    </div>
+  }
+  <ng-content select="[filters]" />
+  <ng-content />
+  @if (hasActions()) {
+    <div class="ml-auto flex items-center gap-3">
+      <ng-content select="[actions]" />
+    </div>
+  }
+</div>

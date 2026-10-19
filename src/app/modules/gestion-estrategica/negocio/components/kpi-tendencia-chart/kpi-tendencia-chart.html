@@ -1,0 +1,9 @@
+@if (tieneValores()) {
+  <div class="relative h-[200px]">
+    <canvas #canvas role="img" [attr.aria-label]="descripcion()"></canvas>
+  </div>
+} @else {
+  <div class="flex h-[200px] items-center justify-center text-muted-foreground">
+    Sin registros de valor
+  </div>
+}

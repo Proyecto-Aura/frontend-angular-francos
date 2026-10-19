@@ -1,0 +1,12 @@
+<textarea
+  [id]="id()"
+  [name]="name()"
+  [rows]="rows()"
+  [value]="value()"
+  [placeholder]="placeholder()"
+  [disabled]="disabled()"
+  (input)="onInput($event)"
+  (focus)="focused.set(true)"
+  (blur)="focused.set(false)"
+  [class]="classes()"
+></textarea>

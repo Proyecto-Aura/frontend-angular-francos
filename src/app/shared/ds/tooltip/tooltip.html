@@ -1,0 +1,12 @@
+<span class="relative inline-flex" (mouseenter)="open.set(true)" (mouseleave)="open.set(false)">
+  <ng-content />
+  @if (open()) {
+    <span
+      role="tooltip"
+      class="pointer-events-none absolute left-1/2 z-[60] -translate-x-1/2 rounded-sm bg-foreground px-2 py-1 text-ds-sm whitespace-nowrap text-white shadow-ds-md"
+      [class]="positionClass()"
+    >
+      {{ label() }}
+    </span>
+  }
+</span>

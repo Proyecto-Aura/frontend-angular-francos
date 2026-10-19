@@ -1,0 +1,28 @@
+<div class="relative flex w-full items-center">
+  @if (hasIcon()) {
+    <span
+      class="pointer-events-none absolute left-[14px] flex transition-colors duration-[120ms] ease-linear"
+      [class]="iconColorClass()"
+    >
+      <ng-content select="[icon]" />
+    </span>
+  }
+  <input
+    [id]="id()"
+    [name]="name()"
+    [type]="type()"
+    [value]="value()"
+    [placeholder]="placeholder()"
+    [disabled]="disabled()"
+    (input)="onInput($event)"
+    (focus)="focused.set(true)"
+    (blur)="focused.set(false)"
+    [class]="shellClasses()"
+    [style.height]="height()"
+  />
+  @if (hasSuffix()) {
+    <span class="absolute right-[14px] flex text-muted-foreground">
+      <ng-content select="[suffix]" />
+    </span>
+  }
+</div>

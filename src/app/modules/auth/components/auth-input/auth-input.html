@@ -1,0 +1,33 @@
+<div class="font-body flex w-full flex-col gap-1.5">
+  <div class="flex w-full items-center justify-between">
+    <label [attr.for]="inputId" class="text-sm font-semibold text-[#424242]">{{ label() }}</label>
+    @if (forgotPasswordText()) {
+      <button
+        type="button"
+        class="text-xs text-[#d22b2b] hover:underline"
+        (click)="forgotPasswordClick.emit()"
+      >
+        {{ forgotPasswordText() }}
+      </button>
+    }
+  </div>
+
+  <app-ds-input
+    [id]="inputId"
+    [type]="type() === 'password' && !passwordVisible() ? 'password' : 'text'"
+    [placeholder]="placeholder()"
+    [(value)]="value"
+    [hasSuffix]="type() === 'password'"
+  >
+    @if (type() === 'password') {
+      <button
+        suffix
+        type="button"
+        class="pointer-events-auto text-[#9e9e9e] hover:text-[#616161]"
+        (click)="togglePasswordVisible()"
+      >
+        <svg [lucideIcon]="eye()" [size]="18"></svg>
+      </button>
+    }
+  </app-ds-input>
+</div>

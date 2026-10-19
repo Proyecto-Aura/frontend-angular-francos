@@ -1,0 +1,15 @@
+<span
+  class="inline-flex items-center gap-2 whitespace-nowrap rounded-full font-medium"
+  [class.text-ds-sm]="size() === 'sm'"
+  [class.text-ds-base]="size() === 'md'"
+  [style.height]="box().h"
+  [style.padding]="box().pad"
+  [style.background]="colors().bg"
+  [style.color]="colors().fg"
+>
+  @if (dot()) {
+    <span class="h-[7px] w-[7px] shrink-0 rounded-full" [style.background]="colors().fg"></span>
+  }
+  <ng-content select="[icon]" />
+  <ng-content />
+</span>

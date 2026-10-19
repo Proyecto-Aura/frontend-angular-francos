@@ -1,0 +1,39 @@
+<header
+  class="box-border flex shrink-0 items-center gap-4 border-b border-border bg-card px-(--page-padding) h-(--topbar-height)"
+>
+  @if (hasUser() && userPlacement() === 'left') {
+    <div class="mr-1 flex items-center gap-2.5 border-r border-border pr-2">
+      <ng-content select="[user]" />
+    </div>
+  }
+
+  @if (title() || hasBreadcrumb()) {
+    <div class="min-w-0">
+      @if (hasBreadcrumb()) {
+        <ng-content select="[breadcrumb]" />
+      }
+      @if (title()) {
+        <h2
+          class="overflow-hidden text-ds-xl font-medium text-ellipsis whitespace-nowrap text-foreground"
+        >
+          {{ title() }}
+        </h2>
+      }
+    </div>
+  }
+
+  @if (hasSearch()) {
+    <div class="ml-auto max-w-[320px] flex-[1_1_220px]">
+      <ng-content select="[search]" />
+    </div>
+  }
+
+  <div class="flex items-center gap-2" [class.ml-auto]="!hasSearch()">
+    <ng-content select="[actions]" />
+    @if (hasUser() && userPlacement() === 'right') {
+      <div class="ml-1 flex items-center gap-2.5 border-l border-border pl-2">
+        <ng-content select="[user]" />
+      </div>
+    }
+  </div>
+</header>

@@ -1,1 +1,56 @@
-<p>auth-form-login works!</p>
+<form
+  [formRoot]="loginForm"
+  class="flex w-full max-w-120 flex-col gap-10 rounded-[25px] bg-white px-7.5 py-12.5 shadow-[0_0_30px_10px_rgba(0,0,0,0.15)]"
+>
+  <div class="flex flex-col gap-2.5">
+    <h1 class="font-heading text-4xl font-extrabold tracking-tight text-black">Iniciar Sesion</h1>
+    <p class="font-body text-[15px] font-medium text-[#616161]">
+      Ingresa tus credenciales para continuar
+    </p>
+  </div>
+
+  <div class="flex flex-col gap-5">
+    <div class="flex flex-col gap-1">
+      <app-auth-input label="Usuario" placeholder="admin" [formField]="loginForm.username" />
+      @if (loginForm.username().invalid() && loginForm.username().touched()) {
+        @for (error of loginForm.username().errors(); track error.kind) {
+          <span class="text-xs font-medium text-[#d22b2b]">{{ error.message }}</span>
+        }
+      }
+    </div>
+
+    <div class="flex flex-col gap-1">
+      <app-auth-input
+        label="Contraseña"
+        placeholder="admin123"
+        type="password"
+        forgotPasswordText="¿Has olvidado tu contraseña?"
+        [formField]="loginForm.password"
+        (forgotPasswordClick)="onForgotPassword()"
+      />
+      @if (loginForm.password().invalid() && loginForm.password().touched()) {
+        @for (error of loginForm.password().errors(); track error.kind) {
+          <span class="text-xs font-medium text-[#d22b2b]">{{ error.message }}</span>
+        }
+      }
+    </div>
+  </div>
+
+  @if (loginError()) {
+    <p class="-mt-4 text-sm font-medium text-[#d22b2b]">{{ loginError() }}</p>
+  }
+
+  <label class="flex cursor-pointer items-center gap-3">
+    <input
+      type="checkbox"
+      [checked]="rememberSession()"
+      (change)="rememberSession.set($any($event.target).checked)"
+      class="size-5 rounded-md border-[1.25px] border-[#bdbdbd] text-[#d22b2b] focus:ring-[#d22b2b]"
+    />
+    <span class="font-body text-sm font-medium text-[#424242]">Recordar sesión por 30 días</span>
+  </label>
+
+  <app-ds-button type="submit" [fullWidth]="true" [disabled]="loginForm().submitting()"
+    >Iniciar Sesion</app-ds-button
+  >
+</form>

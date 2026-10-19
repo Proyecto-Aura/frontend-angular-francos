@@ -1,0 +1,131 @@
+<app-ds-modal
+  [open]="reembolsoId() !== null"
+  [title]="detalle() ? 'Solicitud ' + detalle()?.codigo : 'Detalle de la solicitud'"
+  [width]="760"
+  [hasFooter]="true"
+  (closed)="closed.emit()"
+>
+  @if (cargando()) {
+    <p class="p-6 text-center text-ds-base text-muted-foreground">Cargando solicitud…</p>
+  } @else if (error()) {
+    <div class="flex flex-col items-center gap-3 p-6 text-center">
+      <p role="alert" class="text-ds-base text-muted-foreground">{{ error() }}</p>
+      <app-ds-button variant="secondary" (clicked)="cargar()">Reintentar</app-ds-button>
+    </div>
+  } @else if (detalle(); as d) {
+    <div class="grid min-w-0 gap-[18px]">
+      <div
+        class="flex flex-wrap items-start gap-[26px] rounded-lg border border-border bg-muted px-[18px] py-4"
+      >
+        @for (c of campos(d); track c.label) {
+          <div class="max-w-[260px] min-w-[128px]">
+            <div class="text-ds-sm text-muted-foreground">{{ c.label }}</div>
+            <div class="mt-1 font-medium text-foreground">{{ c.value }}</div>
+          </div>
+        }
+        <span class="flex-1"></span>
+        <app-ds-badge [tone]="estadoTone(d.estado)" [dot]="true" size="md">{{
+          estadoLabel(d.estado)
+        }}</app-ds-badge>
+      </div>
+
+      <div class="grid gap-4 rounded-lg border border-border px-[18px] py-4">
+        <div>
+          <div class="text-ds-sm text-muted-foreground">Motivo del cliente</div>
+          <div class="mt-1 text-foreground">{{ d.motivo }}</div>
+        </div>
+        <div>
+          <div class="text-ds-sm text-muted-foreground">Evidencia adjunta</div>
+          <div class="mt-1.5 flex flex-wrap items-center gap-3">
+            @if (d.evidencia; as e) {
+              <a
+                [href]="e.url"
+                target="_blank"
+                rel="noopener"
+                class="inline-flex h-[34px] items-center gap-[9px] rounded-md border border-border bg-muted px-3 text-ds-sm text-foreground hover:underline"
+                [attr.aria-label]="'Ver evidencia ' + e.nombre"
+              >
+                <app-ds-icon [img]="LucidePaperclip" [size]="15" />{{ e.nombre }}
+              </a>
+              <app-ds-badge tone="success" [dot]="true">Validada</app-ds-badge>
+            } @else {
+              <span
+                class="inline-flex h-[34px] items-center gap-[9px] rounded-md border border-border bg-muted px-3 text-ds-sm text-muted-foreground"
+              >
+                <app-ds-icon [img]="LucidePaperclip" [size]="15" />Sin evidencia adjunta
+              </span>
+              <app-ds-badge tone="danger" [dot]="true">Sin evidencia</app-ds-badge>
+            }
+          </div>
+        </div>
+        <div class="flex items-baseline gap-3">
+          <span class="text-ds-sm text-muted-foreground">Monto a devolver</span>
+          <span class="text-[19px] font-semibold tabular-nums">{{ money(d.monto) }}</span>
+        </div>
+      </div>
+
+      @if (pideRechazo()) {
+        <app-ds-field
+          label="Motivo del rechazo"
+          [required]="true"
+          htmlFor="reembolso-motivo-rechazo"
+          hint="El motivo se envía al cliente junto con la notificación."
+        >
+          <app-ds-textarea
+            id="reembolso-motivo-rechazo"
+            [rows]="2"
+            placeholder="Indica por qué no procede la solicitud"
+            [value]="motivoRechazo()"
+            (valueChange)="setMotivoRechazo($event)"
+            [invalid]="motivoInvalido()"
+          />
+        </app-ds-field>
+      }
+
+      @if (traza(d); as pasos) {
+        @if (pasos.length > 0) {
+          <div class="overflow-hidden rounded-lg border border-border">
+            <div class="border-b border-border bg-muted px-4 py-3 text-ds-sm text-muted-foreground">
+              Trazabilidad
+            </div>
+            @for (p of pasos; track p.tipo) {
+              <div class="flex items-center gap-3 border-b border-border px-4 py-3 last:border-b-0">
+                <app-ds-icon
+                  [img]="iconoPaso[p.tipo].icono"
+                  [size]="16"
+                  [color]="iconoPaso[p.tipo].color"
+                />
+                <div class="min-w-0 flex-1">
+                  <div class="font-medium text-foreground">{{ p.label }}</div>
+                  <div class="mt-0.5 text-ds-sm text-muted-foreground">{{ p.detalle }}</div>
+                </div>
+              </div>
+            }
+          </div>
+        }
+      }
+    </div>
+  }
+
+  <span footer class="flex justify-end gap-2.5">
+    <app-ds-button variant="secondary" (clicked)="closed.emit()">Cerrar</app-ds-button>
+    @if (detalle(); as d) {
+      @if (d.estado === 'pendiente') {
+        <app-ds-button variant="secondary" [disabled]="guardando()" (clicked)="rechazar(d)">
+          <span icon><app-ds-icon [img]="LucideBan" [size]="16" /></span>
+          {{ pideRechazo() ? 'Confirmar rechazo' : 'Rechazar solicitud' }}
+        </app-ds-button>
+        <app-ds-button [disabled]="guardando()" (clicked)="aprobar(d)">
+          <span icon><app-ds-icon [img]="LucideCheck" [size]="16" /></span>
+          Aprobar solicitud
+        </app-ds-button>
+      }
+      @if (d.estado === 'aprobado' && d.metodo === 'culqi') {
+        <app-ds-button [disabled]="guardando()" (clicked)="confirmarCulqi(d)">
+          <span icon><app-ds-icon [img]="LucideCheck" [size]="16" /></span>
+          Recibir confirmación de Culqi
+        </app-ds-button>
+      }
+    }
+  </span>
+</app-ds-modal>

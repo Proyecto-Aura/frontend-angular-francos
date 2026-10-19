@@ -1,0 +1,18 @@
+<nav class="flex flex-wrap items-center gap-1.5 text-ds-sm text-muted-foreground">
+  @for (item of items(); track item.label; let isLast = $last, i = $index) {
+    @if (i > 0) {
+      <span class="text-border">/</span>
+    }
+    @if (isLast) {
+      <span class="text-foreground">{{ item.label }}</span>
+    } @else {
+      <a
+        [href]="item.href ?? '#'"
+        (click)="itemClick.emit(item)"
+        class="text-muted-foreground no-underline"
+      >
+        {{ item.label }}
+      </a>
+    }
+  }
+</nav>

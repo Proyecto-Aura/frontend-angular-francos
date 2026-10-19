@@ -1,0 +1,73 @@
+<div class="w-full overflow-x-auto">
+  <table class="w-full border-collapse text-ds-base">
+    <thead>
+      <tr>
+        @if (selectable()) {
+          <th class="h-[52px] w-[48px] border-b border-border bg-table-header pl-6"></th>
+        }
+        @for (col of columns(); track col.key) {
+          <th
+            class="h-[52px] whitespace-nowrap border-b border-border bg-table-header px-5 font-normal text-ds-base text-muted-foreground"
+            [class.text-right]="col.align === 'right'"
+            [class.text-center]="col.align === 'center'"
+            [class.text-left]="!col.align || col.align === 'left'"
+            [style.width]="col.width ?? null"
+          >
+            {{ col.header }}
+          </th>
+        }
+      </tr>
+    </thead>
+    <tbody>
+      @if (rows().length === 0) {
+        <tr>
+          <td [attr.colspan]="colSpan()" class="p-12 text-center text-muted-foreground">
+            {{ empty() }}
+          </td>
+        </tr>
+      }
+      @for (row of rows(); track $index; let ri = $index, isLast = $last) {
+        <tr
+          (mouseenter)="hoverIndex.set(ri)"
+          (mouseleave)="hoverIndex.set(-1)"
+          (click)="onRowClick(row, ri)"
+          class="cursor-pointer transition-[background] duration-[120ms] ease-linear"
+          [class.bg-table-row-hover]="hoverIndex() === ri"
+          [class.bg-card]="hoverIndex() !== ri"
+        >
+          @if (selectable()) {
+            <td
+              class="h-[76px] pl-6"
+              [class.border-b]="!isLast"
+              [class.border-border]="!isLast"
+            ></td>
+          }
+          @for (col of columns(); track col.key) {
+            <td
+              class="h-[76px] px-5 py-3.5"
+              [class.border-b]="!isLast"
+              [class.border-border]="!isLast"
+              [class.text-right]="col.align === 'right'"
+              [class.text-center]="col.align === 'center'"
+              [class.text-left]="!col.align || col.align === 'left'"
+              [class.text-muted-foreground]="col.muted"
+              [class.text-foreground]="!col.muted"
+              [class.tabular-nums]="col.align === 'right' || col.numeric"
+              [class.whitespace-normal]="col.wrap"
+              [class.whitespace-nowrap]="!col.wrap"
+            >
+              @if (col.cellTemplate) {
+                <ng-container
+                  [ngTemplateOutlet]="col.cellTemplate"
+                  [ngTemplateOutletContext]="{ $implicit: row, index: ri }"
+                />
+              } @else {
+                {{ cellValue(row, col.key) }}
+              }
+            </td>
+          }
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>

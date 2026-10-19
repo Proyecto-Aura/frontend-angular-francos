@@ -1,0 +1,91 @@
+##################
+#     CONFIG     #
+##################
+name: CD
+
+# Solo main: el rol de AWS solo acepta tokens de refs/heads/main. No usar
+# `environment:` en el job: cambia el sub del token y el rol dejaria de aceptarlo.
+on:
+  push:
+    branches: [main]
+
+permissions:
+  id-token: write # pedir el token OIDC a GitHub para asumir el rol de AWS
+  contents: read
+
+# Un deploy a medias no se cancela: podria dejar el bucket inconsistente.
+concurrency:
+  group: cd-${{ github.ref_name }}
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: us-east-1
+  ROLE_ARN: arn:aws:iam::075367015000:role/francos-github-actions-portal-role
+  BUCKET: francos-erp-frontend
+  DIST_COMMENT: Portal ERP del staff # comentario de la distribucion de CloudFront
+  BUILD_DIR: dist/francos-front/browser
+
+##################
+#     JOBS       #
+##################
+
+jobs:
+  deploy:
+    name: deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar codigo
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Instalar Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Build (produccion)
+        run: npm run build
+
+      - name: Credenciales de AWS (OIDC)
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ env.ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      # Archivos con hash en el nombre (main-ABC123.js): su contenido nunca cambia,
+      # se pueden cachear un anio.
+      - name: Subir JS y CSS con hash (cache larga)
+        run: |
+          aws s3 sync "$BUILD_DIR" "s3://$BUCKET" --delete \
+            --exclude "*" --include "*.js" --include "*.css" \
+            --cache-control "public,max-age=31536000,immutable"
+
+      # El resto (iconos, imagenes, etc.) no siempre lleva hash: cache corta.
+      - name: Subir el resto de archivos (cache corta)
+        run: |
+          aws s3 sync "$BUILD_DIR" "s3://$BUCKET" --delete \
+            --exclude "index.html" --exclude "*.js" --exclude "*.css" \
+            --cache-control "public,max-age=3600"
+
+      # index.html apunta a los archivos con hash nuevos: se sube al final y el
+      # navegador debe pedirlo siempre.
+      - name: Subir index.html (sin cache)
+        run: |
+          aws s3 cp "$BUILD_DIR/index.html" "s3://$BUCKET/index.html" \
+            --cache-control "no-cache" --content-type "text/html; charset=utf-8"
+
+      # CloudFront solo existe dentro de una ventana de produccion y su ID cambia:
+      # se busca por comentario y, si no hay distribucion, se omite sin fallar.
+      - name: Invalidar /index.html en CloudFront (si existe)
+        run: |
+          DIST_ID=$(aws cloudfront list-distributions \
+            --query "DistributionList.Items[?contains(Comment, '$DIST_COMMENT')].Id | [0]" \
+            --output text)
+          if [ -z "$DIST_ID" ] || [ "$DIST_ID" = "None" ]; then
+            echo "No hay distribucion de CloudFront para '$DIST_COMMENT': se omite la invalidacion."
+          else
+            aws cloudfront create-invalidation --distribution-id "$DIST_ID" --paths "/index.html"
+          fi
