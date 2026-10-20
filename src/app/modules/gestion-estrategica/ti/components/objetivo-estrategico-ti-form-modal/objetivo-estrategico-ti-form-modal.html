@@ -1,0 +1,181 @@
+<app-ds-modal
+  [open]="open()"
+  [title]="titulo()"
+  [description]="planNombre()"
+  [hasFooter]="true"
+  [width]="600"
+  (closed)="cerrar()"
+>
+  <div class="flex flex-col gap-5">
+    @if (objetivo(); as objetivoActual) {
+      <app-ds-field
+        label="Código"
+        hint="Generado automáticamente"
+        htmlFor="objetivo-estrategico-ti-codigo"
+      >
+        <app-ds-input
+          id="objetivo-estrategico-ti-codigo"
+          [value]="objetivoActual.codigo"
+          [disabled]="true"
+        />
+      </app-ds-field>
+    }
+
+    <app-ds-field
+      label="Nombre del objetivo"
+      htmlFor="objetivo-estrategico-ti-nombre"
+      [required]="true"
+      [error]="errorDe('nombre')"
+    >
+      <app-ds-input
+        id="objetivo-estrategico-ti-nombre"
+        [(value)]="nombre"
+        placeholder="Ej. Modernizar la infraestructura tecnológica"
+        [invalid]="!!errores().nombre"
+      />
+    </app-ds-field>
+
+    <app-ds-field label="Descripción" htmlFor="objetivo-estrategico-ti-descripcion">
+      <app-ds-textarea
+        id="objetivo-estrategico-ti-descripcion"
+        [(value)]="descripcion"
+        [rows]="3"
+        placeholder="Detalla el objetivo"
+      />
+    </app-ds-field>
+
+    <app-ds-field label="Perspectiva (BSC)" [required]="true" [error]="errorDe('perspectivaId')">
+      <div class="grid grid-cols-2 gap-2">
+        @for (perspectiva of perspectivasOrdenadas(); track perspectiva.id) {
+          <button
+            type="button"
+            [class]="clasesPerspectiva(perspectiva)"
+            [attr.aria-pressed]="perspectivaId() === perspectiva.id"
+            (click)="seleccionarPerspectiva(perspectiva.id)"
+          >
+            <span
+              class="h-[7px] w-[7px] shrink-0 rounded-full"
+              [class]="clasePuntoPerspectiva(perspectiva.orden)"
+            ></span>
+            <span class="min-w-0 flex-1">{{ perspectiva.nombre }}</span>
+            @if (perspectivaId() === perspectiva.id) {
+              <app-ds-icon [img]="LucideCheck" [size]="16" />
+            }
+          </button>
+        }
+      </div>
+    </app-ds-field>
+
+    <app-ds-field
+      label="Responsable"
+      htmlFor="objetivo-estrategico-ti-responsable"
+      [required]="true"
+      [error]="errorDe('responsable')"
+    >
+      <app-ds-input
+        id="objetivo-estrategico-ti-responsable"
+        [(value)]="responsable"
+        placeholder="Nombre del responsable"
+        [invalid]="!!errores().responsable"
+      />
+    </app-ds-field>
+
+    <app-ds-field
+      label="Objetivo de negocio asociado"
+      htmlFor="objetivo-estrategico-ti-negocio"
+      [required]="true"
+      [hint]="hintObjetivoNegocio()"
+      [error]="errorDe('oeNegocioId')"
+    >
+      <app-ds-select
+        id="objetivo-estrategico-ti-negocio"
+        [(value)]="oeNegocioIdTexto"
+        [options]="opcionesObjetivoNegocio()"
+        placeholder="Selecciona un objetivo de negocio"
+        [invalid]="!!errores().oeNegocioId"
+      />
+    </app-ds-field>
+
+    <app-ds-field
+      label="Influye en (mapa estratégico de TI)"
+      hint="La flecha va de este objetivo hacia los seleccionados"
+      [error]="errorRelaciones()"
+    >
+      @if (objetivosRelacionables().length > 0) {
+        <div class="overflow-hidden rounded-(--radius-field) border border-border bg-card">
+          <div
+            class="flex h-11 items-center gap-2.5 border-b border-border bg-muted px-3.5 text-muted-foreground"
+          >
+            <app-ds-icon [img]="LucideSearch" [size]="16" />
+            <input
+              #buscadorRelacion
+              type="text"
+              class="min-w-0 flex-1 border-none bg-transparent text-ds-base text-foreground outline-none placeholder:text-muted-foreground"
+              placeholder="Buscar objetivo"
+              aria-label="Buscar objetivo"
+              [value]="busquedaRelacion()"
+              (input)="busquedaRelacion.set(buscadorRelacion.value)"
+            />
+          </div>
+
+          <div class="max-h-50 overflow-y-auto">
+            @for (
+              objetivoRelacionable of objetivosRelacionablesFiltrados();
+              track objetivoRelacionable.id
+            ) {
+              <div
+                class="flex min-h-11 items-center gap-3 border-b border-border px-3.5 py-2 last:border-b-0 hover:bg-accent"
+                [class.bg-accent]="estaRelacionada(objetivoRelacionable.id)"
+              >
+                <app-ds-checkbox
+                  class="min-w-0 flex-1"
+                  [checked]="estaRelacionada(objetivoRelacionable.id)"
+                  [label]="objetivoRelacionable.nombre"
+                  (checkedChange)="cambiarRelacion(objetivoRelacionable.id, $event)"
+                />
+                <span
+                  class="flex shrink-0 items-center gap-2 text-ds-sm"
+                  [class]="claseTextoPerspectiva(objetivoRelacionable.perspectivaOrden)"
+                >
+                  <span
+                    class="h-[7px] w-[7px] shrink-0 rounded-full"
+                    [class]="clasePuntoPerspectiva(objetivoRelacionable.perspectivaOrden)"
+                  ></span>
+                  {{ objetivoRelacionable.perspectivaNombre }}
+                </span>
+              </div>
+            }
+
+            @if (sinResultadosRelacion()) {
+              <div class="px-3.5 py-3.5 text-ds-sm text-muted-foreground">Sin resultados</div>
+            }
+          </div>
+        </div>
+      } @else {
+        <div
+          class="rounded-(--radius-field) border border-border bg-muted px-3.5 py-3 text-ds-sm text-muted-foreground"
+        >
+          No hay otros objetivos de TI en este plan. Crea más objetivos para vincularlos.
+        </div>
+      }
+    </app-ds-field>
+
+    @if (errorGeneral()) {
+      <div class="rounded-lg bg-destructive/10 px-3.5 py-3 text-ds-sm text-destructive">
+        {{ errorGeneral() }}
+      </div>
+    }
+  </div>
+
+  <span footer class="flex gap-2">
+    <app-ds-button variant="secondary" (clicked)="cerrar()">Cancelar</app-ds-button>
+    <app-ds-button variant="primary" [disabled]="guardando()" (clicked)="guardar()">
+      @if (!guardando()) {
+        <span icon>
+          <app-ds-icon [img]="modoEdicion() ? LucideCheck : LucidePlus" [size]="16" />
+        </span>
+      }
+      {{ guardando() ? 'Guardando…' : modoEdicion() ? 'Guardar cambios' : 'Crear objetivo' }}
+    </app-ds-button>
+  </span>
+</app-ds-modal>
