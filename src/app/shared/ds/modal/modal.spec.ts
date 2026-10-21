@@ -37,4 +37,21 @@ describe('Modal', () => {
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('[role="dialog"]')).toBeTruthy();
   });
+
+  it('leaves max-height unset by default, relying only on max-h-full', () => {
+    const fixture = create();
+    fixture.detectChanges();
+
+    const box = fixture.nativeElement.querySelector('[role="dialog"] > div') as HTMLElement;
+    expect(box.style.maxHeight).toBe('');
+  });
+
+  it('caps max-height at the given px without exceeding the viewport', () => {
+    const fixture = create();
+    fixture.componentRef.setInput('maxHeight', 820);
+    fixture.detectChanges();
+
+    const box = fixture.nativeElement.querySelector('[role="dialog"] > div') as HTMLElement;
+    expect(box.style.maxHeight).toBe('min(820px, 100%)');
+  });
 });

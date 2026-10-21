@@ -13,6 +13,12 @@ export class Modal {
   hint = input<string | null>(null);
   hasFooter = input(false);
   width = input(480);
+  // Igual que width, pero opcional: si no se pasa, el modal sigue limitado
+  // solo por el viewport (max-h-full) como siempre. Si se pasa, pide ese
+  // alto en px pero nunca mas que el viewport disponible (min() con el
+  // 100% que ya daba max-h-full) — asi un modal puede pedir mas espacio sin
+  // arriesgarse a salirse de la pantalla en ventanas chicas.
+  maxHeight = input<number | null>(null);
   closable = input(true);
 
   closed = output<void>();

@@ -1,0 +1,131 @@
+<app-ds-modal
+  [open]="open()"
+  [title]="titulo()"
+  [hasIcon]="true"
+  [hasFooter]="true"
+  [width]="640"
+  (closed)="cerrar()"
+>
+  <span
+    icon
+    class="flex h-9 w-9 items-center justify-center rounded-md bg-[rgba(255,255,255,0.18)]"
+  >
+    <app-ds-icon [img]="tituloIcon()" [size]="18" />
+  </span>
+
+  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+    <app-ds-field label="SKU" hint="Generado automáticamente, no editable." htmlFor="insumo-sku">
+      <app-ds-input
+        id="insumo-sku"
+        [value]="skuMostrado()"
+        placeholder="Se generará al guardar"
+        [disabled]="true"
+      />
+    </app-ds-field>
+
+    <app-ds-field
+      label="Nombre del insumo"
+      htmlFor="insumo-nombre"
+      [required]="true"
+      [error]="errorDe('nombre')"
+    >
+      <app-ds-input
+        id="insumo-nombre"
+        [(value)]="nombre"
+        placeholder="Ej. Harina especial"
+        [invalid]="!!errores().nombre"
+      />
+    </app-ds-field>
+
+    <app-ds-field label="Descripción" htmlFor="insumo-descripcion" [error]="errorDe('descripcion')">
+      <app-ds-textarea
+        id="insumo-descripcion"
+        [(value)]="descripcion"
+        [rows]="3"
+        placeholder="Detalle interno del insumo"
+        [invalid]="!!errores().descripcion"
+      />
+    </app-ds-field>
+
+    <app-ds-field
+      label="Tipo de insumo"
+      htmlFor="insumo-tipo"
+      [required]="true"
+      [error]="errorDe('tipo')"
+    >
+      <app-ds-select
+        id="insumo-tipo"
+        [(value)]="tipo"
+        [options]="tipoOptions"
+        placeholder="Selecciona un tipo"
+        [invalid]="!!errores().tipo"
+      />
+    </app-ds-field>
+
+    <app-ds-field
+      label="Unidad de medida"
+      htmlFor="insumo-unidad"
+      [required]="true"
+      [error]="errorDe('unidadMedida')"
+    >
+      <app-ds-select
+        id="insumo-unidad"
+        [(value)]="unidadMedida"
+        [options]="unidadOptions"
+        placeholder="Selecciona una unidad"
+        [invalid]="!!errores().unidadMedida"
+      />
+    </app-ds-field>
+
+    <app-ds-field
+      label="Stock mínimo"
+      htmlFor="insumo-stock-minimo"
+      [required]="true"
+      [error]="errorDe('stockMinimo')"
+    >
+      <app-ds-input
+        id="insumo-stock-minimo"
+        [(value)]="stockMinimo"
+        placeholder="0"
+        [invalid]="!!errores().stockMinimo"
+      />
+    </app-ds-field>
+
+    <app-ds-field
+      label="Stock máximo"
+      htmlFor="insumo-stock-maximo"
+      [required]="true"
+      [error]="errorDe('stockMaximo')"
+    >
+      <app-ds-input
+        id="insumo-stock-maximo"
+        [(value)]="stockMaximo"
+        placeholder="0"
+        [invalid]="!!errores().stockMaximo"
+      />
+    </app-ds-field>
+
+    @if (modoEdicion()) {
+      <app-ds-field
+        label="Stock actual"
+        hint="Solo se modifica mediante movimientos."
+        htmlFor="insumo-stock-actual"
+      >
+        <app-ds-input id="insumo-stock-actual" [value]="stockActualMostrado()" [disabled]="true" />
+      </app-ds-field>
+    }
+  </div>
+
+  @if (errorGeneral()) {
+    <div class="mt-4 rounded-lg bg-destructive/10 px-3.5 py-3 text-ds-sm text-destructive">
+      {{ errorGeneral() }}
+    </div>
+  }
+
+  <span footer class="flex gap-2">
+    <app-ds-button variant="secondary" (clicked)="cerrar()">Cancelar</app-ds-button>
+    <app-ds-button variant="primary" [disabled]="guardando()" (clicked)="guardar()">
+      {{ guardando() ? 'Guardando…' : modoEdicion() ? 'Guardar cambios' : 'Guardar insumo' }}
+    </app-ds-button>
+  </span>
+</app-ds-modal>
