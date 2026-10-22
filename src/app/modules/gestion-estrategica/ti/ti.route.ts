@@ -17,6 +17,14 @@ export const TI_ROUTES: Routes = [
           ),
       },
       {
+        path: 'analisis-estrategico-ti',
+        canActivate: [permisoGuard],
+        loadComponent: () =>
+          import('./pages/analisis-estrategico-ti/analisis-estrategico-ti').then(
+            (c) => c.AnalisisEstrategicoTiPage,
+          ),
+      },
+      {
         path: '',
         redirectTo: 'objetivos-estrategicos-ti',
         pathMatch: 'full',

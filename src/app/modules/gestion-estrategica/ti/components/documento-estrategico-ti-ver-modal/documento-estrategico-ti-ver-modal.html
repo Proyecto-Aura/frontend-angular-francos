@@ -1,0 +1,71 @@
+<app-ds-modal
+  [open]="open()"
+  [title]="documento()?.nombre ?? 'Ver documento'"
+  [description]="documentoActual()?.nombreOriginal ?? documento()?.nombreOriginal ?? null"
+  [hasFooter]="true"
+  [width]="880"
+  (closed)="cerrar()"
+>
+  @if (cargando()) {
+    <div class="py-12 text-center text-muted-foreground">Cargando…</div>
+  } @else if (error()) {
+    <div class="py-12 text-center text-muted-foreground">No se pudo abrir el documento.</div>
+  } @else if (documentoActual(); as documentoActual) {
+    <div class="flex flex-col gap-4">
+      @if (tipoVistaPrevia() === 'pdf') {
+        <iframe
+          class="h-[62vh] w-full rounded-lg border border-border bg-muted"
+          [src]="urlSegura()"
+          [title]="documentoActual.nombre"
+        ></iframe>
+      } @else if (puedeVistaPrevia()) {
+        <div
+          class="max-h-[62vh] overflow-auto rounded-lg border border-border bg-muted p-4 text-center"
+        >
+          <img
+            class="mx-auto max-h-[62vh] max-w-full object-contain"
+            [src]="documentoActual.url"
+            [alt]="documentoActual.nombre"
+          />
+        </div>
+      } @else {
+        <div class="flex flex-col items-center gap-3 rounded-lg bg-muted px-5 py-12 text-center">
+          <app-ds-icon class="text-muted-foreground" [img]="LucideFileText" [size]="28" />
+          <div>
+            <p class="font-medium text-foreground">{{ documentoActual.nombreOriginal }}</p>
+            <p class="mt-1 text-ds-sm text-muted-foreground">
+              Vista previa no disponible para este tipo de archivo. Descárgalo para abrirlo.
+            </p>
+          </div>
+        </div>
+      }
+
+      <div class="flex flex-col gap-1 text-ds-sm text-muted-foreground">
+        <p>
+          <span class="font-medium text-foreground">Archivo:</span>
+          {{ documentoActual.nombreOriginal }}
+        </p>
+        <p>
+          <span class="font-medium text-foreground">Subido:</span>
+          {{ formatearFecha(documentoActual.fechaSubida) }}
+        </p>
+      </div>
+    </div>
+  }
+
+  <span footer class="flex gap-2">
+    @if (documentoActual()?.url; as url) {
+      <a
+        [href]="url"
+        target="_blank"
+        rel="noopener"
+        download
+        class="inline-flex h-(--control-height) items-center justify-center gap-2 rounded-md border border-border bg-card px-[14px] text-ds-base font-medium text-foreground transition-[background,border-color,color] duration-[120ms] ease-linear hover:bg-muted"
+      >
+        <app-ds-icon [img]="LucideDownload" [size]="16" />
+        Descargar
+      </a>
+    }
+    <app-ds-button variant="primary" (clicked)="cerrar()">Cerrar</app-ds-button>
+  </span>
+</app-ds-modal>
