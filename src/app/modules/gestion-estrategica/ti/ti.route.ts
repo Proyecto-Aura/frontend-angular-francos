@@ -25,6 +25,14 @@ export const TI_ROUTES: Routes = [
           ),
       },
       {
+        path: 'mapa-estrategico-ti',
+        canActivate: [permisoGuard],
+        loadComponent: () =>
+          import('./pages/mapa-estrategico-ti/mapa-estrategico-ti').then(
+            (c) => c.MapaEstrategicoTiPage,
+          ),
+      },
+      {
         path: '',
         redirectTo: 'objetivos-estrategicos-ti',
         pathMatch: 'full',
