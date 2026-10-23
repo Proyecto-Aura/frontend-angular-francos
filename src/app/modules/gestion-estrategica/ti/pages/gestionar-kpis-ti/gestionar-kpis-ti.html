@@ -1,0 +1,232 @@
+<div class="flex min-h-full flex-col">
+  <div class="flex flex-col gap-4 p-(--page-padding)">
+    @if (planSeleccionado.cargando()) {
+      <div class="py-12 text-center text-muted-foreground">Cargando…</div>
+    } @else if (!planSeleccionado.plan()) {
+      <app-ds-card>
+        <div class="flex flex-col items-center gap-3 py-10 text-center">
+          <p class="text-muted-foreground">No hay planes estratégicos registrados.</p>
+          <a
+            routerLink="/gestion-estrategica/plan-estrategico"
+            class="font-medium text-primary hover:underline"
+            >Ir a Plan estratégico</a
+          >
+        </div>
+      </app-ds-card>
+    } @else if (planSeleccionado.plan(); as plan) {
+      <div class="flex justify-between gap-4">
+        <div>
+          <h1 class="text-ds-2xl font-medium text-foreground">KPIs de TI</h1>
+          <p class="mt-1 text-muted-foreground">
+            {{ kpis().length }} {{ kpis().length === 1 ? 'KPI' : 'KPIs' }} en el plan
+            <span class="text-foreground">{{ plan.nombre }}</span>
+          </p>
+        </div>
+
+        <app-ds-button
+          variant="primary"
+          [disabled]="plan.estadoCodigo !== 'BORRADOR' || objetivos().length === 0"
+          (clicked)="abrirNuevo()"
+        >
+          <span icon><app-ds-icon [img]="LucidePlus" [size]="16" /></span>
+          Nuevo KPI
+        </app-ds-button>
+      </div>
+
+      @if (plan.estadoCodigo !== 'BORRADOR') {
+        <div class="flex items-center gap-2.5 rounded-lg border border-border bg-muted px-4 py-3">
+          <app-ds-icon class="shrink-0" [img]="LucideLock" [size]="16" />
+          <span>{{ mensajeSoloLectura() }}</span>
+        </div>
+      }
+
+      @if (errorCarga()) {
+        <app-ds-card>
+          <div class="flex flex-col items-center gap-3 py-10 text-center">
+            <p class="text-muted-foreground">No se pudieron cargar los KPIs.</p>
+            <app-ds-button variant="secondary" (clicked)="cargarKpis()"> Reintentar </app-ds-button>
+          </div>
+        </app-ds-card>
+      } @else if (cargando()) {
+        <app-ds-card [padded]="false">
+          <div class="p-12 text-center text-muted-foreground">Cargando…</div>
+        </app-ds-card>
+      } @else if (objetivos().length === 0) {
+        <app-ds-card [padded]="false">
+          <div class="flex flex-col items-center gap-3.5 px-5 py-11 text-center">
+            <span
+              class="flex h-13 w-13 items-center justify-center rounded-full bg-accent text-primary"
+            >
+              <app-ds-icon [img]="LucideChartLine" [size]="20" />
+            </span>
+            <div>
+              <h2 class="text-ds-lg font-medium text-foreground">
+                No hay objetivos estratégicos de TI
+              </h2>
+              <p class="mt-1.5 text-muted-foreground">
+                Registra objetivos estratégicos de TI en este plan antes de crear KPIs de TI.
+              </p>
+            </div>
+          </div>
+        </app-ds-card>
+      } @else if (kpis().length > 0) {
+        <app-ds-card [padded]="false">
+          <app-ds-data-table
+            [columns]="columnas()"
+            [rows]="kpis()"
+            (rowClicked)="abrirFormularioDesdeFila($event)"
+          />
+        </app-ds-card>
+      } @else {
+        <app-ds-card [padded]="false">
+          <div class="flex flex-col items-center gap-3.5 px-5 py-11 text-center">
+            <span
+              class="flex h-13 w-13 items-center justify-center rounded-full bg-accent text-primary"
+            >
+              <app-ds-icon [img]="LucideChartLine" [size]="20" />
+            </span>
+            <div>
+              <h2 class="text-ds-lg font-medium text-foreground">No hay KPIs aún</h2>
+              <p class="mt-1.5 text-muted-foreground">{{ mensajeVacio() }}</p>
+            </div>
+          </div>
+        </app-ds-card>
+      }
+    }
+
+    <ng-template #kpiCell let-kpi>
+      <div class="w-120 max-w-120 leading-[1.35]">
+        <span class="block truncate font-semibold text-foreground" [title]="kpi.nombre">
+          {{ kpi.nombre }}
+        </span>
+        <span class="mt-1 block truncate text-ds-sm text-muted-foreground" [title]="kpi.codigo">
+          {{ kpi.codigo }}
+        </span>
+      </div>
+    </ng-template>
+
+    <ng-template #objetivoCell let-kpi>
+      <div class="w-72 max-w-72 leading-[1.35]">
+        <span class="block truncate text-foreground" [title]="kpi.objetivoNombre">
+          {{ kpi.objetivoNombre }}
+        </span>
+        <span
+          class="mt-1 block truncate text-ds-sm text-muted-foreground"
+          [title]="kpi.perspectivaNombre"
+        >
+          {{ kpi.perspectivaNombre }}
+        </span>
+      </div>
+    </ng-template>
+
+    <ng-template #frecuenciaCell let-kpi>
+      <span class="block w-32 truncate" [title]="kpi.frecuenciaNombre">
+        {{ kpi.frecuenciaNombre }}
+      </span>
+    </ng-template>
+
+    <ng-template #metaCell let-kpi>
+      <span class="font-medium text-foreground">{{ formatearMeta(kpi) }}</span>
+    </ng-template>
+
+    <ng-template #ultimoValorCell let-kpi>
+      @if (kpi.ultimoValor; as ultimoValor) {
+        <div class="ml-auto w-36 max-w-36 leading-[1.35]">
+          <span
+            class="block truncate font-medium text-foreground"
+            [title]="formatearUltimoValor(kpi)"
+          >
+            {{ formatearUltimoValor(kpi) }}
+          </span>
+          <span
+            class="mt-1 block truncate text-ds-sm text-muted-foreground"
+            [title]="ultimoValor.periodoNombre + ' ' + ultimoValor.anio"
+          >
+            {{ ultimoValor.periodoNombre }} {{ ultimoValor.anio }}
+          </span>
+        </div>
+      } @else {
+        <span class="text-muted-foreground">Sin registros</span>
+      }
+    </ng-template>
+
+    <ng-template #semaforoCell let-kpi>
+      @if (kpi.ultimoValor) {
+        <app-ds-badge [tone]="tonoSemaforo(kpi)" [dot]="true">
+          {{ textoSemaforo(kpi) }}
+        </app-ds-badge>
+      } @else {
+        <span class="text-muted-foreground">—</span>
+      }
+    </ng-template>
+
+    <ng-template #accionesCell let-kpi>
+      <div class="flex justify-end gap-2">
+        <app-ds-icon-button
+          label="Registrar valor"
+          variant="secondary"
+          size="md"
+          [disabled]="planSeleccionado.plan()?.estadoCodigo !== 'ACTIVO'"
+          (clicked)="abrirRegistro($event, kpi)"
+        >
+          <app-ds-icon [img]="LucideChartLine" [size]="16" />
+        </app-ds-icon-button>
+
+        @if (planSeleccionado.plan()?.estadoCodigo === 'BORRADOR') {
+          <app-ds-icon-button
+            label="Editar"
+            variant="secondary"
+            size="md"
+            (clicked)="abrirEdicion($event, kpi)"
+          >
+            <app-ds-icon [img]="LucidePencil" [size]="16" />
+          </app-ds-icon-button>
+
+          <app-ds-icon-button
+            label="Eliminar"
+            variant="secondary"
+            size="md"
+            (clicked)="abrirEliminacion($event, kpi)"
+          >
+            <app-ds-icon [img]="LucideTrash2" [size]="16" />
+          </app-ds-icon-button>
+        } @else {
+          <app-ds-icon-button
+            label="Ver"
+            variant="secondary"
+            size="md"
+            (clicked)="abrirVerDesdeAccion($event, kpi)"
+          >
+            <app-ds-icon [img]="LucideEye" [size]="16" />
+          </app-ds-icon-button>
+        }
+      </div>
+    </ng-template>
+
+    @if (planSeleccionado.plan(); as planModal) {
+      <app-kpi-ti-form-modal
+        [open]="modalActivo() === 'form'"
+        [plan]="planModal"
+        [objetivos]="objetivos()"
+        [kpi]="kpiSeleccionado()"
+        (closed)="cerrarModal()"
+        (saved)="kpiGuardado()"
+      />
+
+      <app-kpi-ti-valor-modal
+        [open]="modalActivo() === 'valor'"
+        [plan]="planModal"
+        [kpi]="kpiSeleccionado()"
+        (closed)="cerrarModal()"
+        (saved)="valorGuardado()"
+      />
+
+      <app-kpi-ti-eliminar-modal
+        [open]="modalActivo() === 'eliminar'"
+        [kpi]="kpiSeleccionado()"
+        (closed)="cerrarModal()"
+        (deleted)="kpiEliminado()"
+      />
+    }
+  </div>
+</div>

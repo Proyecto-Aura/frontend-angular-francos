@@ -33,6 +33,12 @@ export const TI_ROUTES: Routes = [
           ),
       },
       {
+        path: 'gestionar-kpis-ti',
+        canActivate: [permisoGuard],
+        loadComponent: () =>
+          import('./pages/gestionar-kpis-ti/gestionar-kpis-ti').then((c) => c.GestionarKpisTiPage),
+      },
+      {
         path: '',
         redirectTo: 'objetivos-estrategicos-ti',
         pathMatch: 'full',
