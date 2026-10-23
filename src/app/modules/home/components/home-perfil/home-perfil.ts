@@ -1,5 +1,6 @@
-import { Component, inject, input } from '@angular/core';
+import { Component, inject, input, signal } from '@angular/core';
 import { Router } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AuthService } from '../../../auth/services/auth.service';
 
 @Component({
@@ -12,10 +13,19 @@ export class HomePerfil {
   private router = inject(Router);
   private authService = inject(AuthService);
 
-  // TODO: reemplazar por los datos reales del usuario autenticado (AuthService)
-  userName = input('Andres Chavarri Centeno');
-  userSede = input('Sede Central');
+  // Mismo nombre que se ve mientras responde /auth/me.
+  userName = signal('Usuario');
   avatarUrl = input<string | null>(null);
+
+  constructor() {
+    this.authService
+      .getCurrentUser()
+      .pipe(takeUntilDestroyed())
+      .subscribe({
+        next: (me) => this.userName.set(me.nombre_completo),
+        error: () => undefined,
+      });
+  }
 
   onSubmit() {
     this.authService.logout().subscribe({

@@ -14,6 +14,7 @@
     "node": "^24.15.0"
   },
   "dependencies": {
+    "@angular/cdk": "^22.2.3",
     "@angular/common": "^22.0.0",
     "@angular/compiler": "^22.0.0",
     "@angular/core": "^22.0.0",
@@ -22,6 +23,7 @@
     "@angular/router": "^22.0.0",
     "@lucide/angular": "^1.44.0",
     "@tailwindcss/postcss": "^4.3.3",
+    "chart.js": "^4.5.1",
     "postcss": "^8.5.26",
     "rxjs": "~7.8.0",
     "tailwindcss": "^4.3.3",

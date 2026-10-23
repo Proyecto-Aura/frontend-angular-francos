@@ -1,0 +1,185 @@
+<div class="flex flex-col gap-6 p-(--page-padding)">
+  <div>
+    <h1 class="text-ds-2xl font-medium text-foreground">Stock de insumos</h1>
+  </div>
+
+  <div class="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-4">
+    <app-ds-kpi-card label="Total de insumos" [value]="resumen().total" [hasIcon]="true">
+      <span icon><app-ds-icon [img]="LucidePackage" [size]="16" /></span>
+    </app-ds-kpi-card>
+
+    <app-ds-kpi-card label="Stock normal" [value]="resumen().normal" [hasIcon]="true">
+      <span icon><app-ds-icon [img]="LucideCircleCheck" [size]="16" /></span>
+    </app-ds-kpi-card>
+
+    <app-ds-kpi-card label="Stock alto" [value]="resumen().alto" [hasIcon]="true">
+      <span icon><app-ds-icon [img]="LucideTrendingUp" [size]="16" /></span>
+    </app-ds-kpi-card>
+
+    <app-ds-kpi-card label="Stock bajo" [value]="resumen().bajo" [hasIcon]="true">
+      <span icon><app-ds-icon [img]="LucideTrendingDown" [size]="16" /></span>
+    </app-ds-kpi-card>
+
+    <app-ds-kpi-card label="Agotados" [value]="resumen().agotados" [hasIcon]="true">
+      <span icon><app-ds-icon [img]="LucideCircleAlert" [size]="16" /></span>
+    </app-ds-kpi-card>
+  </div>
+
+  <app-ds-tabs [tabs]="tabs()" [activeId]="activeTab()" (changed)="cambiarTab($event)" />
+
+  @if (activeTab() === 'stock') {
+    <div class="flex flex-wrap justify-end gap-3">
+      <app-ds-button variant="secondary" (clicked)="abrirRegistrarLote()">
+        <span icon><app-ds-icon [img]="LucideLayers" [size]="16" /></span>
+        Registrar lote
+      </app-ds-button>
+      <app-ds-button variant="primary" (clicked)="abrirRegistrarMovimiento()">
+        <span icon><app-ds-icon [img]="LucideArrowLeftRight" [size]="16" /></span>
+        Registrar movimiento
+      </app-ds-button>
+    </div>
+
+    <app-ds-filter-bar [hasSearch]="true" [hasActions]="true">
+      <app-ds-input
+        search
+        [value]="search()"
+        (valueChange)="setSearch($event)"
+        placeholder="Nombre o SKU…"
+        [hasIcon]="true"
+      >
+        <span icon><app-ds-icon [img]="LucideSearch" [size]="16" /></span>
+      </app-ds-input>
+
+      <div filters class="w-[188px]">
+        <app-ds-select
+          [value]="tipoFiltro()"
+          (valueChange)="setTipo($event)"
+          [options]="tipoOptions"
+          placeholder="Todos los tipos"
+        />
+      </div>
+      <div filters class="w-[188px]">
+        <app-ds-select
+          [value]="estadoFiltro()"
+          (valueChange)="setEstado($event)"
+          [options]="estadoOptions"
+          placeholder="Todos los estados"
+        />
+      </div>
+
+      <span actions>
+        <app-ds-button (clicked)="abrirNuevoInsumo()">
+          <span icon><app-ds-icon [img]="LucidePlus" [size]="16" /></span>
+          Nuevo insumo
+        </app-ds-button>
+      </span>
+    </app-ds-filter-bar>
+
+    <app-ds-card [padded]="false" [hasFooter]="totalPaginas() > 1">
+      @if (cargando()) {
+        <div class="p-12 text-center text-muted-foreground">Cargando…</div>
+      } @else if (errorCarga()) {
+        <div class="flex flex-col items-center gap-3 p-12 text-center">
+          <p class="text-muted-foreground">No se pudieron cargar los insumos.</p>
+          <app-ds-button variant="secondary" (clicked)="cargarInsumos()">Reintentar</app-ds-button>
+        </div>
+      } @else {
+        <app-ds-data-table
+          [columns]="columnas()"
+          [rows]="insumos()"
+          empty="Sin insumos registrados"
+        />
+      }
+
+      @if (totalPaginas() > 1) {
+        <div footer>
+          <app-ds-pagination
+            [page]="pagina()"
+            [pageCount]="totalPaginas()"
+            [total]="total()"
+            [pageSize]="tamanioPagina"
+            (changed)="cambiarPagina($event)"
+          />
+        </div>
+      }
+    </app-ds-card>
+  } @else {
+    <app-ds-card>
+      <p class="p-6 text-center text-muted-foreground">Historial de movimientos — próximamente.</p>
+    </app-ds-card>
+  }
+
+  <app-insumo-form-modal
+    [open]="modalFormAbierto()"
+    [insumo]="insumoEnEdicion()"
+    (closed)="cerrarFormInsumo()"
+    (saved)="insumoGuardado()"
+  />
+
+  <app-insumo-detalle-modal [insumo]="insumoEnDetalle()" (closed)="insumoEnDetalle.set(null)" />
+
+  <app-lote-form-modal
+    [open]="modalLoteAbierto()"
+    (closed)="cerrarFormLote()"
+    (saved)="loteGuardado()"
+  />
+
+  <app-movimiento-form-modal [open]="modalMovimientoAbierto()" (closed)="cerrarFormMovimiento()" />
+</div>
+
+<ng-template #insumoCell let-insumo>
+  <app-ds-cell-stack [primary]="insumo.nombre" [secondary]="insumo.sku" />
+</ng-template>
+
+<ng-template #tipoCell let-insumo>
+  {{ tipoLabel(insumo) }}
+</ng-template>
+
+<ng-template #nivelCell let-insumo>
+  <app-ds-badge [tone]="nivelTone(insumo)" [dot]="true">{{ nivelLabel(insumo) }}</app-ds-badge>
+</ng-template>
+
+<ng-template #estadoCell let-insumo>
+  <app-ds-badge [tone]="insumo.estado ? 'success' : 'neutral'" [dot]="true">
+    {{ insumo.estado ? 'Activo' : 'Inactivo' }}
+  </app-ds-badge>
+</ng-template>
+
+<ng-template #accionesCell let-insumo>
+  <div class="flex justify-end gap-2">
+    <app-ds-icon-button
+      label="Ver detalle"
+      variant="secondary"
+      size="md"
+      (clicked)="insumoEnDetalle.set(insumo)"
+    >
+      <app-ds-icon [img]="LucideEye" [size]="16" />
+    </app-ds-icon-button>
+
+    <app-ds-icon-button
+      label="Editar"
+      variant="secondary"
+      size="md"
+      (clicked)="abrirEditarInsumo(insumo)"
+    >
+      <app-ds-icon [img]="LucidePencil" [size]="16" />
+    </app-ds-icon-button>
+
+    <app-ds-icon-button label="Registrar movimiento" variant="secondary" size="md">
+      <app-ds-icon [img]="LucideArrowLeftRight" [size]="16" />
+    </app-ds-icon-button>
+
+    <app-ds-icon-button
+      [label]="insumo.estado ? 'Desactivar' : 'Reactivar'"
+      variant="secondary"
+      size="md"
+      (clicked)="alternarEstado(insumo)"
+    >
+      @if (insumo.estado) {
+        <app-ds-icon [img]="LucideBan" [size]="16" />
+      } @else {
+        <app-ds-icon [img]="LucideRotateCcw" [size]="16" />
+      }
+    </app-ds-icon-button>
+  </div>
+</ng-template>

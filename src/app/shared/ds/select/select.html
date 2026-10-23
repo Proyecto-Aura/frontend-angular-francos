@@ -1,6 +1,9 @@
 <div class="relative flex w-full items-center">
   @if (hasIcon()) {
-    <span class="pointer-events-none absolute left-[14px] flex transition-colors duration-[120ms] ease-linear" [class]="iconColorClass()">
+    <span
+      class="pointer-events-none absolute left-[14px] flex transition-colors duration-[120ms] ease-linear"
+      [class]="iconColorClass()"
+    >
       <ng-content select="[icon]" />
     </span>
   }
@@ -16,10 +19,10 @@
     [style.height]="height()"
   >
     @if (placeholder()) {
-      <option value="">{{ placeholder() }}</option>
+      <option value="" [selected]="value() === ''">{{ placeholder() }}</option>
     }
     @for (opt of options(); track opt.value) {
-      <option [value]="opt.value">{{ opt.label }}</option>
+      <option [value]="opt.value" [selected]="opt.value === value()">{{ opt.label }}</option>
     }
   </select>
   <svg

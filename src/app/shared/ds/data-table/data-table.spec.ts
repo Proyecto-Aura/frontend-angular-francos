@@ -4,7 +4,10 @@ import { DataTable } from './data-table';
 describe('DataTable', () => {
   function create() {
     const fixture = TestBed.createComponent(DataTable);
-    fixture.componentRef.setInput('columns', [{ key: 'name', header: 'Nombre' }, { key: 'email', header: 'Email' }]);
+    fixture.componentRef.setInput('columns', [
+      { key: 'name', header: 'Nombre' },
+      { key: 'email', header: 'Email' },
+    ]);
     return fixture;
   }
 

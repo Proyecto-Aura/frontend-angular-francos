@@ -13,9 +13,12 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const authService = inject(AuthService);
   const router = inject(Router);
 
-  const isAuthEndpoint = AUTH_ENDPOINTS.some(path => req.url.includes(path));
+  const isAuthEndpoint = AUTH_ENDPOINTS.some((path) => req.url.includes(path));
   const token = authService.accessToken();
-  const authedReq = token && !isAuthEndpoint ? req.clone({ setHeaders: { Authorization: `Bearer ${token}` } }) : req;
+  const authedReq =
+    token && !isAuthEndpoint
+      ? req.clone({ setHeaders: { Authorization: `Bearer ${token}` } })
+      : req;
 
   return next(authedReq).pipe(
     catchError((error: unknown) => {
@@ -28,10 +31,12 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
       // quien hizo el llamado.
       return authService.refresh().pipe(
         switchMap(() => {
-          const retried = req.clone({ setHeaders: { Authorization: `Bearer ${authService.accessToken()}` } });
+          const retried = req.clone({
+            setHeaders: { Authorization: `Bearer ${authService.accessToken()}` },
+          });
           return next(retried);
         }),
-        catchError(refreshError => {
+        catchError((refreshError) => {
           authService.session.set(null);
           router.navigateByUrl('/auth');
           return throwError(() => refreshError);

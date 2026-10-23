@@ -1,6 +1,13 @@
 <aside
   class="hidden lg:flex w-[20%] shrink-0 flex-col"
-  style="background: linear-gradient(144.8deg, rgb(239, 68, 68) 6.17%, rgb(220, 38, 38) 54.38%, rgb(185, 28, 28) 93.83%);"
+  style="
+    background: linear-gradient(
+      144.8deg,
+      rgb(239, 68, 68) 6.17%,
+      rgb(220, 38, 38) 54.38%,
+      rgb(185, 28, 28) 93.83%
+    );
+  "
 >
   <!-- logo -->
   <div class="flex items-center gap-3 border-b border-white/10 px-6 py-7">
@@ -9,32 +16,37 @@
     </div>
     <div class="flex flex-col">
       <span class="font-['Nunito'] text-base font-bold text-white">Franco's</span>
-      <span class="text-[10px] font-medium tracking-[1px] text-white/50 uppercase">Portal Empresarial</span>
+      <span class="text-[10px] font-medium tracking-[1px] text-white/50 uppercase"
+        >Portal Empresarial</span
+      >
     </div>
   </div>
 
   <!-- perfil, pegado abajo -->
   <div class="mt-auto flex flex-col items-center gap-8 px-3 pb-10">
     <div class="flex flex-col items-center gap-2">
-      <div class="relative size-25 shrink-0 rounded-full bg-linear-to-br from-amber-500 to-emerald-500 p-0.75]">
+      <div
+        class="relative size-25 shrink-0 rounded-full bg-linear-to-br from-amber-500 to-emerald-500 p-0.75]"
+      >
         <div class="size-full overflow-hidden rounded-full bg-white/20">
           @if (avatarUrl()) {
             <img [src]="avatarUrl()" alt="" class="size-full object-cover" />
           }
         </div>
-        <span class="absolute right-1 bottom-0.5 size-3.5 rounded-full border-2 border-white bg-emerald-500"></span>
+        <span
+          class="absolute right-1 bottom-0.5 size-3.5 rounded-full border-2 border-white bg-emerald-500"
+        ></span>
       </div>
 
       <div class="flex flex-col items-center text-center">
         <span class="font-body text-base font-semibold text-white">{{ userName() }}</span>
-        <span class="text-sm font-semibold text-white">{{ userSede() }}</span>
       </div>
     </div>
 
     <div class="flex w-full flex-col items-center gap-2">
       <button
         type="button"
-        class="flex w-full cursor-pointer items-center justify-center gap-2 rounded-[14px] px-3 py-2.5 text-sm font-semibold text-white transition-colors bg-white/15  hover:bg-white/30 active:bg-white/40"
+        class="flex w-full cursor-pointer items-center justify-center gap-2 rounded-[14px] px-3 py-2.5 text-sm font-semibold text-white transition-colors bg-white/15 hover:bg-white/30 active:bg-white/40"
         (click)="onSubmit()"
       >
         <img src="/icons/log-out.svg" alt="" class="size-5.5 shrink-0" />

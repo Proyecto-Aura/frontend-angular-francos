@@ -1,0 +1,63 @@
+<div class="flex flex-col gap-5 p-(--page-padding)">
+  @if (planSeleccionado.cargando()) {
+    <div class="py-12 text-center text-muted-foreground">Cargando…</div>
+  } @else if (!planSeleccionado.plan()) {
+    <app-ds-card>
+      <div class="flex flex-col items-center gap-3 py-10 text-center">
+        <p class="text-muted-foreground">No hay planes estratégicos registrados.</p>
+        <a
+          routerLink="/gestion-estrategica/plan-estrategico"
+          class="font-medium text-primary hover:underline"
+          >Ir a Plan estratégico</a
+        >
+      </div>
+    </app-ds-card>
+  } @else {
+    <div class="flex flex-wrap items-start justify-between gap-4">
+      <div>
+        <h1 class="text-ds-2xl font-medium text-foreground">Mapa estratégico</h1>
+        <p class="mt-1 text-muted-foreground">
+          {{ objetivos().length }}
+          {{ objetivos().length === 1 ? 'objetivo' : 'objetivos' }} ·
+          {{ cantidadRelaciones() }}
+          {{ cantidadRelaciones() === 1 ? 'relación' : 'relaciones' }} · pasa el cursor sobre un
+          objetivo para ver sus relaciones
+        </p>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-4 text-ds-sm text-muted-foreground">
+        @for (perspectiva of perspectivas(); track perspectiva.id) {
+          <span class="inline-flex items-center gap-1.5">
+            <span [class]="clasePuntoPerspectiva(perspectiva.orden)"></span>
+            {{ perspectiva.nombre }}
+          </span>
+        }
+        <span class="inline-flex items-center gap-1.5">
+          <span class="w-5.5 border-t-2 border-dashed border-primary"></span>
+          influye en
+        </span>
+      </div>
+    </div>
+
+    @if (cargando()) {
+      <app-ds-card [padded]="false">
+        <div class="p-12 text-center text-muted-foreground">Cargando…</div>
+      </app-ds-card>
+    } @else if (errorCarga()) {
+      <app-ds-card>
+        <div class="flex flex-col items-center gap-3 py-10 text-center">
+          <p class="text-muted-foreground">No se pudo cargar el mapa.</p>
+          <app-ds-button variant="secondary" (clicked)="reintentar()"> Reintentar </app-ds-button>
+        </div>
+      </app-ds-card>
+    } @else if (objetivos().length > 0) {
+      <app-ds-card [padded]="false">
+        <app-mapa-estrategico [perspectivas]="perspectivas()" [objetivos]="objetivos()" />
+      </app-ds-card>
+    } @else {
+      <app-ds-card>
+        <div class="py-10 text-center text-muted-foreground">Este plan no registra objetivos.</div>
+      </app-ds-card>
+    }
+  }
+</div>

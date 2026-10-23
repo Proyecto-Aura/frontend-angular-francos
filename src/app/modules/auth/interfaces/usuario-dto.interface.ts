@@ -29,3 +29,16 @@ export interface LoginResponseDto {
   email_verificado: boolean;
   debe_cambiar_contrasena: boolean;
 }
+
+// GET /api/v1/auth/me — cualquier usuario autenticado (no solo admin).
+// "roles" viene crudo tal cual esta en la BD (ej. "admin", "ventas"), sin
+// labels bonitos — eso lo resuelve el front si hace falta.
+export interface MeResponseDto {
+  nombre_completo: string;
+  nombres: string;
+  apellido_paterno: string;
+  apellido_materno: string;
+  email: string;
+  username: string;
+  roles: string[];
+}

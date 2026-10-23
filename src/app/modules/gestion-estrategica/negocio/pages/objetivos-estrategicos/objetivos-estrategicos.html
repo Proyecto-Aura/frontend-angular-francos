@@ -1,0 +1,194 @@
+<div class="flex min-h-full flex-col">
+  <div class="flex flex-col gap-4 p-(--page-padding)">
+    @if (planSeleccionado.cargando()) {
+      <div class="py-12 text-center text-muted-foreground">Cargando…</div>
+    } @else if (!planSeleccionado.plan()) {
+      <app-ds-card>
+        <div class="flex flex-col items-center gap-3 py-10 text-center">
+          <p class="text-muted-foreground">No hay planes estratégicos registrados.</p>
+          <a
+            routerLink="/gestion-estrategica/plan-estrategico"
+            class="font-medium text-primary hover:underline"
+            >Ir a Plan estratégico</a
+          >
+        </div>
+      </app-ds-card>
+    } @else if (planSeleccionado.plan(); as plan) {
+      <div class="flex justify-between gap-4">
+        <div>
+          <h1 class="text-ds-2xl font-medium text-foreground">Objetivos estratégicos</h1>
+          <p class="mt-1 text-muted-foreground">
+            {{ objetivos().length }}
+            {{ objetivos().length === 1 ? 'objetivo' : 'objetivos' }} en el plan
+            <span class="text-foreground">{{ plan.nombre }}</span>
+          </p>
+        </div>
+
+        <app-ds-button
+          variant="primary"
+          [disabled]="plan.estadoCodigo !== 'BORRADOR'"
+          (clicked)="abrirNuevoObjetivo()"
+        >
+          <span icon><app-ds-icon [img]="LucidePlus" [size]="16" /></span>
+          Nuevo objetivo
+        </app-ds-button>
+      </div>
+
+      @if (plan.estadoCodigo !== 'BORRADOR') {
+        <div class="flex items-center gap-2.5 rounded-lg border border-border bg-muted px-4 py-3">
+          <app-ds-icon class="shrink-0" [img]="LucideLock" [size]="16" />
+          <span>{{ mensajeSoloLectura() }}</span>
+        </div>
+      }
+
+      @if (errorCarga()) {
+        <app-ds-card>
+          <div class="flex flex-col items-center gap-3 py-10 text-center">
+            <p class="text-muted-foreground">No se pudieron cargar los objetivos.</p>
+            <app-ds-button variant="secondary" (clicked)="cargarObjetivos()">
+              Reintentar
+            </app-ds-button>
+          </div>
+        </app-ds-card>
+      } @else {
+        <div class="flex flex-wrap gap-2">
+          <button
+            type="button"
+            [class]="clasesFiltro(perspectivaSeleccionadaId() === null)"
+            (click)="seleccionarPerspectiva(null)"
+          >
+            Todas <span class="opacity-70">{{ objetivos().length }}</span>
+          </button>
+
+          @for (perspectiva of perspectivas(); track perspectiva.id) {
+            <button
+              type="button"
+              [class]="clasesFiltro(perspectivaSeleccionadaId() === perspectiva.id)"
+              (click)="seleccionarPerspectiva(perspectiva.id)"
+            >
+              {{ perspectiva.nombre }}
+              <span class="opacity-70">{{ conteoPerspectiva(perspectiva.id) }}</span>
+            </button>
+          }
+        </div>
+
+        @if (cargando()) {
+          <app-ds-card [padded]="false">
+            <div class="p-12 text-center text-muted-foreground">Cargando…</div>
+          </app-ds-card>
+        } @else if (objetivosFiltrados().length > 0) {
+          <app-ds-card [padded]="false">
+            <app-ds-data-table [columns]="columnas()" [rows]="objetivosFiltrados()" />
+          </app-ds-card>
+        } @else {
+          <app-ds-card [padded]="false">
+            <div class="flex flex-col items-center gap-3.5 px-5 py-11 text-center">
+              <span
+                class="flex h-13 w-13 items-center justify-center rounded-full bg-accent text-primary"
+              >
+                <app-ds-icon [img]="LucideFlag" [size]="20" />
+              </span>
+              <div>
+                <h2 class="text-ds-lg font-medium text-foreground">No hay objetivos aún</h2>
+                <p class="mt-1.5 text-muted-foreground">{{ mensajeVacio() }}</p>
+              </div>
+            </div>
+          </app-ds-card>
+        }
+      }
+    }
+
+    <ng-template #objetivoCell let-objetivo>
+      <div class="w-120 max-w-120 leading-[1.35]">
+        <span class="block truncate font-semibold text-foreground" [title]="objetivo.nombre">
+          {{ objetivo.nombre }}
+        </span>
+        <span
+          class="mt-[3px] block truncate text-ds-sm text-muted-foreground"
+          [title]="objetivo.codigo"
+        >
+          {{ objetivo.codigo }}
+        </span>
+      </div>
+    </ng-template>
+
+    <ng-template #perspectivaCell let-objetivo>
+      <app-ds-badge [tone]="tonoPerspectiva(objetivo.perspectivaOrden)" [dot]="true">
+        {{ objetivo.perspectivaNombre }}
+      </app-ds-badge>
+    </ng-template>
+
+    <ng-template #responsableCell let-objetivo>
+      <span class="block w-36 truncate text-muted-foreground" [title]="objetivo.responsable">
+        {{ objetivo.responsable }}
+      </span>
+    </ng-template>
+
+    <ng-template #estadoCell let-objetivo>
+      <app-ds-badge [tone]="tonoEstado(objetivo.estadoCodigo)" [dot]="true">
+        {{ objetivo.estadoNombre }}
+      </app-ds-badge>
+    </ng-template>
+
+    <ng-template #accionesCell let-objetivo>
+      <div class="flex justify-end gap-2">
+        <app-ds-icon-button
+          label="Editar"
+          variant="secondary"
+          size="md"
+          [disabled]="planSeleccionado.plan()?.estadoCodigo !== 'BORRADOR'"
+          (clicked)="abrirEdicion($event, objetivo)"
+        >
+          <app-ds-icon [img]="LucidePencil" [size]="16" />
+        </app-ds-icon-button>
+
+        <app-ds-icon-button
+          label="Cambiar estado"
+          variant="secondary"
+          size="md"
+          [disabled]="!puedeCambiarEstado(objetivo)"
+          (clicked)="abrirCambioEstado($event, objetivo)"
+        >
+          <app-ds-icon [img]="LucideRefreshCw" [size]="16" />
+        </app-ds-icon-button>
+
+        <app-ds-icon-button
+          label="Eliminar"
+          variant="secondary"
+          size="md"
+          [disabled]="planSeleccionado.plan()?.estadoCodigo !== 'BORRADOR'"
+          (clicked)="abrirEliminacion($event, objetivo)"
+        >
+          <app-ds-icon [img]="LucideTrash2" [size]="16" />
+        </app-ds-icon-button>
+      </div>
+    </ng-template>
+
+    <app-objetivo-estrategico-form-modal
+      [open]="modalActivo() === 'form'"
+      [planId]="planSeleccionado.planId()"
+      [planNombre]="planSeleccionado.plan()?.nombre ?? ''"
+      [objetivo]="objetivoSeleccionado()"
+      [perspectivas]="perspectivas()"
+      [objetivosDelPlan]="objetivos()"
+      [perspectivaInicialId]="perspectivaSeleccionadaId()"
+      (closed)="cerrarModal()"
+      (saved)="objetivoGuardado()"
+    />
+
+    <app-objetivo-estrategico-estado-modal
+      [open]="modalActivo() === 'estado'"
+      [objetivo]="objetivoSeleccionado()"
+      (closed)="cerrarModal()"
+      (saved)="objetivoGuardado()"
+    />
+
+    <app-objetivo-estrategico-eliminar-modal
+      [open]="modalActivo() === 'eliminar'"
+      [objetivo]="objetivoSeleccionado()"
+      [objetivosDelPlan]="objetivos()"
+      (closed)="cerrarModal()"
+      (deleted)="objetivoEliminado()"
+    />
+  </div>
+</div>

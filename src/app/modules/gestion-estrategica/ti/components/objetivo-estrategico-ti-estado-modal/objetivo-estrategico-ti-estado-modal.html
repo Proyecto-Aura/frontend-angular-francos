@@ -1,0 +1,55 @@
+<app-ds-modal
+  [open]="open()"
+  title="Cambiar estado del objetivo de TI"
+  [description]="descripcionModal()"
+  [hasFooter]="true"
+  [width]="480"
+  (closed)="cerrar()"
+>
+  <div class="flex flex-col gap-4">
+    <div class="grid grid-cols-2 gap-2">
+      @for (estado of estados; track estado.codigo) {
+        <button
+          type="button"
+          [class]="clasesEstado(estado.codigo)"
+          [disabled]="!puedeSeleccionar(estado.codigo)"
+          [attr.aria-pressed]="estadoSeleccionado() === estado.codigo"
+          (click)="seleccionar(estado.codigo)"
+        >
+          <span [class]="clasePuntoEstado(estado.codigo)"></span>
+          <span class="min-w-0 flex-1">
+            {{ estado.nombre }}{{ objetivo()?.estadoCodigo === estado.codigo ? ' (actual)' : '' }}
+          </span>
+          @if (estadoSeleccionado() === estado.codigo) {
+            <app-ds-icon [img]="LucideCheck" [size]="16" />
+          }
+        </button>
+      }
+    </div>
+
+    <p class="text-ds-sm text-muted-foreground">{{ mensajeFlujo() }}</p>
+
+    @if (estadoFinalSeleccionado()) {
+      <p class="text-ds-sm text-muted-foreground">
+        Es un estado final: después no podrá cambiarse.
+      </p>
+    }
+
+    @if (errorGeneral()) {
+      <div class="rounded-lg bg-destructive/10 px-3.5 py-3 text-ds-sm text-destructive">
+        {{ errorGeneral() }}
+      </div>
+    }
+  </div>
+
+  <span footer class="flex gap-2">
+    <app-ds-button variant="secondary" (clicked)="cerrar()">Cancelar</app-ds-button>
+    <app-ds-button
+      variant="primary"
+      [disabled]="!puedeGuardar() || guardando()"
+      (clicked)="guardar()"
+    >
+      {{ guardando() ? 'Guardando…' : 'Guardar' }}
+    </app-ds-button>
+  </span>
+</app-ds-modal>

@@ -1,8 +1,12 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { finalize, tap } from 'rxjs';
+import { Observable, finalize, shareReplay, tap } from 'rxjs';
 import { environment } from '../../../../environments/environment';
-import { LoginRequestDto, LoginResponseDto } from '../interfaces/usuario-dto.interface';
+import {
+  LoginRequestDto,
+  LoginResponseDto,
+  MeResponseDto,
+} from '../interfaces/usuario-dto.interface';
 
 export interface AuthSession {
   accessToken: string;
@@ -24,11 +28,28 @@ export class AuthService {
   isAuthenticated = computed(() => this.session() !== null);
   accessToken = computed(() => this.session()?.accessToken ?? null);
 
+  // Cache de GET /auth/me por sesion — se invalida en login/logout (ver mas
+  // abajo) para que un cambio de usuario en la misma pestaña no se quede con
+  // el nombre/rol de quien estaba logueado antes.
+  private me$: Observable<MeResponseDto> | null = null;
+
   login(identificador: string, password: string) {
     const body: LoginRequestDto = { identificador, password };
-    return this.http.post<LoginResponseDto>(`${AUTH_BASE}/login`, body, { withCredentials: true }).pipe(
-      tap(response => this.session.set(this.toSession(response))),
-    );
+    return this.http
+      .post<LoginResponseDto>(`${AUTH_BASE}/login`, body, { withCredentials: true })
+      .pipe(
+        tap((response) => {
+          this.session.set(this.toSession(response));
+          this.me$ = null;
+        }),
+      );
+  }
+
+  getCurrentUser(): Observable<MeResponseDto> {
+    this.me$ ??= this.http
+      .get<MeResponseDto>(`${AUTH_BASE}/me`)
+      .pipe(shareReplay({ bufferSize: 1, refCount: false }));
+    return this.me$;
   }
 
   // Pensado para llamarse al arrancar la app (via el interceptor o un APP_INITIALIZER
@@ -37,17 +58,19 @@ export class AuthService {
   // Nota: el backend solo devuelve access_token nuevo aca, no roles/flags — si ya
   // habia una sesion en memoria se conservan sus roles/flags viejos.
   refresh() {
-    return this.http.post<{ access_token: string }>(`${AUTH_BASE}/refresh`, null, { withCredentials: true }).pipe(
-      tap(response => {
-        const current = this.session();
-        this.session.set({
-          accessToken: response.access_token,
-          roles: current?.roles ?? [],
-          emailVerificado: current?.emailVerificado ?? false,
-          debeCambiarContrasena: current?.debeCambiarContrasena ?? false,
-        });
-      }),
-    );
+    return this.http
+      .post<{ access_token: string }>(`${AUTH_BASE}/refresh`, null, { withCredentials: true })
+      .pipe(
+        tap((response) => {
+          const current = this.session();
+          this.session.set({
+            accessToken: response.access_token,
+            roles: current?.roles ?? [],
+            emailVerificado: current?.emailVerificado ?? false,
+            debeCambiarContrasena: current?.debeCambiarContrasena ?? false,
+          });
+        }),
+      );
   }
 
   logout() {
@@ -55,7 +78,10 @@ export class AuthService {
     // (si el logout ahi falla, igual no tiene sentido dejar al usuario con una
     // sesion "activa" en el front que ya no puede usar).
     return this.http.post(`${AUTH_BASE}/logout`, null, { withCredentials: true }).pipe(
-      finalize(() => this.session.set(null)),
+      finalize(() => {
+        this.session.set(null);
+        this.me$ = null;
+      }),
     );
   }
 

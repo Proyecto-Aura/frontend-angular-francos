@@ -1,0 +1,65 @@
+<div class="relative w-full">
+  <div #trigger class="relative flex w-full items-center">
+    <input
+      [id]="id()"
+      [name]="name()"
+      type="text"
+      role="combobox"
+      aria-haspopup="listbox"
+      [attr.aria-expanded]="open()"
+      [attr.aria-controls]="listboxId()"
+      autocomplete="off"
+      [disabled]="disabled()"
+      [value]="displayText()"
+      [placeholder]="placeholder() ?? ''"
+      (input)="onInput($event)"
+      (keydown)="onKeydown($event)"
+      (focus)="abrir(); focused.set(true)"
+      (blur)="cerrar(); focused.set(false)"
+      [class]="shellClasses()"
+      [style.height]="height()"
+    />
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+      class="pointer-events-none absolute right-[14px] text-muted-foreground"
+    >
+      <path d="m6 9 6 6 6-6" />
+    </svg>
+  </div>
+
+  <ng-template #panel>
+    <ul
+      [id]="listboxId()"
+      role="listbox"
+      class="max-h-60 w-full overflow-auto rounded-lg border border-border bg-popover p-1 shadow-ds-md"
+      (mousedown)="$event.preventDefault()"
+    >
+      @if (filteredOptions().length === 0) {
+        <li class="px-2.5 py-2 text-ds-sm text-muted-foreground">{{ emptyMessage() }}</li>
+      }
+      @for (opt of filteredOptions(); track opt.value; let i = $index) {
+        <li role="presentation">
+          <button
+            type="button"
+            role="option"
+            [attr.aria-selected]="opt.value === value()"
+            class="flex h-8 w-full cursor-pointer items-center rounded-md border-none bg-transparent px-2.5 text-left text-ds-sm"
+            [class.bg-accent]="i === highlightIndex() || opt.value === value()"
+            (click)="seleccionar(opt)"
+            (mouseenter)="highlightIndex.set(i)"
+          >
+            <span class="min-w-0 truncate">{{ opt.label }}</span>
+          </button>
+        </li>
+      }
+    </ul>
+  </ng-template>
+</div>

@@ -21,7 +21,9 @@
     <tbody>
       @if (rows().length === 0) {
         <tr>
-          <td [attr.colspan]="colSpan()" class="p-12 text-center text-muted-foreground">{{ empty() }}</td>
+          <td [attr.colspan]="colSpan()" class="p-12 text-center text-muted-foreground">
+            {{ empty() }}
+          </td>
         </tr>
       }
       @for (row of rows(); track $index; let ri = $index, isLast = $last) {
@@ -34,7 +36,11 @@
           [class.bg-card]="hoverIndex() !== ri"
         >
           @if (selectable()) {
-            <td class="h-[76px] pl-6" [class.border-b]="!isLast" [class.border-border]="!isLast"></td>
+            <td
+              class="h-[76px] pl-6"
+              [class.border-b]="!isLast"
+              [class.border-border]="!isLast"
+            ></td>
           }
           @for (col of columns(); track col.key) {
             <td
@@ -51,7 +57,10 @@
               [class.whitespace-nowrap]="!col.wrap"
             >
               @if (col.cellTemplate) {
-                <ng-container [ngTemplateOutlet]="col.cellTemplate" [ngTemplateOutletContext]="{ $implicit: row, index: ri }" />
+                <ng-container
+                  [ngTemplateOutlet]="col.cellTemplate"
+                  [ngTemplateOutletContext]="{ $implicit: row, index: ri }"
+                />
               } @else {
                 {{ cellValue(row, col.key) }}
               }

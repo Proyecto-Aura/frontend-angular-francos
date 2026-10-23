@@ -1,5 +1,10 @@
 <span class="block leading-[1.35]">
-  <span class="block text-foreground" [class.font-semibold]="strong()" [class.font-normal]="!strong()">{{ primary() }}</span>
+  <span
+    class="block text-foreground"
+    [class.font-semibold]="strong()"
+    [class.font-normal]="!strong()"
+    >{{ primary() }}</span
+  >
   @if (secondary()) {
     <span class="mt-[3px] block text-ds-sm text-muted-foreground">{{ secondary() }}</span>
   }

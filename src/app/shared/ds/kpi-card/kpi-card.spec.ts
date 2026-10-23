@@ -25,4 +25,19 @@ describe('KpiCard', () => {
     fixture.detectChanges();
     expect(fixture.componentInstance.toneClass()).toBe('text-muted-foreground');
   });
+
+  it('defaults to the md size (unchanged for existing usages)', () => {
+    const fixture = create();
+    fixture.detectChanges();
+    expect(fixture.componentInstance.valueClass()).toBe('text-ds-3xl');
+    expect(fixture.componentInstance.iconBoxClass()).toBe('h-8 w-8');
+  });
+
+  it('uses smaller text/icon classes when size is sm', () => {
+    const fixture = create();
+    fixture.componentRef.setInput('size', 'sm');
+    fixture.detectChanges();
+    expect(fixture.componentInstance.valueClass()).toBe('text-ds-lg');
+    expect(fixture.componentInstance.iconBoxClass()).toBe('h-7 w-7');
+  });
 });

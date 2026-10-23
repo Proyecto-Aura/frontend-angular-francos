@@ -1,5 +1,6 @@
 /* You can add global styles to this file, and also import other style files */
 @import 'tailwindcss';
+@import '@angular/cdk/overlay-prebuilt.css';
 
 /*
  * Franco's Portal Empresarial - Design System tokens, ported verbatim from the
@@ -18,69 +19,69 @@
   --font-nunito: 'Nunito', ui-sans-serif, system-ui, sans-serif;
 
   /* Base ramp */
-  --color-ds-red-600: #D22B2B;
-  --color-ds-red-500: #E53935;
+  --color-ds-red-600: #d22b2b;
+  --color-ds-red-500: #e53935;
   --color-ds-neutral-000: #ffffff;
-  --color-ds-neutral-050: #F5F5F5;
-  --color-ds-neutral-200: #E0E0E0;
+  --color-ds-neutral-050: #f5f5f5;
+  --color-ds-neutral-200: #e0e0e0;
   --color-ds-neutral-500: #757575;
   --color-ds-neutral-900: #212121;
-  --color-ds-blue-600: #1E88E5;
-  --color-ds-green-600: #43A047;
-  --color-ds-yellow-500: #FDD835;
-  --color-ds-orange-600: #FB8C00;
+  --color-ds-blue-600: #1e88e5;
+  --color-ds-green-600: #43a047;
+  --color-ds-yellow-500: #fdd835;
+  --color-ds-orange-600: #fb8c00;
 
   /* Semantic — surfaces & text */
-  --color-background: #F5F5F5;
+  --color-background: #f5f5f5;
   --color-foreground: #212121;
   --color-card: #ffffff;
   --color-card-foreground: #212121;
   --color-popover: #ffffff;
   --color-popover-foreground: #212121;
-  --color-secondary: #F5F5F5;
+  --color-secondary: #f5f5f5;
   --color-secondary-foreground: #212121;
-  --color-muted: #F5F5F5;
+  --color-muted: #f5f5f5;
   --color-muted-foreground: #757575;
 
   /* Semantic — brand & state */
-  --color-primary: #D22B2B;
+  --color-primary: #d22b2b;
   --color-primary-foreground: #ffffff;
-  --color-primary-hover: #B92525;
-  --color-primary-active: #A32020;
+  --color-primary-hover: #b92525;
+  --color-primary-active: #a32020;
   --color-accent: rgba(210, 43, 43, 0.08);
-  --color-accent-foreground: #D22B2B;
-  --color-destructive: #E53935;
+  --color-accent-foreground: #d22b2b;
+  --color-destructive: #e53935;
   --color-destructive-foreground: #ffffff;
-  --color-success: #43A047;
-  --color-warning: #FB8C00;
-  --color-info: #1E88E5;
+  --color-success: #43a047;
+  --color-warning: #fb8c00;
+  --color-info: #1e88e5;
 
   /* Tables */
-  --color-table-header: #FAFAFA;
-  --color-table-row-hover: #FAFAFA;
-  --color-table-row-alt: #FCFCFC;
+  --color-table-header: #fafafa;
+  --color-table-row-hover: #fafafa;
+  --color-table-row-alt: #fcfcfc;
 
   /* Lines, fields, focus */
-  --color-border: #E0E0E0;
+  --color-border: #e0e0e0;
   --color-input: #ffffff;
   --color-input-background: #ffffff;
-  --color-switch-background: #E0E0E0;
+  --color-switch-background: #e0e0e0;
   --color-ring: rgba(210, 43, 43, 0.3);
 
   /* Charts */
-  --color-chart-1: #D22B2B;
-  --color-chart-2: #1E88E5;
-  --color-chart-3: #43A047;
-  --color-chart-4: #FDD835;
-  --color-chart-5: #FB8C00;
+  --color-chart-1: #d22b2b;
+  --color-chart-2: #1e88e5;
+  --color-chart-3: #43a047;
+  --color-chart-4: #fdd835;
+  --color-chart-5: #fb8c00;
 
   /* Sidebar */
   --color-sidebar-foreground: #ffffff;
   --color-sidebar-foreground-muted: rgba(255, 255, 255, 0.72);
   --color-sidebar-primary: #ffffff;
-  --color-sidebar-primary-foreground: #D22B2B;
+  --color-sidebar-primary-foreground: #d22b2b;
   --color-sidebar-accent: rgba(255, 255, 255, 0.16);
-  --color-sidebar-accent-hover: rgba(255, 255, 255, 0.10);
+  --color-sidebar-accent-hover: rgba(255, 255, 255, 0.1);
   --color-sidebar-accent-foreground: #ffffff;
   --color-sidebar-icon-well: rgba(255, 255, 255, 0.14);
   --color-sidebar-border: rgba(255, 255, 255, 0.16);
@@ -126,7 +127,7 @@
 
 /* Values that don't fit a single @theme key (gradient, computed focus ring, dark scope). */
 :root {
-  --sidebar: linear-gradient(180deg, #E23A3A 0%, #D22B2B 55%, #C42222 100%);
+  --sidebar: linear-gradient(180deg, #e23a3a 0%, #d22b2b 55%, #c42222 100%);
   --shadow-focus: 0 0 0 3px var(--color-ring);
 }
 

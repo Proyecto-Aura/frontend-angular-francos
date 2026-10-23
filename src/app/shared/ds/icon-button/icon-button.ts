@@ -24,7 +24,7 @@ export class IconButton {
   classes = computed(() => {
     const outlined = this.outlined();
     return [
-      'inline-flex items-center justify-center rounded-md border transition-[background,color,border-color] duration-[120ms] ease-linear disabled:cursor-not-allowed disabled:opacity-45',
+      'inline-flex items-center justify-center rounded-md border transition-[background,color,border-color] duration-[120ms] ease-linear enabled:cursor-pointer disabled:cursor-not-allowed disabled:opacity-45',
       outlined ? 'border-border bg-card' : 'border-transparent bg-transparent',
       'text-muted-foreground',
       'enabled:hover:bg-accent enabled:hover:text-accent-foreground',

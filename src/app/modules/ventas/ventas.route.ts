@@ -1,65 +1,39 @@
 import { Routes } from '@angular/router';
-import {
-  LucideLayoutDashboard,
-  LucideUsers,
-  LucidePackage,
-  LucideList,
-  LucideSettings,
-  LucideShoppingCart,
-  LucideRotateCcw,
-} from '@lucide/angular';
+import { permisoGuard } from '../../core/guards/permiso.guard';
 
-// Nota: label/icon/path hoy estan fijos aca a mano. Cuando exista el backend,
-// esta estructura (y que opciones ve cada usuario) deberia venir de la BD segun su rol.
+// Sin sidebarLinks/sidebarTitle hardcodeados a proposito — moduleNombre solo
+// alcanza para que ModuleLayout arme el sidebar entero desde /rutas/mi-menu
+// (ver inventario.route.ts, mismo patron). "clientes" es hoja directa en el
+// backend (sin hijos), por eso va suelta y no detras de su propio router de
+// grupo como catalogo/mis-pedidos.
 export const VENTAS_ROUTES: Routes = [
   {
     path: '',
-    loadComponent: () => import('../../layouts/module-layout/module-layout').then(c => c.ModuleLayout),
+    loadComponent: () =>
+      import('../../layouts/module-layout/module-layout').then((c) => c.ModuleLayout),
     data: {
-      sidebarTitle: 'Gestión de Ventas',
-      sidebarLinks: [
-        { label: 'Dashboard', path: 'dashboard', icon: LucideLayoutDashboard },
-        { label: 'Clientes', path: 'clientes', icon: LucideUsers },
-        {
-          label: 'Catalogo',
-          icon: LucidePackage,
-          children: [
-            { label: 'Gestión de productos', path: 'catalogo/productos', icon: LucideList },
-            { label: 'Configuración del catálogo', path: 'catalogo/configuracion', icon: LucideSettings },
-          ],
-        },
-        {
-          label: 'Mis Pedidos',
-          icon: LucideShoppingCart,
-          children: [
-            { label: 'Gestión de pedidos', path: 'pedidos/gestion', icon: LucideList },
-            { label: 'Reembolsos', path: 'pedidos/reembolsos', icon: LucideRotateCcw },
-          ],
-        },
-      ],
+      moduleNombre: 'ventas',
     },
     children: [
       {
         path: 'clientes',
-        loadChildren: () =>
-          import('./clientes/clientes.route').
-        then(m => m.CLIENTES_ROUTES)
+        canActivate: [permisoGuard],
+        loadComponent: () =>
+          import('./clientes/pages/listar-clientes/listar-clientes').then((c) => c.ListarClientes),
       },
-      // {
-      //   path: 'catalogo',
-      //   loadChildren: () =>
-      //     import('./catalogo/catalogo.route').
-      //   then(m => m.CATALOGO_ROUTES)
-      // },
-      // { path: 'pedidos',
-      //   loadChildren: () =>
-      //     import('./pedidos/pedidos.route').
-      //   then(m => m.PEDIDOS_ROUTES)
-      // },
+      {
+        path: 'catalogo',
+        loadChildren: () => import('./catalogo/catalogo.route').then((m) => m.CATALOGO_ROUTES),
+      },
+      {
+        path: 'mis-pedidos',
+        loadChildren: () =>
+          import('./mis-pedidos/mis-pedidos.route').then((m) => m.MIS_PEDIDOS_ROUTES),
+      },
       {
         path: '',
         redirectTo: 'clientes',
-        pathMatch: 'full'
+        pathMatch: 'full',
       },
       {
         path: '**',

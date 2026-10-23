@@ -1,14 +1,21 @@
-<div class="flex min-w-0 flex-col gap-2.5 rounded-lg border border-border bg-card p-(--card-padding) shadow-ds-xs">
+<div
+  class="flex min-w-0 flex-col gap-2.5 rounded-lg border border-border bg-card p-(--card-padding) shadow-ds-xs"
+>
   <div class="flex items-start justify-between gap-3">
     <span class="text-ds-sm text-muted-foreground">{{ label() }}</span>
     @if (hasIcon()) {
-      <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-accent text-accent-foreground">
+      <span
+        class="flex shrink-0 items-center justify-center rounded-md bg-accent text-accent-foreground"
+        [class]="iconBoxClass()"
+      >
         <ng-content select="[icon]" />
       </span>
     }
   </div>
   <div class="flex flex-wrap items-baseline gap-2">
-    <span class="text-ds-3xl font-semibold tracking-[-0.01em] text-foreground">{{ value() }}</span>
+    <span class="font-semibold tracking-[-0.01em] text-foreground" [class]="valueClass()">{{
+      value()
+    }}</span>
     @if (delta()) {
       <span class="text-ds-sm font-medium" [class]="toneClass()">{{ delta() }}</span>
     }
