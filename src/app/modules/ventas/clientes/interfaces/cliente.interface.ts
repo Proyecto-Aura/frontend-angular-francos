@@ -1,124 +1,256 @@
-// Modelo y reglas de Cliente — portados 1:1 desde la lógica real del diseño
-// (FrancoSPortalEmpresarialDesignSystem), no del Excel de requisitos ni de la
-// HU en texto: el diseño es la fuente de verdad que confirmó el equipo.
+import { UbicacionCliente } from './ubicacion.interface';
 
-export type TipoDocumento = 'DNI' | 'CE' | 'Pasaporte' | 'RUC';
-export type TipoPersona = 'natural' | 'empresa';
-export type TipoCliente = 'Mayorista' | 'Minorista';
-export type EstadoCliente = 'Activo' | 'Inactivo';
+// Modelo y reglas de Cliente. Los valores de los enums son los del backend
+// (minúsculas); las etiquetas en español para la pantalla están en los *_LABEL.
+export type TipoDocumento = 'dni' | 'ce' | 'pasaporte' | 'ruc';
+export type TipoCliente = 'persona_natural' | 'empresa';
+export type CategoriaCliente = 'minorista' | 'mayorista';
 
-export const LARGO_DOC: Record<TipoDocumento, number> = { DNI: 8, CE: 9, Pasaporte: 9, RUC: 11 };
+export const TIPO_DOCUMENTO_LABEL: Record<TipoDocumento, string> = {
+  dni: 'DNI',
+  ce: 'Carné de Extranjería',
+  pasaporte: 'Pasaporte',
+  ruc: 'RUC',
+};
 
-// Campos que llena el operador en el alta/edición. `persona` se deriva de
-// tipoDoc + doc (ver personaPorDocumento) — nunca lo elige el operador.
-export interface ClienteFormModel {
-  tipoDoc: TipoDocumento;
-  persona: TipoPersona;
-  doc: string;
-  // Persona natural (DNI / CE / Pasaporte / RUC 10)
-  nombres: string;
-  apellidos: string;
-  nacimiento: string;
-  departamento: string;
-  provincia: string;
-  distrito: string;
-  direccion: string;
-  // Empresa (RUC 20)
-  razon: string;
-  cNombres: string;
-  cPaterno: string;
-  cMaterno: string;
-  cCorreo: string;
-  // Comunes a ambos casos
-  tipo: TipoCliente;
-  telefono: string;
-  correo: string;
-  password: string;
-}
+export const TIPO_CLIENTE_LABEL: Record<TipoCliente, string> = {
+  persona_natural: 'Persona natural',
+  empresa: 'Empresa',
+};
 
-export interface Cliente extends ClienteFormModel {
+export const CATEGORIA_LABEL: Record<CategoriaCliente, string> = {
+  minorista: 'Minorista',
+  mayorista: 'Mayorista',
+};
+
+// En la UI los datos opcionales que el backend manda como null se muestran como
+// texto vacío, por eso aquí son string y no string | null.
+export interface Cliente {
+  id: string;
+  /** Código visible, por ejemplo "CLI-000001". */
   codigo: string;
-  estado: EstadoCliente;
-  usuario: string;
-  verificado: boolean;
+  personaId: string;
+  tipoCliente: TipoCliente;
+  razonSocial: string;
+  categoria: CategoriaCliente;
+  estado: boolean;
+  nombres: string;
+  apellidoPaterno: string;
+  apellidoMaterno: string;
+  tipoDocumento: TipoDocumento;
+  numeroDocumento: string;
+  telefono: string;
+  /** AAAA-MM-DD (formato de <input type="date">), o vacío. */
+  fechaNacimiento: string;
+  direccion: string;
+  /** null si el cliente aún no registró su ubicación. */
+  ubicacion: UbicacionCliente | null;
+  email: string;
 }
 
-/** Nombre a mostrar: razón social si es empresa, "nombres apellidos" si es persona natural. */
-export function nombreCliente(c: Pick<Cliente, 'persona' | 'razon' | 'nombres' | 'apellidos'>): string {
-  return c.persona === 'empresa' ? c.razon : `${c.nombres} ${c.apellidos}`.trim();
+export interface ClientesPagina {
+  clientes: Cliente[];
+  total: number;
+  pagina: number;
+  totalPaginas: number;
+}
+
+/** Resultado del alta: el backend crea la cuenta con credenciales por defecto. */
+export interface ClienteRegistrado {
+  usuario: string;
+  email: string;
+}
+
+// Campos del alta/edición. Todo es texto, como lo escribe el operador. El tipo
+// de cliente (persona natural / empresa) no se elige: se deriva del documento
+// (ver tipoClientePorDocumento). En una empresa, nombres y apellidos son los
+// del contacto, que el backend guarda como la persona del cliente.
+export interface ClienteForm {
+  tipoDocumento: TipoDocumento;
+  numeroDocumento: string;
+  razonSocial: string;
+  nombres: string;
+  apellidoPaterno: string;
+  apellidoMaterno: string;
+  fechaNacimiento: string;
+  /** Códigos del catálogo de ubigeo; vacíos si aún no se eligen. */
+  departamentoId: string;
+  provinciaId: string;
+  distritoId: string;
+  direccion: string;
+  categoria: CategoriaCliente;
+  telefono: string;
+  email: string;
+}
+
+export function clienteFormVacio(): ClienteForm {
+  return {
+    tipoDocumento: 'dni',
+    numeroDocumento: '',
+    razonSocial: '',
+    nombres: '',
+    apellidoPaterno: '',
+    apellidoMaterno: '',
+    fechaNacimiento: '',
+    departamentoId: '',
+    provinciaId: '',
+    distritoId: '',
+    direccion: '',
+    categoria: 'minorista',
+    telefono: '',
+    email: '',
+  };
+}
+
+export function clienteAForm(cliente: Cliente): ClienteForm {
+  return {
+    tipoDocumento: cliente.tipoDocumento,
+    numeroDocumento: cliente.numeroDocumento,
+    razonSocial: cliente.razonSocial,
+    nombres: cliente.nombres,
+    apellidoPaterno: cliente.apellidoPaterno,
+    apellidoMaterno: cliente.apellidoMaterno,
+    fechaNacimiento: cliente.fechaNacimiento,
+    departamentoId: cliente.ubicacion?.departamento.id ?? '',
+    provinciaId: cliente.ubicacion?.provincia.id ?? '',
+    distritoId: cliente.ubicacion?.distrito.id ?? '',
+    direccion: cliente.direccion,
+    categoria: cliente.categoria,
+    telefono: cliente.telefono,
+    email: cliente.email,
+  };
+}
+
+/** Razón social si es empresa; "nombres apellidos" si es persona natural. */
+export function nombreCliente(
+  cliente: Pick<
+    Cliente,
+    'tipoCliente' | 'razonSocial' | 'nombres' | 'apellidoPaterno' | 'apellidoMaterno'
+  >,
+): string {
+  if (cliente.tipoCliente === 'empresa') {
+    return cliente.razonSocial;
+  }
+  return [cliente.nombres, cliente.apellidoPaterno, cliente.apellidoMaterno]
+    .filter(Boolean)
+    .join(' ');
 }
 
 /** RUC que empieza en "20" = empresa; cualquier otro caso (incluido RUC 10) = persona natural. */
-export function personaPorDocumento(tipoDoc: TipoDocumento, doc: string): TipoPersona {
-  return tipoDoc === 'RUC' ? (doc.indexOf('20') === 0 ? 'empresa' : 'natural') : 'natural';
+export function tipoClientePorDocumento(
+  tipoDocumento: TipoDocumento,
+  numeroDocumento: string,
+): TipoCliente {
+  return tipoDocumento === 'ruc' && numeroDocumento.startsWith('20')
+    ? 'empresa'
+    : 'persona_natural';
 }
 
-export function generarClave(): string {
-  return 'Fr2026-' + String(1000 + Math.floor(Math.random() * 8999));
+/**
+ * Al pasar de persona natural a empresa (o al revés) se vacían los campos que
+ * el otro tipo no usa, para no mandar datos que ya no se ven en el formulario.
+ */
+export function limpiarCamposDeOtroTipo(form: ClienteForm, tipo: TipoCliente): ClienteForm {
+  return tipo === 'empresa'
+    ? {
+        ...form,
+        fechaNacimiento: '',
+        departamentoId: '',
+        provinciaId: '',
+        distritoId: '',
+        direccion: '',
+      }
+    : { ...form, razonSocial: '' };
 }
 
-function slugify(s: string): string {
-  return s
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/(^-|-$)/g, '');
-}
-
-/** usuario = primera palabra de la razón social (empresa) o inicial+apellidos (natural) + "." + documento. */
-export function generarUsuario(f: Pick<ClienteFormModel, 'persona' | 'razon' | 'nombres' | 'apellidos' | 'doc'>): string {
-  const base =
-    f.persona === 'empresa'
-      ? slugify(f.razon || '').split('-')[0] || 'empresa'
-      : slugify((f.nombres || '').charAt(0) + (f.apellidos || '')) || 'cliente';
-  return `${base}.${(f.doc || '').toLowerCase()}`;
-}
-
-/** Limpia los campos del "otro" tipo de persona al cambiar de tipoDoc/doc, igual que hace el diseño. */
-export function limpiarPersona(f: ClienteFormModel, persona: TipoPersona): ClienteFormModel {
-  if (persona === f.persona) return { ...f, persona };
-  return persona === 'empresa'
-    ? { ...f, persona, nombres: '', apellidos: '', nacimiento: '', departamento: '', provincia: '', distrito: '', direccion: '' }
-    : { ...f, persona, razon: '', cNombres: '', cPaterno: '', cMaterno: '', cCorreo: '' };
-}
+// Mismos formatos que valida el backend (numero-documento.validator.ts).
+const FORMATO_DOCUMENTO: Record<TipoDocumento, { regex: RegExp; mensaje: string }> = {
+  dni: { regex: /^\d{8}$/, mensaje: 'el DNI debe tener 8 dígitos' },
+  ruc: { regex: /^\d{11}$/, mensaje: 'el RUC debe tener 11 dígitos' },
+  ce: {
+    regex: /^[a-zA-Z0-9]{9,12}$/,
+    mensaje: 'el carné de extranjería debe tener de 9 a 12 letras o números',
+  },
+  pasaporte: {
+    regex: /^[a-zA-Z0-9]{6,12}$/,
+    mensaje: 'el pasaporte debe tener de 6 a 12 letras o números',
+  },
+};
 
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
-/** Mismas reglas y mismos mensajes que `validarCliente` en el diseño real. */
-export function validarCliente(f: ClienteFormModel): string[] {
-  const e: string[] = [];
-  if (!f.doc) e.push('número de documento');
-  else if (f.tipoDoc !== 'Pasaporte' && !/^[0-9]+$/.test(f.doc)) e.push('el documento admite solo dígitos');
-  else if (f.doc.length !== LARGO_DOC[f.tipoDoc]) e.push(`el documento debe tener ${LARGO_DOC[f.tipoDoc]} caracteres`);
-  else if (f.tipoDoc === 'RUC' && !['10', '20'].includes(f.doc.slice(0, 2))) e.push('el RUC debe iniciar en 10 o 20');
+/**
+ * Devuelve los campos que faltan o están mal, en español, listos para mostrar.
+ * Al editar, el correo no se valida: pertenece a la cuenta de acceso y no se
+ * modifica desde este formulario.
+ */
+export function validarClienteForm(form: ClienteForm, editando: boolean): string[] {
+  const errores: string[] = [];
+  const documento = form.numeroDocumento.trim();
+  const tipo = tipoClientePorDocumento(form.tipoDocumento, documento);
+  const formato = FORMATO_DOCUMENTO[form.tipoDocumento];
 
-  if (f.persona === 'empresa' && !f.razon) e.push('razón social');
-  if (f.persona !== 'empresa' && (!f.nombres || !f.apellidos)) e.push('nombres y apellidos');
-  if (f.persona !== 'empresa') {
-    if (!f.nacimiento) e.push('fecha de nacimiento');
-    if (!f.departamento || !f.provincia || !f.distrito) e.push('departamento, provincia y distrito');
-    if (!f.direccion) e.push('dirección');
-  }
-  if (f.persona === 'empresa') {
-    if (!f.cNombres || !f.cPaterno || !f.cMaterno) e.push('nombres y apellidos del contacto');
-    if (!f.cCorreo) e.push('correo del contacto');
-    else if (!EMAIL_RE.test(f.cCorreo)) e.push('el correo del contacto no tiene un formato válido');
+  if (!documento) {
+    errores.push('número de documento');
+  } else if (!formato.regex.test(documento)) {
+    errores.push(formato.mensaje);
+  } else if (form.tipoDocumento === 'ruc' && !['10', '20'].includes(documento.slice(0, 2))) {
+    errores.push('el RUC debe iniciar en 10 o 20');
   }
 
-  if (!f.telefono) e.push('teléfono');
-  else if (!/^[0-9]{9}$/.test(f.telefono)) e.push('el teléfono debe tener 9 dígitos');
-  if (!f.correo) e.push('correo');
-  else if (!EMAIL_RE.test(f.correo)) e.push('el correo no tiene un formato válido');
+  if (tipo === 'empresa') {
+    if (!form.razonSocial.trim()) {
+      errores.push('razón social');
+    } else if (form.razonSocial.trim().length > 200) {
+      errores.push('la razón social no puede pasar de 200 caracteres');
+    }
+  }
 
-  return e;
-}
+  const etiquetaPersona = tipo === 'empresa' ? 'del contacto' : '';
+  if (!form.nombres.trim()) {
+    errores.push(`nombres ${etiquetaPersona}`.trim());
+  }
+  if (!form.apellidoPaterno.trim()) {
+    errores.push(`apellido paterno ${etiquetaPersona}`.trim());
+  }
+  if (!form.apellidoMaterno.trim()) {
+    errores.push(`apellido materno ${etiquetaPersona}`.trim());
+  }
 
-export function clienteFormVacio(): ClienteFormModel {
-  return {
-    tipoDoc: 'DNI', persona: 'natural', doc: '', razon: '',
-    nombres: '', apellidos: '', nacimiento: '', departamento: '', provincia: '', distrito: '', direccion: '',
-    cNombres: '', cPaterno: '', cMaterno: '', cCorreo: '',
-    tipo: 'Minorista', telefono: '', correo: '', password: generarClave(),
-  };
+  if (tipo === 'persona_natural') {
+    if (!form.fechaNacimiento) {
+      errores.push('fecha de nacimiento');
+    }
+    if (!form.departamentoId) {
+      errores.push('departamento');
+    }
+    if (!form.provinciaId) {
+      errores.push('provincia');
+    }
+    if (!form.distritoId) {
+      errores.push('distrito');
+    }
+    if (!form.direccion.trim()) {
+      errores.push('dirección');
+    }
+  }
+
+  if (!form.telefono.trim()) {
+    errores.push('teléfono');
+  } else if (!/^\d{9}$/.test(form.telefono.trim())) {
+    errores.push('el teléfono debe tener 9 dígitos');
+  }
+
+  if (!editando) {
+    const email = form.email.trim();
+    if (!email) {
+      errores.push('correo');
+    } else if (!EMAIL_RE.test(email)) {
+      errores.push('el correo no tiene un formato válido');
+    } else if (email.length > 150) {
+      errores.push('el correo no puede pasar de 150 caracteres');
+    }
+  }
+
+  return errores;
 }

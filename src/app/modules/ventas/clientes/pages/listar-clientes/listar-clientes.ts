@@ -1,12 +1,29 @@
-import { AfterViewInit, Component, TemplateRef, ViewChild, computed, inject, signal } from '@angular/core';
-import { LucideEye, LucidePencil, LucidePlus, LucideSearch, LucideTrash2 } from '@lucide/angular';
-
+import {
+  AfterViewInit,
+  Component,
+  DestroyRef,
+  OnInit,
+  TemplateRef,
+  ViewChild,
+  inject,
+  signal,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import {
+  LucideEye,
+  LucidePencil,
+  LucidePlus,
+  LucideRotateCcw,
+  LucideSearch,
+  LucideTrash2,
+} from '@lucide/angular';
+import { finalize } from 'rxjs';
 import { Avatar } from '../../../../../shared/ds/avatar/avatar';
 import { Badge, BadgeTone } from '../../../../../shared/ds/badge/badge';
 import { Button } from '../../../../../shared/ds/button/button';
+import { Card } from '../../../../../shared/ds/card/card';
 import { CellStack } from '../../../../../shared/ds/cell-stack/cell-stack';
 import { DataTable, DsColumn } from '../../../../../shared/ds/data-table/data-table';
-import { Field } from '../../../../../shared/ds/field/field';
 import { FilterBar } from '../../../../../shared/ds/filter-bar/filter-bar';
 import { Icon } from '../../../../../shared/ds/icon/icon';
 import { IconButton } from '../../../../../shared/ds/icon-button/icon-button';
@@ -14,228 +31,275 @@ import { Input } from '../../../../../shared/ds/input/input';
 import { Modal } from '../../../../../shared/ds/modal/modal';
 import { Pagination } from '../../../../../shared/ds/pagination/pagination';
 import { Select, SelectOption } from '../../../../../shared/ds/select/select';
+import { AvisoBanner } from '../../../catalogo/components/aviso-banner/aviso-banner';
+import { ClienteDetalleModal } from '../../components/cliente-detalle-modal/cliente-detalle-modal';
+import { ClienteFormModal } from '../../components/cliente-form-modal/cliente-form-modal';
 import {
+  CATEGORIA_LABEL,
+  CategoriaCliente,
   Cliente,
-  ClienteFormModel,
-  TipoDocumento,
-  clienteFormVacio,
-  limpiarPersona,
+  TIPO_DOCUMENTO_LABEL,
   nombreCliente,
-  personaPorDocumento,
-  validarCliente,
 } from '../../interfaces/cliente.interface';
 import { ClienteService } from '../../services/cliente.service';
-import { departamentos, distritosDe, provinciasDe } from '../../interfaces/ubigeo';
 
-const PAGE_SIZE = 8;
+const MENSAJE_ERROR_ESTADO = 'No se pudo cambiar el estado del cliente. Intente nuevamente.';
 
 @Component({
-  imports: [Avatar, Badge, Button, CellStack, DataTable, Field, FilterBar, Icon, IconButton, Input, Modal, Pagination, Select],
+  imports: [
+    Avatar,
+    AvisoBanner,
+    Badge,
+    Button,
+    Card,
+    CellStack,
+    ClienteDetalleModal,
+    ClienteFormModal,
+    DataTable,
+    FilterBar,
+    Icon,
+    IconButton,
+    Input,
+    Modal,
+    Pagination,
+    Select,
+  ],
   selector: 'app-listar-clientes',
   templateUrl: './listar-clientes.html',
 })
-export class ListarClientes implements AfterViewInit {
+export class ListarClientes implements OnInit, AfterViewInit {
   private clienteService = inject(ClienteService);
+  private destroyRef = inject(DestroyRef);
 
-  @ViewChild('codigoCell', { static: true }) codigoCellTpl!: TemplateRef<{ $implicit: Cliente; index: number }>;
-  @ViewChild('clienteCell', { static: true }) clienteCellTpl!: TemplateRef<{ $implicit: Cliente; index: number }>;
-  @ViewChild('documentoCell', { static: true }) documentoCellTpl!: TemplateRef<{ $implicit: Cliente; index: number }>;
-  @ViewChild('tipoCell', { static: true }) tipoCellTpl!: TemplateRef<{ $implicit: Cliente; index: number }>;
-  @ViewChild('estadoCell', { static: true }) estadoCellTpl!: TemplateRef<{ $implicit: Cliente; index: number }>;
-  @ViewChild('accionesCell', { static: true }) accionesCellTpl!: TemplateRef<{ $implicit: Cliente; index: number }>;
+  @ViewChild('clienteCell', { static: true })
+  clienteCellTpl!: TemplateRef<{ $implicit: Cliente; index: number }>;
 
-  readonly LucideSearch = LucideSearch;
-  readonly LucidePlus = LucidePlus;
+  @ViewChild('documentoCell', { static: true })
+  documentoCellTpl!: TemplateRef<{ $implicit: Cliente; index: number }>;
+
+  @ViewChild('categoriaCell', { static: true })
+  categoriaCellTpl!: TemplateRef<{ $implicit: Cliente; index: number }>;
+
+  @ViewChild('estadoCell', { static: true })
+  estadoCellTpl!: TemplateRef<{ $implicit: Cliente; index: number }>;
+
+  @ViewChild('accionesCell', { static: true })
+  accionesCellTpl!: TemplateRef<{ $implicit: Cliente; index: number }>;
+
   readonly LucideEye = LucideEye;
   readonly LucidePencil = LucidePencil;
+  readonly LucidePlus = LucidePlus;
+  readonly LucideRotateCcw = LucideRotateCcw;
+  readonly LucideSearch = LucideSearch;
   readonly LucideTrash2 = LucideTrash2;
 
-  protected readonly nombreCliente = nombreCliente;
+  readonly nombreCliente = nombreCliente;
+  readonly tamanioPagina = 8;
 
-  protected readonly tipoOptions: SelectOption[] = [
-    { value: 'Mayorista', label: 'Mayorista' },
-    { value: 'Minorista', label: 'Minorista' },
+  readonly categoriaOptions: SelectOption[] = (
+    Object.keys(CATEGORIA_LABEL) as CategoriaCliente[]
+  ).map((value) => ({ value, label: CATEGORIA_LABEL[value] }));
+
+  // El <select> solo maneja strings: 'true'/'false' se convierte al booleano
+  // real en cargarClientes() (el backend exige el booleano literal).
+  readonly estadoOptions: SelectOption[] = [
+    { value: 'true', label: 'Activo' },
+    { value: 'false', label: 'Inactivo' },
   ];
 
-  protected readonly estadoOptions: SelectOption[] = [
-    { value: 'Activo', label: 'Activo' },
-    { value: 'Inactivo', label: 'Inactivo' },
-  ];
+  // Los filtros van contra el backend (GET /clientes): search, estado y
+  // categoria_cliente son query params reales.
+  query = signal('');
+  categoriaFiltro = signal('');
+  estadoFiltro = signal('');
 
-  protected readonly documentoOptions: SelectOption[] = [
-    { value: 'DNI', label: 'DNI' },
-    { value: 'CE', label: 'Carné de Extranjería' },
-    { value: 'Pasaporte', label: 'Pasaporte' },
-    { value: 'RUC', label: 'RUC' },
-  ];
+  clientes = signal<Cliente[]>([]);
+  total = signal(0);
+  pagina = signal(1);
+  totalPaginas = signal(0);
+  cargando = signal(true);
+  errorCarga = signal(false);
 
-  // --- Listado, búsqueda, filtros y paginación ---
-  protected readonly pageSize = PAGE_SIZE;
-  protected query = signal('');
-  protected tipoFiltro = signal('');
-  protected estadoFiltro = signal('');
-  protected documentoFiltro = signal('');
-  protected page = signal(1);
+  columnas = signal<DsColumn[]>([]);
 
-  protected clientesFiltrados = computed(() => {
-    const q = this.query().trim().toLowerCase();
-    const tipo = this.tipoFiltro();
-    const estado = this.estadoFiltro();
-    const documento = this.documentoFiltro();
-    return this.clienteService
-      .clientes()
-      .filter(
-        c =>
-          (!q ||
-            nombreCliente(c).toLowerCase().includes(q) ||
-            c.doc.toLowerCase().includes(q) ||
-            c.codigo.toLowerCase().includes(q)) &&
-          (!tipo || c.tipo === tipo) &&
-          (!estado || c.estado === estado) &&
-          (!documento || c.tipoDoc === documento),
-      );
-  });
+  aviso = signal('');
+  avisoTono = signal<'ok' | 'error'>('ok');
 
-  protected pageCount = computed(() => Math.max(1, Math.ceil(this.clientesFiltrados().length / PAGE_SIZE)));
-  protected paginaActual = computed(() => Math.min(this.page(), this.pageCount()));
+  modalFormAbierto = signal(false);
+  clienteEnEdicion = signal<Cliente | null>(null);
+  clienteEnDetalle = signal<Cliente | null>(null);
+  clienteADesactivar = signal<Cliente | null>(null);
+  procesandoEstado = signal(false);
 
-  protected clientesPagina = computed(() => {
-    const pagina = this.paginaActual();
-    return this.clientesFiltrados().slice((pagina - 1) * PAGE_SIZE, pagina * PAGE_SIZE);
-  });
-
-  protected columns = signal<DsColumn[]>([
-    { key: 'codigo', header: 'Código', width: '120px' },
-    { key: 'nombre', header: 'Cliente' },
-    { key: 'doc', header: 'Documento', width: '168px' },
-    { key: 'tipo', header: 'Tipo', width: '118px' },
-    { key: 'telefono', header: 'Teléfono', width: '130px', muted: true },
-    { key: 'estado', header: 'Estado', width: '110px' },
-    { key: 'acciones', header: 'Acciones', width: '150px', align: 'right' },
-  ]);
+  ngOnInit(): void {
+    this.cargarClientes();
+  }
 
   ngAfterViewInit(): void {
-    this.columns.update(cols =>
-      cols.map(col => {
-        if (col.key === 'codigo') return { ...col, cellTemplate: this.codigoCellTpl };
-        if (col.key === 'nombre') return { ...col, cellTemplate: this.clienteCellTpl };
-        if (col.key === 'doc') return { ...col, cellTemplate: this.documentoCellTpl };
-        if (col.key === 'tipo') return { ...col, cellTemplate: this.tipoCellTpl };
-        if (col.key === 'estado') return { ...col, cellTemplate: this.estadoCellTpl };
-        if (col.key === 'acciones') return { ...col, cellTemplate: this.accionesCellTpl };
-        return col;
-      }),
-    );
+    this.columnas.set([
+      { key: 'codigo', header: 'Código', width: '120px' },
+      { key: 'nombre', header: 'Cliente', cellTemplate: this.clienteCellTpl },
+      {
+        key: 'documento',
+        header: 'Documento',
+        width: '190px',
+        cellTemplate: this.documentoCellTpl,
+      },
+      { key: 'categoria', header: 'Tipo', width: '118px', cellTemplate: this.categoriaCellTpl },
+      { key: 'telefono', header: 'Teléfono', width: '130px', muted: true },
+      { key: 'estado', header: 'Estado', width: '110px', cellTemplate: this.estadoCellTpl },
+      {
+        key: 'acciones',
+        header: 'Acciones',
+        width: '230px',
+        align: 'right',
+        cellTemplate: this.accionesCellTpl,
+      },
+    ]);
   }
 
-  protected tipoTone(tipo: Cliente['tipo']): BadgeTone {
-    return tipo === 'Mayorista' ? 'brand' : 'neutral';
+  cargarClientes(pagina = this.pagina()): void {
+    this.pagina.set(pagina);
+    this.cargando.set(true);
+    this.errorCarga.set(false);
+
+    this.clienteService
+      .listar(pagina, this.tamanioPagina, {
+        search: this.query().trim() || undefined,
+        estado: this.estadoFiltro() === '' ? undefined : this.estadoFiltro() === 'true',
+        categoria: (this.categoriaFiltro() || undefined) as CategoriaCliente | undefined,
+      })
+      .pipe(
+        finalize(() => this.cargando.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (resultado) => {
+          this.clientes.set(resultado.clientes);
+          this.pagina.set(resultado.pagina);
+          this.total.set(resultado.total);
+          this.totalPaginas.set(resultado.totalPaginas);
+        },
+        error: () => {
+          this.clientes.set([]);
+          this.total.set(0);
+          this.totalPaginas.set(0);
+          this.errorCarga.set(true);
+        },
+      });
   }
 
-  protected estadoTone(estado: Cliente['estado']): BadgeTone {
-    return estado === 'Activo' ? 'success' : 'neutral';
+  setQuery(valor: string): void {
+    this.query.set(valor);
+    this.cargarClientes(1);
   }
 
-  // --- Alta / edición de cliente ---
-  protected modo = signal<'nuevo' | 'editar' | null>(null);
-  protected clienteSeleccionado = signal<string | null>(null);
-  protected f = signal<ClienteFormModel>(clienteFormVacio());
-  protected errores = signal<string[]>([]);
-
-  protected nuevoCliente() {
-    this.modo.set('nuevo');
-    this.clienteSeleccionado.set(null);
-    this.errores.set([]);
-    this.f.set(clienteFormVacio());
+  setCategoria(valor: string): void {
+    this.categoriaFiltro.set(valor);
+    this.cargarClientes(1);
   }
 
-  protected editarCliente(c: Cliente) {
-    this.modo.set('editar');
-    this.clienteSeleccionado.set(c.codigo);
-    this.errores.set([]);
-    this.f.set({ ...c });
+  setEstado(valor: string): void {
+    this.estadoFiltro.set(valor);
+    this.cargarClientes(1);
   }
 
-  // TODO: cuando exista el módulo de Pedidos, construir la vista de detalle
-  // (RF-A21/22) mostrando también el historial de pedidos finalizados.
-  protected verCliente(c: Cliente) {
-    console.log('ver detalle (pendiente, depende de Pedidos)', c.codigo);
+  cambiarPagina(pagina: number): void {
+    if (pagina !== this.pagina() && pagina >= 1 && pagina <= this.totalPaginas()) {
+      this.cargarClientes(pagina);
+    }
   }
 
-  protected cerrarForm() {
-    this.modo.set(null);
-    this.clienteSeleccionado.set(null);
-    this.errores.set([]);
+  categoriaTone(categoria: CategoriaCliente): BadgeTone {
+    return categoria === 'mayorista' ? 'brand' : 'neutral';
   }
 
-  protected actualizarCampo<K extends keyof ClienteFormModel>(campo: K, valor: ClienteFormModel[K]) {
-    this.f.update(curr => ({ ...curr, [campo]: valor }));
+  categoriaLabel(categoria: CategoriaCliente): string {
+    return CATEGORIA_LABEL[categoria];
   }
 
-  protected onTipoDoc(tipoDoc: string) {
-    const t = tipoDoc as TipoDocumento;
-    this.f.update(curr => limpiarPersona({ ...curr, tipoDoc: t }, personaPorDocumento(t, curr.doc)));
+  estadoTone(estado: boolean): BadgeTone {
+    return estado ? 'success' : 'neutral';
   }
 
-  protected readonly departamentoOptions: SelectOption[] = departamentos().map(d => ({ value: d, label: d }));
-
-  protected provinciaOptions = computed<SelectOption[]>(() => provinciasDe(this.f().departamento).map(p => ({ value: p, label: p })));
-
-  protected distritoOptions = computed<SelectOption[]>(() =>
-    distritosDe(this.f().departamento, this.f().provincia).map(d => ({ value: d, label: d })),
-  );
-
-  protected onDepartamento(valor: string) {
-    this.f.update(curr => ({ ...curr, departamento: valor, provincia: '', distrito: '' }));
+  documentoLabel(cliente: Cliente): string {
+    return TIPO_DOCUMENTO_LABEL[cliente.tipoDocumento];
   }
 
-  protected onProvincia(valor: string) {
-    this.f.update(curr => ({ ...curr, provincia: valor, distrito: '' }));
+  // --- Alta / edición / detalle ---
+  nuevoCliente(): void {
+    this.clienteEnEdicion.set(null);
+    this.modalFormAbierto.set(true);
   }
 
-  protected onTipo(valor: string) {
-    this.actualizarCampo('tipo', valor as Cliente['tipo']);
+  editarCliente(cliente: Cliente): void {
+    this.clienteEnEdicion.set(cliente);
+    this.modalFormAbierto.set(true);
   }
 
-  protected onDoc(valor: string) {
-    const doc = valor.replace(/\s/g, '');
-    this.f.update(curr => limpiarPersona({ ...curr, doc }, personaPorDocumento(curr.tipoDoc, doc)));
+  cerrarForm(): void {
+    this.modalFormAbierto.set(false);
+    this.clienteEnEdicion.set(null);
   }
 
-  protected guardar() {
-    const f = this.f();
-    const errores = validarCliente(f);
-    if (errores.length) {
-      this.errores.set(errores);
+  verCliente(cliente: Cliente): void {
+    this.clienteEnDetalle.set(cliente);
+  }
+
+  clienteGuardado(aviso: string): void {
+    this.mostrarAviso(aviso, 'ok');
+    this.cargarClientes();
+  }
+
+  // --- Desactivar (lógico, con confirmación) y reactivar ---
+  pedirDesactivar(cliente: Cliente): void {
+    this.clienteADesactivar.set(cliente);
+  }
+
+  cancelarDesactivar(): void {
+    this.clienteADesactivar.set(null);
+  }
+
+  confirmarDesactivar(): void {
+    const cliente = this.clienteADesactivar();
+    if (!cliente) {
       return;
     }
-    if (this.modo() === 'editar') {
-      this.clienteService.actualizar(this.clienteSeleccionado()!, f);
-    } else {
-      this.clienteService.registrar(f);
-    }
-    this.cerrarForm();
+
+    this.procesandoEstado.set(true);
+    this.clienteService
+      .desactivar(cliente.id)
+      .pipe(
+        finalize(() => {
+          this.procesandoEstado.set(false);
+          this.clienteADesactivar.set(null);
+        }),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: () => {
+          this.mostrarAviso(`Cliente ${nombreCliente(cliente)} desactivado.`, 'ok');
+          this.cargarClientes();
+        },
+        error: () => this.mostrarAviso(MENSAJE_ERROR_ESTADO, 'error'),
+      });
   }
 
-  // --- Eliminar (lógico: alterna Activo/Inactivo, no borra el registro) ---
-  protected clienteAEliminarCodigo = signal<string | null>(null);
-
-  protected clienteAEliminar = computed(() => {
-    const codigo = this.clienteAEliminarCodigo();
-    return codigo ? (this.clienteService.clientes().find(c => c.codigo === codigo) ?? null) : null;
-  });
-
-  protected pedirEliminar(c: Cliente) {
-    this.clienteAEliminarCodigo.set(c.codigo);
+  reactivarCliente(cliente: Cliente): void {
+    this.clienteService
+      .activar(cliente.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.mostrarAviso(`Cliente ${nombreCliente(cliente)} reactivado.`, 'ok');
+          this.cargarClientes();
+        },
+        error: () => this.mostrarAviso(MENSAJE_ERROR_ESTADO, 'error'),
+      });
   }
 
-  protected cancelarEliminar() {
-    this.clienteAEliminarCodigo.set(null);
-  }
-
-  protected confirmarEliminar() {
-    const codigo = this.clienteAEliminarCodigo();
-    if (codigo) this.clienteService.alternarEstado(codigo);
-    this.clienteAEliminarCodigo.set(null);
+  private mostrarAviso(texto: string, tono: 'ok' | 'error'): void {
+    this.aviso.set(texto);
+    this.avisoTono.set(tono);
   }
 }

@@ -1,0 +1,40 @@
+<app-ds-modal
+  [open]="cliente() !== null"
+  [title]="titulo()"
+  [hasIcon]="true"
+  [hasFooter]="true"
+  [width]="640"
+  (closed)="cerrar()"
+>
+  <span
+    icon
+    class="flex h-9 w-9 items-center justify-center rounded-md bg-[rgba(255,255,255,0.18)]"
+  >
+    <app-ds-icon [img]="LucideEye" [size]="18" />
+  </span>
+
+  @if (cliente(); as c) {
+    <div class="flex flex-col gap-5">
+      <div>
+        <app-ds-badge [tone]="c.estado ? 'success' : 'neutral'" [dot]="true">
+          {{ c.estado ? 'Activo' : 'Inactivo' }}
+        </app-ds-badge>
+      </div>
+
+      <div class="grid grid-cols-[repeat(auto-fit,minmax(170px,1fr))] gap-x-5 gap-y-4">
+        @for (campo of campos(); track campo.label) {
+          <div class="min-w-0">
+            <div class="text-ds-sm text-muted-foreground">{{ campo.label }}</div>
+            <div class="mt-1 break-words font-medium text-foreground">{{ campo.value }}</div>
+          </div>
+        }
+      </div>
+
+      <p class="text-ds-sm text-muted-foreground">Historial de pedidos — próximamente.</p>
+    </div>
+  }
+
+  <span footer>
+    <app-ds-button variant="secondary" (clicked)="cerrar()">Cerrar</app-ds-button>
+  </span>
+</app-ds-modal>
