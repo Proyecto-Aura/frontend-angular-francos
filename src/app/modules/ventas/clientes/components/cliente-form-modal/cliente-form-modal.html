@@ -1,0 +1,232 @@
+<app-ds-modal
+  [open]="open()"
+  [title]="titulo()"
+  [hasIcon]="true"
+  [hasFooter]="true"
+  [width]="640"
+  (closed)="cerrar()"
+>
+  <span
+    icon
+    class="flex h-9 w-9 items-center justify-center rounded-md bg-[rgba(255,255,255,0.18)]"
+  >
+    <app-ds-icon [img]="tituloIcon()" [size]="18" />
+  </span>
+
+  <div class="flex flex-col gap-4">
+    @if (errores().length) {
+      <div
+        class="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-ds-sm text-destructive"
+        role="alert"
+      >
+        <p class="font-semibold">Revisa estos campos:</p>
+        <ul class="mt-1 list-disc pl-4">
+          @for (e of errores(); track e) {
+            <li>{{ e }}</li>
+          }
+        </ul>
+      </div>
+    }
+
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <app-ds-field label="Tipo de documento" htmlFor="cliente-tipo-documento" [required]="true">
+        <app-ds-select
+          id="cliente-tipo-documento"
+          [value]="f().tipoDocumento"
+          (valueChange)="onTipoDocumento($event)"
+          [options]="documentoOptions"
+        />
+      </app-ds-field>
+      <app-ds-field
+        label="Número de documento"
+        htmlFor="cliente-numero-documento"
+        [required]="true"
+        [hint]="pistaDocumento()"
+      >
+        <app-ds-input
+          id="cliente-numero-documento"
+          [value]="f().numeroDocumento"
+          (valueChange)="onNumeroDocumento($event)"
+          placeholder="Número de documento"
+        />
+      </app-ds-field>
+    </div>
+
+    @if (esEmpresa()) {
+      <p class="text-ds-sm font-semibold text-foreground">Datos de empresa</p>
+      <app-ds-field label="Razón social" htmlFor="cliente-razon-social" [required]="true">
+        <app-ds-input
+          id="cliente-razon-social"
+          [value]="f().razonSocial"
+          (valueChange)="setCampo('razonSocial', $event)"
+          placeholder="Razón social"
+        />
+      </app-ds-field>
+
+      <p class="text-ds-sm font-semibold text-foreground">Datos del contacto</p>
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <app-ds-field label="Nombres" htmlFor="cliente-nombres" [required]="true">
+          <app-ds-input
+            id="cliente-nombres"
+            [value]="f().nombres"
+            (valueChange)="setCampo('nombres', $event)"
+            placeholder="Nombres"
+          />
+        </app-ds-field>
+        <app-ds-field label="Apellido paterno" htmlFor="cliente-apellido-paterno" [required]="true">
+          <app-ds-input
+            id="cliente-apellido-paterno"
+            [value]="f().apellidoPaterno"
+            (valueChange)="setCampo('apellidoPaterno', $event)"
+            placeholder="Apellido paterno"
+          />
+        </app-ds-field>
+        <app-ds-field label="Apellido materno" htmlFor="cliente-apellido-materno" [required]="true">
+          <app-ds-input
+            id="cliente-apellido-materno"
+            [value]="f().apellidoMaterno"
+            (valueChange)="setCampo('apellidoMaterno', $event)"
+            placeholder="Apellido materno"
+          />
+        </app-ds-field>
+      </div>
+    } @else {
+      <p class="text-ds-sm font-semibold text-foreground">Datos personales</p>
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <app-ds-field label="Nombres" htmlFor="cliente-nombres" [required]="true">
+          <app-ds-input
+            id="cliente-nombres"
+            [value]="f().nombres"
+            (valueChange)="setCampo('nombres', $event)"
+            placeholder="Nombres"
+          />
+        </app-ds-field>
+        <app-ds-field label="Fecha de nacimiento" htmlFor="cliente-nacimiento" [required]="true">
+          <app-ds-input
+            id="cliente-nacimiento"
+            type="date"
+            [value]="f().fechaNacimiento"
+            (valueChange)="setCampo('fechaNacimiento', $event)"
+          />
+        </app-ds-field>
+        <app-ds-field label="Apellido paterno" htmlFor="cliente-apellido-paterno" [required]="true">
+          <app-ds-input
+            id="cliente-apellido-paterno"
+            [value]="f().apellidoPaterno"
+            (valueChange)="setCampo('apellidoPaterno', $event)"
+            placeholder="Apellido paterno"
+          />
+        </app-ds-field>
+        <app-ds-field label="Apellido materno" htmlFor="cliente-apellido-materno" [required]="true">
+          <app-ds-input
+            id="cliente-apellido-materno"
+            [value]="f().apellidoMaterno"
+            (valueChange)="setCampo('apellidoMaterno', $event)"
+            placeholder="Apellido materno"
+          />
+        </app-ds-field>
+      </div>
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <app-ds-field label="Departamento" htmlFor="cliente-departamento" [required]="true">
+          <app-ds-select
+            id="cliente-departamento"
+            [value]="f().departamentoId"
+            (valueChange)="onDepartamento($event)"
+            [options]="departamentoOptions()"
+            placeholder="Seleccionar"
+          />
+        </app-ds-field>
+        <app-ds-field label="Provincia" htmlFor="cliente-provincia" [required]="true">
+          <app-ds-select
+            id="cliente-provincia"
+            [value]="f().provinciaId"
+            (valueChange)="onProvincia($event)"
+            [options]="provinciaOptions()"
+            [placeholder]="f().departamentoId ? 'Seleccionar' : 'Elige un departamento'"
+            [disabled]="!f().departamentoId"
+          />
+        </app-ds-field>
+        <app-ds-field label="Distrito" htmlFor="cliente-distrito" [required]="true">
+          <app-ds-select
+            id="cliente-distrito"
+            [value]="f().distritoId"
+            (valueChange)="onDistrito($event)"
+            [options]="distritoOptions()"
+            [placeholder]="f().provinciaId ? 'Seleccionar' : 'Elige una provincia'"
+            [disabled]="!f().provinciaId"
+          />
+        </app-ds-field>
+      </div>
+      <app-ds-field label="Dirección" htmlFor="cliente-direccion" [required]="true">
+        <app-ds-input
+          id="cliente-direccion"
+          [value]="f().direccion"
+          (valueChange)="setCampo('direccion', $event)"
+          placeholder="Ej. Av. Grau 245, Urb. Los Pinos"
+        />
+      </app-ds-field>
+    }
+
+    <p class="text-ds-sm font-semibold text-foreground">Datos comerciales</p>
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <app-ds-field label="Tipo de cliente" htmlFor="cliente-categoria" [required]="true">
+        <app-ds-select
+          id="cliente-categoria"
+          [value]="f().categoria"
+          (valueChange)="onCategoria($event)"
+          [options]="categoriaOptions"
+        />
+      </app-ds-field>
+      <app-ds-field label="Teléfono" htmlFor="cliente-telefono" [required]="true" hint="9 dígitos">
+        <app-ds-input
+          id="cliente-telefono"
+          [value]="f().telefono"
+          (valueChange)="setCampo('telefono', $event)"
+          placeholder="987654321"
+        />
+      </app-ds-field>
+    </div>
+    <app-ds-field
+      [label]="esEmpresa() ? 'Correo de la empresa' : 'Correo'"
+      htmlFor="cliente-email"
+      [required]="!modoEdicion()"
+      [hint]="
+        modoEdicion()
+          ? 'El correo pertenece a la cuenta de acceso y no se edita aquí.'
+          : 'Recibe el correo de verificación con las credenciales por defecto.'
+      "
+    >
+      <app-ds-input
+        id="cliente-email"
+        type="email"
+        [value]="f().email"
+        (valueChange)="setCampo('email', $event)"
+        placeholder="correo@dominio.com"
+        [disabled]="modoEdicion()"
+      />
+    </app-ds-field>
+
+    @if (!modoEdicion()) {
+      <p class="text-ds-sm text-muted-foreground">
+        El usuario y la contraseña iniciales son el número de documento; el cliente debe cambiarlos
+        al ingresar por primera vez.
+      </p>
+    }
+
+    @if (errorGeneral()) {
+      <div
+        class="rounded-lg bg-destructive/10 px-3.5 py-3 text-ds-sm text-destructive"
+        role="alert"
+      >
+        {{ errorGeneral() }}
+      </div>
+    }
+  </div>
+
+  <span footer class="flex gap-2">
+    <app-ds-button variant="secondary" (clicked)="cerrar()">Cancelar</app-ds-button>
+    <app-ds-button variant="primary" [disabled]="guardando()" (clicked)="guardar()">
+      {{ guardando() ? 'Guardando…' : modoEdicion() ? 'Guardar cambios' : 'Registrar cliente' }}
+    </app-ds-button>
+  </span>
+</app-ds-modal>

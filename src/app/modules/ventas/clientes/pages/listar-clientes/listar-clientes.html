@@ -1,1 +1,169 @@
-<p>listar-clientes works!</p>
+<div class="flex flex-col gap-5 p-(--page-padding)">
+  <div>
+    <h1 class="text-ds-2xl font-semibold text-foreground">Gestión de clientes</h1>
+    <p class="mt-1 text-ds-base text-muted-foreground">
+      Registro, edición y consulta de la cartera de clientes mayoristas y minoristas.
+    </p>
+  </div>
+
+  <app-aviso-banner [texto]="aviso()" [tono]="avisoTono()" (closed)="aviso.set('')" />
+
+  <app-ds-filter-bar [hasSearch]="true" [hasActions]="true">
+    <app-ds-input
+      search
+      [value]="query()"
+      (valueChange)="setQuery($event)"
+      placeholder="Nombre, razón social o documento…"
+      [hasIcon]="true"
+    >
+      <span icon><app-ds-icon [img]="LucideSearch" [size]="16" /></span>
+    </app-ds-input>
+
+    <div filters class="w-[180px]">
+      <app-ds-select
+        [value]="categoriaFiltro()"
+        (valueChange)="setCategoria($event)"
+        [options]="categoriaOptions"
+        placeholder="Todos los tipos"
+      />
+    </div>
+    <div filters class="w-[190px]">
+      <app-ds-select
+        [value]="estadoFiltro()"
+        (valueChange)="setEstado($event)"
+        [options]="estadoOptions"
+        placeholder="Todos los estados"
+      />
+    </div>
+
+    <span actions>
+      <app-ds-button size="sm" (clicked)="nuevoCliente()">
+        <span icon><app-ds-icon [img]="LucidePlus" [size]="16" /></span>
+        Registrar cliente
+      </app-ds-button>
+    </span>
+  </app-ds-filter-bar>
+
+  <app-ds-card [padded]="false" [hasFooter]="totalPaginas() > 1">
+    @if (cargando()) {
+      <div class="p-12 text-center text-muted-foreground">Cargando…</div>
+    } @else if (errorCarga()) {
+      <div class="flex flex-col items-center gap-3 p-12 text-center">
+        <p class="text-muted-foreground">No se pudieron cargar los clientes.</p>
+        <app-ds-button variant="secondary" (clicked)="cargarClientes()">Reintentar</app-ds-button>
+      </div>
+    } @else {
+      <app-ds-data-table
+        [columns]="columnas()"
+        [rows]="clientes()"
+        empty="No se encontraron clientes"
+      />
+    }
+
+    @if (totalPaginas() > 1) {
+      <div footer>
+        <app-ds-pagination
+          [page]="pagina()"
+          [pageCount]="totalPaginas()"
+          [total]="total()"
+          [pageSize]="tamanioPagina"
+          (changed)="cambiarPagina($event)"
+        />
+      </div>
+    }
+  </app-ds-card>
+
+  <app-cliente-form-modal
+    [open]="modalFormAbierto()"
+    [cliente]="clienteEnEdicion()"
+    (closed)="cerrarForm()"
+    (saved)="clienteGuardado($event)"
+  />
+
+  <app-cliente-detalle-modal [cliente]="clienteEnDetalle()" (closed)="clienteEnDetalle.set(null)" />
+
+  <!-- Confirmar desactivación (lógica: el cliente se conserva en el historial) -->
+  <app-ds-modal
+    [open]="clienteADesactivar() !== null"
+    title="Desactivar cliente"
+    [width]="480"
+    [hasFooter]="true"
+    (closed)="cancelarDesactivar()"
+  >
+    @if (clienteADesactivar(); as c) {
+      <p class="text-ds-sm text-muted-foreground">
+        ¿Seguro que deseas desactivar a
+        <strong class="text-foreground">{{ nombreCliente(c) }}</strong
+        >? El cliente dejará de aparecer en nuevos pedidos, pero se mantiene en el historial y
+        puedes reactivarlo cuando quieras.
+      </p>
+    }
+    <span footer class="flex gap-2">
+      <app-ds-button variant="secondary" (clicked)="cancelarDesactivar()">Cancelar</app-ds-button>
+      <app-ds-button [disabled]="procesandoEstado()" (clicked)="confirmarDesactivar()">
+        {{ procesandoEstado() ? 'Desactivando…' : 'Desactivar cliente' }}
+      </app-ds-button>
+    </span>
+  </app-ds-modal>
+</div>
+
+<ng-template #clienteCell let-c>
+  <span class="inline-flex min-w-0 items-center gap-3">
+    <app-ds-avatar [name]="nombreCliente(c)" size="sm" />
+    <app-ds-cell-stack [primary]="nombreCliente(c)" [secondary]="c.email" />
+  </span>
+</ng-template>
+
+<ng-template #documentoCell let-c>
+  <app-ds-cell-stack
+    [primary]="c.numeroDocumento"
+    [secondary]="documentoLabel(c)"
+    [strong]="false"
+  />
+</ng-template>
+
+<ng-template #categoriaCell let-c>
+  <app-ds-badge [tone]="categoriaTone(c.categoria)">{{ categoriaLabel(c.categoria) }}</app-ds-badge>
+</ng-template>
+
+<ng-template #estadoCell let-c>
+  <app-ds-badge [tone]="estadoTone(c.estado)" [dot]="true">
+    {{ c.estado ? 'Activo' : 'Inactivo' }}
+  </app-ds-badge>
+</ng-template>
+
+<ng-template #accionesCell let-c>
+  <span class="inline-flex items-center justify-end gap-1.5">
+    <app-ds-button variant="secondary" size="sm" (clicked)="verCliente(c)">
+      <span icon><app-ds-icon [img]="LucideEye" [size]="16" /></span>
+      Ver detalle
+    </app-ds-button>
+    <app-ds-icon-button
+      label="Editar cliente"
+      variant="secondary"
+      size="sm"
+      (clicked)="editarCliente(c)"
+    >
+      <app-ds-icon [img]="LucidePencil" [size]="16" />
+    </app-ds-icon-button>
+    @if (c.estado) {
+      <app-ds-icon-button
+        label="Desactivar cliente"
+        variant="secondary"
+        size="sm"
+        (clicked)="pedirDesactivar(c)"
+      >
+        <app-ds-icon [img]="LucideTrash2" [size]="16" />
+      </app-ds-icon-button>
+    } @else {
+      <app-ds-icon-button
+        label="Reactivar cliente"
+        variant="secondary"
+        size="sm"
+        (clicked)="reactivarCliente(c)"
+      >
+        <app-ds-icon [img]="LucideRotateCcw" [size]="16" />
+      </app-ds-icon-button>
+    }
+  </span>
+</ng-template>
