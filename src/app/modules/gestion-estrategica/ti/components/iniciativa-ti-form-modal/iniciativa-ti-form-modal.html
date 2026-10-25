@@ -1,0 +1,137 @@
+<app-ds-modal
+  [open]="open()"
+  [title]="titulo()"
+  [description]="plan().nombre"
+  [hasFooter]="true"
+  [width]="560"
+  (closed)="cerrar()"
+>
+  <div class="flex flex-col gap-4">
+    <app-ds-field
+      label="Nombre de la iniciativa"
+      htmlFor="iniciativa-nombre"
+      [required]="true"
+      [error]="errores().nombre ?? null"
+    >
+      <app-ds-input
+        id="iniciativa-nombre"
+        [(value)]="nombre"
+        placeholder="Ej. Implementar programa de fidelización"
+        [invalid]="!!errores().nombre"
+      />
+    </app-ds-field>
+
+    <app-ds-field label="Descripción" htmlFor="iniciativa-descripcion" hint="Opcional">
+      <app-ds-textarea
+        id="iniciativa-descripcion"
+        [(value)]="descripcion"
+        [rows]="3"
+        placeholder="Alcance de la iniciativa"
+      />
+    </app-ds-field>
+
+    <app-ds-field
+      label="Objetivo estratégico de TI"
+      htmlFor="iniciativa-objetivo"
+      [required]="true"
+      [error]="errores().objetivoId ?? null"
+    >
+      <app-ds-select
+        id="iniciativa-objetivo"
+        [(value)]="objetivoId"
+        [options]="opcionesObjetivo()"
+        placeholder="Selecciona un objetivo"
+        [invalid]="!!errores().objetivoId"
+      />
+    </app-ds-field>
+
+    <app-ds-field
+      label="Responsable"
+      htmlFor="iniciativa-responsable"
+      [required]="true"
+      [error]="errores().responsable ?? null"
+    >
+      <app-ds-input
+        id="iniciativa-responsable"
+        [(value)]="responsable"
+        placeholder="Nombre del responsable"
+        [invalid]="!!errores().responsable"
+      />
+    </app-ds-field>
+
+    <app-ds-field
+      label="Presupuesto"
+      hint="Opcional (S/)"
+      htmlFor="iniciativa-presupuesto"
+      [error]="errores().presupuesto ?? null"
+    >
+      <app-ds-input
+        id="iniciativa-presupuesto"
+        type="number"
+        [(value)]="presupuesto"
+        placeholder="0.00"
+        [invalid]="!!errores().presupuesto"
+      />
+    </app-ds-field>
+
+    <div class="grid gap-4 md:grid-cols-2">
+      <app-ds-field
+        label="Fecha de inicio"
+        htmlFor="iniciativa-fecha-inicio"
+        [required]="true"
+        [error]="errores().fechaInicio ?? null"
+      >
+        <app-ds-input
+          id="iniciativa-fecha-inicio"
+          type="date"
+          [(value)]="fechaInicio"
+          [invalid]="!!errores().fechaInicio"
+          [attr.min]="fechaMinima()"
+          [attr.max]="fechaMaxima()"
+        />
+      </app-ds-field>
+
+      <app-ds-field
+        label="Fecha de fin"
+        htmlFor="iniciativa-fecha-fin"
+        [required]="true"
+        [error]="errores().fechaFin ?? null"
+      >
+        <app-ds-input
+          id="iniciativa-fecha-fin"
+          type="date"
+          [(value)]="fechaFin"
+          [invalid]="!!errores().fechaFin"
+          [attr.min]="fechaMinima()"
+          [attr.max]="fechaMaxima()"
+        />
+      </app-ds-field>
+    </div>
+
+    @if (!modoEdicion()) {
+      <div
+        class="flex items-center justify-between rounded-lg border border-border bg-muted px-4 py-3"
+      >
+        <span class="text-ds-sm text-muted-foreground">Estado inicial</span>
+        <app-ds-badge tone="neutral" [dot]="true">Pendiente</app-ds-badge>
+      </div>
+    }
+
+    @if (errorGeneral()) {
+      <div class="rounded-lg bg-destructive/10 px-3.5 py-3 text-ds-sm text-destructive">
+        {{ errorGeneral() }}
+      </div>
+    }
+  </div>
+
+  <span footer class="flex gap-2">
+    <app-ds-button variant="secondary" (clicked)="cerrar()">Cancelar</app-ds-button>
+    <app-ds-button variant="primary" [disabled]="guardando()" (clicked)="guardar()">
+      @if (guardando()) {
+        Guardando…
+      } @else {
+        {{ modoEdicion() ? 'Guardar cambios' : 'Crear iniciativa' }}
+      }
+    </app-ds-button>
+  </span>
+</app-ds-modal>
