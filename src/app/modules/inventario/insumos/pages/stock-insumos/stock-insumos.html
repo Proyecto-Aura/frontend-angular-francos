@@ -111,8 +111,10 @@
         </div>
       }
     </app-ds-card>
-  } @else {
+  } @else if (activeTab() === 'historial') {
     <app-historial-movimientos-insumo />
+  } @else {
+    <app-lotes-insumo-general />
   }
 
   <app-insumo-form-modal
@@ -132,6 +134,7 @@
 
   <app-movimiento-form-modal
     [open]="modalMovimientoAbierto()"
+    [insumoPreseleccionado]="insumoParaMovimiento()"
     (closed)="cerrarFormMovimiento()"
     (saved)="movimientoGuardado()"
   />
@@ -175,7 +178,12 @@
       <app-ds-icon [img]="LucidePencil" [size]="16" />
     </app-ds-icon-button>
 
-    <app-ds-icon-button label="Registrar movimiento" variant="secondary" size="md">
+    <app-ds-icon-button
+      label="Registrar movimiento"
+      variant="secondary"
+      size="md"
+      (clicked)="abrirRegistrarMovimiento(insumo)"
+    >
       <app-ds-icon [img]="LucideArrowLeftRight" [size]="16" />
     </app-ds-icon-button>
 

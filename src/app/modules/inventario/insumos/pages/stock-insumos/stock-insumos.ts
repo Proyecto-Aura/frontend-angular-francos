@@ -44,6 +44,7 @@ import { HistorialMovimientosInsumo } from '../../components/historial-movimient
 import { InsumoDetalleModal } from '../../components/insumo-detalle-modal/insumo-detalle-modal';
 import { InsumoFormModal } from '../../components/insumo-form-modal/insumo-form-modal';
 import { LoteFormModal } from '../../components/lote-form-modal/lote-form-modal';
+import { LotesInsumoGeneral } from '../../components/lotes-insumo-general/lotes-insumo-general';
 import { MovimientoFormModal } from '../../components/movimiento-form-modal/movimiento-form-modal';
 import {
   Insumo,
@@ -53,6 +54,7 @@ import {
   calcularNivelStock,
 } from '../../interfaces/insumo.interface';
 import { InsumoService } from '../../services/insumo.service';
+import { LoteInsumoService } from '../../services/lote-insumo.service';
 
 const RESUMEN_VACIO: ResumenInsumos = { total: 0, normal: 0, alto: 0, bajo: 0, agotados: 0 };
 
@@ -103,6 +105,7 @@ const NIVEL_TONE: Record<NivelStock, BadgeTone> = {
     InsumoFormModal,
     KpiCard,
     LoteFormModal,
+    LotesInsumoGeneral,
     MovimientoFormModal,
     Pagination,
     Select,
@@ -113,6 +116,7 @@ const NIVEL_TONE: Record<NivelStock, BadgeTone> = {
 })
 export class StockInsumos implements OnInit, AfterViewInit {
   private insumoService = inject(InsumoService);
+  private loteService = inject(LoteInsumoService);
   private destroyRef = inject(DestroyRef);
 
   @ViewChild('insumoCell', { static: true })
@@ -166,7 +170,7 @@ export class StockInsumos implements OnInit, AfterViewInit {
     { value: 'agotado', label: 'Agotado' },
   ];
 
-  activeTab = signal<'stock' | 'historial'>('stock');
+  activeTab = signal<'stock' | 'historial' | 'lotes'>('stock');
   columnas = signal<DsColumn[]>([]);
 
   // --- Filtros (van contra el backend: search/estado/tipo/nivel son query
@@ -190,20 +194,31 @@ export class StockInsumos implements OnInit, AfterViewInit {
   // el backend con el mismo criterio que calcularNivelStock() de abajo.
   resumen = signal<ResumenInsumos>(RESUMEN_VACIO);
 
+  // Solo para el contador de la pestaña "Lotes" — se pide aparte (limit=1,
+  // solo interesa meta.total) porque LotesInsumoGeneral es autonomo (carga
+  // sus propios datos, igual que HistorialMovimientosInsumo) y no expone su
+  // total hacia este componente.
+  lotesTotal = signal(0);
+
   modalFormAbierto = signal(false);
   insumoEnEdicion = signal<Insumo | null>(null);
   insumoEnDetalle = signal<Insumo | null>(null);
   modalLoteAbierto = signal(false);
   modalMovimientoAbierto = signal(false);
+  // Insumo de origen cuando se abre desde el icono "Registrar movimiento" de
+  // una fila (null = se abrio desde el boton general, sin preseleccion).
+  insumoParaMovimiento = signal<Insumo | null>(null);
 
   tabs = computed<DsTab[]>(() => [
     { id: 'stock', label: 'Stock', icon: LucidePackage, count: this.resumen().total },
     { id: 'historial', label: 'Historial de movimientos', icon: LucideClock, count: 0 },
+    { id: 'lotes', label: 'Lotes', icon: LucideLayers, count: this.lotesTotal() },
   ]);
 
   ngOnInit(): void {
     this.cargarInsumos();
     this.cargarResumen();
+    this.cargarLotesTotal();
   }
 
   ngAfterViewInit(): void {
@@ -262,6 +277,16 @@ export class StockInsumos implements OnInit, AfterViewInit {
       });
   }
 
+  cargarLotesTotal(): void {
+    this.loteService
+      .listar(1, 1)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (pagina) => this.lotesTotal.set(pagina.total),
+        error: () => this.lotesTotal.set(0),
+      });
+  }
+
   recargarTodo(): void {
     this.cargarInsumos(this.pagina());
     this.cargarResumen();
@@ -294,7 +319,11 @@ export class StockInsumos implements OnInit, AfterViewInit {
   }
 
   cambiarTab(id: string): void {
-    this.activeTab.set(id === 'historial' ? 'historial' : 'stock');
+    if (id === 'historial' || id === 'lotes') {
+      this.activeTab.set(id);
+      return;
+    }
+    this.activeTab.set('stock');
   }
 
   abrirNuevoInsumo(): void {
@@ -330,12 +359,14 @@ export class StockInsumos implements OnInit, AfterViewInit {
     this.recargarTodo();
   }
 
-  abrirRegistrarMovimiento(): void {
+  abrirRegistrarMovimiento(insumo: Insumo | null = null): void {
+    this.insumoParaMovimiento.set(insumo);
     this.modalMovimientoAbierto.set(true);
   }
 
   cerrarFormMovimiento(): void {
     this.modalMovimientoAbierto.set(false);
+    this.insumoParaMovimiento.set(null);
   }
 
   movimientoGuardado(): void {

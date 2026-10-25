@@ -76,7 +76,30 @@ describe('LoteInsumoService', () => {
         !request.params.has('search') &&
         !request.params.has('insumo_id') &&
         !request.params.has('estado') &&
-        !request.params.has('activo'),
+        !request.params.has('activo') &&
+        !request.params.has('vence_desde') &&
+        !request.params.has('vence_hasta'),
+    );
+    req.flush({ data: [], meta: { total: 0, page: 1, limit: 10, total_pages: 0 } });
+  });
+
+  it('sends vence_desde/vence_hasta como rango sobre fecha_vencimiento', () => {
+    service.listar(1, 10, { venceDesde: '2026-10-01', venceHasta: '2026-10-31' }).subscribe();
+
+    const req = httpMock.expectOne(
+      (request) =>
+        request.url === LOTES_BASE &&
+        request.params.get('vence_desde') === '2026-10-01' &&
+        request.params.get('vence_hasta') === '2026-10-31',
+    );
+    req.flush({ data: [], meta: { total: 0, page: 1, limit: 10, total_pages: 0 } });
+  });
+
+  it('sends estado=por_vencer (4to estado calculado por el backend al leer)', () => {
+    service.listar(1, 10, { estado: 'por_vencer' }).subscribe();
+
+    const req = httpMock.expectOne(
+      (request) => request.url === LOTES_BASE && request.params.get('estado') === 'por_vencer',
     );
     req.flush({ data: [], meta: { total: 0, page: 1, limit: 10, total_pages: 0 } });
   });
