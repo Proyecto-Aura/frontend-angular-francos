@@ -68,7 +68,6 @@ export class ProductoDetalle {
           ? `-${f.promo.pct}% del ${fechaCorta(f.promo.ini)} al ${fechaCorta(f.promo.fin)}`
           : 'Sin promoción',
       },
-      { label: 'Visible en Portal B', value: f.visible ? 'Activado' : 'Desactivado' },
       { label: 'Slug', value: f.slug || '—' },
     ];
   });
