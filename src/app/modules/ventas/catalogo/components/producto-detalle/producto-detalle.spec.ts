@@ -44,11 +44,19 @@ describe('ProductoDetalle', () => {
     el = fixture.nativeElement as HTMLElement;
   });
 
-  it('no muestra un segundo interruptor "Visible en Portal B": el estado Activo/Desactivado es el único', () => {
+  it('"Visible en Portal B" sigue al estado: Activado si está Activo, aunque la columna visible sea false', () => {
     mostrar(makeFila({ estado: 'Activo', visible: false }));
 
-    expect(el.textContent).not.toContain('Visible en Portal B');
-    expect(el.textContent).toContain('Activo');
+    expect(el.textContent).toContain('Visible en Portal B');
+    expect(el.textContent).toContain('Activado');
+    expect(el.textContent).not.toContain('Desactivado');
+  });
+
+  it('"Visible en Portal B" aparece Desactivado si la presentación está Inactiva, aunque visible sea true', () => {
+    mostrar(makeFila({ estado: 'Inactivo', visible: true }));
+
+    expect(el.textContent).toContain('Visible en Portal B');
+    expect(el.textContent).toContain('Desactivado');
   });
 
   it('ofrece "Desactivar" si la presentación está activa', () => {
