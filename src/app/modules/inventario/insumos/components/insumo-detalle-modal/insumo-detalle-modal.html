@@ -53,7 +53,7 @@
         </app-ds-kpi-card>
 
         <app-ds-kpi-card
-          label="Próximo vencimiento"
+          label="Vencimiento"
           [value]="proximoVencimiento()"
           [hasIcon]="true"
           size="sm"
@@ -93,9 +93,24 @@
           </app-ds-card>
         }
       } @else {
-        <p class="p-6 text-center text-muted-foreground">
-          Historial de movimientos — próximamente.
-        </p>
+        @if (cargandoMovimientos()) {
+          <div class="p-12 text-center text-muted-foreground">Cargando…</div>
+        } @else if (errorMovimientos()) {
+          <div class="flex flex-col items-center gap-3 p-12 text-center">
+            <p class="text-muted-foreground">No se pudieron cargar los movimientos.</p>
+            <app-ds-button variant="secondary" (clicked)="cargarMovimientos(insumo)">
+              Reintentar
+            </app-ds-button>
+          </div>
+        } @else {
+          <app-ds-card [padded]="false">
+            <app-ds-data-table
+              [columns]="columnasMovimientos()"
+              [rows]="movimientos()"
+              empty="Sin movimientos registrados"
+            />
+          </app-ds-card>
+        }
       }
     </div>
   }
@@ -120,4 +135,28 @@
   <app-ds-badge [tone]="estadoLoteTone(fila.estado)" [dot]="true">
     {{ estadoLoteLabel(fila.estado) }}
   </app-ds-badge>
+</ng-template>
+
+<ng-template #codigoMovimientoCell let-fila>
+  <app-ds-cell-stack [primary]="fila.codigo" [secondary]="fila.loteCodigo" />
+</ng-template>
+
+<ng-template #fechaMovimientoCell let-fila>
+  <div class="flex flex-col gap-0.5 py-0.5">
+    <span>{{ fila.fechaMostrada }}</span>
+    <span class="text-ds-sm text-muted-foreground">{{ fila.horaMostrada }}</span>
+  </div>
+</ng-template>
+
+<ng-template #tipoMovimientoCell let-fila>
+  <app-ds-badge [tone]="tipoMovimientoTone(fila.tipo)">
+    <app-ds-icon icon [img]="tipoMovimientoIcon(fila.tipo)" [size]="14" />
+    {{ tipoMovimientoLabel(fila.tipo) }}
+  </app-ds-badge>
+</ng-template>
+
+<ng-template #cantidadMovimientoCell let-fila>
+  <span class="font-medium" [style.color]="cantidadMovimientoColor(fila)">
+    {{ fila.cantidadMostrada }}
+  </span>
 </ng-template>

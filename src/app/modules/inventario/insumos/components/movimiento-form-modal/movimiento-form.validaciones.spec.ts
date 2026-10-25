@@ -128,4 +128,62 @@ describe('validarMovimientoForm', () => {
 
     expect(resultado.filas).toBeUndefined();
   });
+
+  it('returns no errors for a valid ajuste form (con lote, cantidad en 0)', () => {
+    const resultado = validarMovimientoForm(
+      makeForm({
+        tipoMovimiento: 'ajuste',
+        filas: [{ id: 1, insumoId: '9', loteId: '5', cantidad: '0' }],
+      }),
+    );
+
+    expect(resultado).toEqual({});
+  });
+
+  it('requires loteId on ajuste, igual que en entrada', () => {
+    const resultado = validarMovimientoForm(
+      makeForm({
+        tipoMovimiento: 'ajuste',
+        filas: [{ id: 1, insumoId: '9', loteId: '', cantidad: '10' }],
+      }),
+    );
+
+    expect(resultado.porFila).toEqual({ 1: { loteId: 'Selecciona un lote.' } });
+  });
+
+  it('on ajuste, rejects a negative cantidad but allows 0 (lote agotado es un conteo valido)', () => {
+    const resultado = validarMovimientoForm(
+      makeForm({
+        tipoMovimiento: 'ajuste',
+        filas: [{ id: 1, insumoId: '9', loteId: '5', cantidad: '-1' }],
+      }),
+    );
+
+    expect(resultado.porFila).toEqual({ 1: { cantidad: 'No puede ser negativa.' } });
+  });
+
+  it('on ajuste, requires a cantidad (cantidad real contada, no un delta)', () => {
+    const resultado = validarMovimientoForm(
+      makeForm({
+        tipoMovimiento: 'ajuste',
+        filas: [{ id: 1, insumoId: '9', loteId: '5', cantidad: '' }],
+      }),
+    );
+
+    expect(resultado.porFila).toEqual({ 1: { cantidad: 'Ingresa la cantidad real.' } });
+  });
+
+  it('on ajuste, rejects repeating the same lote across filas', () => {
+    const resultado = validarMovimientoForm(
+      makeForm({
+        tipoMovimiento: 'ajuste',
+        filas: [
+          { id: 1, insumoId: '9', loteId: '5', cantidad: '10' },
+          { id: 2, insumoId: '11', loteId: '5', cantidad: '3' },
+        ],
+      }),
+    );
+
+    expect(resultado.filas).toBe('No puedes repetir el mismo lote en dos filas.');
+  });
 });

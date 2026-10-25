@@ -175,6 +175,11 @@ describe('StockInsumos', () => {
       .expectOne((r) => r.url === INSUMOS_BASE && r.params.get('tipo') === 'empaque')
       .flush({ data: [], meta: { total: 0, page: 1, limit: 10, total_pages: 0 } });
 
+    fixture.componentInstance.setNivel('bajo');
+    httpMock
+      .expectOne((r) => r.url === INSUMOS_BASE && r.params.get('nivel') === 'bajo')
+      .flush({ data: [], meta: { total: 0, page: 1, limit: 10, total_pages: 0 } });
+
     // El <select> manda el string 'false' y el componente lo convierte al
     // booleano literal que exige el backend (ver insumo.service.ts).
     fixture.componentInstance.setEstado('false');
@@ -248,6 +253,33 @@ describe('StockInsumos', () => {
     fixture.componentInstance.loteGuardado();
 
     expect(fixture.componentInstance.modalLoteAbierto()).toBe(false);
+    flushPage(expectPageRequest(1, 10));
+    flushIndicadores();
+  });
+
+  it('opens and closes the movimiento modal from "Registrar movimiento"', () => {
+    const fixture = create();
+    flushPage(expectPageRequest(1, 10));
+    flushIndicadores();
+
+    expect(fixture.componentInstance.modalMovimientoAbierto()).toBe(false);
+
+    fixture.componentInstance.abrirRegistrarMovimiento();
+    expect(fixture.componentInstance.modalMovimientoAbierto()).toBe(true);
+
+    fixture.componentInstance.cerrarFormMovimiento();
+    expect(fixture.componentInstance.modalMovimientoAbierto()).toBe(false);
+  });
+
+  it('closes the movimiento modal and reloads the list and the summary when a movimiento is saved', () => {
+    const fixture = create();
+    flushPage(expectPageRequest(1, 10));
+    flushIndicadores();
+
+    fixture.componentInstance.abrirRegistrarMovimiento();
+    fixture.componentInstance.movimientoGuardado();
+
+    expect(fixture.componentInstance.modalMovimientoAbierto()).toBe(false);
     flushPage(expectPageRequest(1, 10));
     flushIndicadores();
   });
