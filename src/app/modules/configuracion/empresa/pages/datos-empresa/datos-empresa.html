@@ -1,0 +1,178 @@
+<div class="flex flex-col gap-5 p-(--page-padding)">
+  <app-ds-breadcrumb [items]="migas" />
+
+  <div class="flex flex-wrap items-start justify-between gap-4">
+    <div>
+      <h1 class="text-ds-2xl font-semibold text-foreground">Gestionar datos empresa</h1>
+      <p class="mt-1 text-ds-base text-muted-foreground">
+        Datos usados en la emisión de comprobantes de pago
+      </p>
+    </div>
+    <div class="flex items-center gap-2">
+      <app-ds-button
+        variant="secondary"
+        [disabled]="!hayCambios() || guardando()"
+        (clicked)="descartar()"
+      >
+        Descartar
+      </app-ds-button>
+      <app-ds-button [disabled]="!hayCambios() || guardando()" (clicked)="guardar()">
+        {{ guardando() ? 'Guardando…' : 'Guardar cambios' }}
+      </app-ds-button>
+    </div>
+  </div>
+
+  <app-aviso-banner [texto]="aviso()" tono="ok" (closed)="aviso.set('')" />
+  <app-aviso-banner [texto]="errorGuardar()" tono="error" (closed)="errorGuardar.set('')" />
+
+  @if (cargando()) {
+    <p
+      class="rounded-lg border border-border bg-card p-8 text-center text-ds-base text-muted-foreground"
+    >
+      Cargando datos de la empresa…
+    </p>
+  } @else if (errorCarga()) {
+    <div
+      class="flex flex-col items-center gap-3 rounded-lg border border-border bg-card p-8 text-center"
+    >
+      <p class="text-ds-base text-muted-foreground">{{ errorCarga() }}</p>
+      <app-ds-button variant="secondary" (clicked)="cargar()">Reintentar</app-ds-button>
+    </div>
+  } @else {
+    <div
+      class="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(260px,1fr)]"
+    >
+      <app-ds-card
+        title="Datos generales"
+        subtitle="Se imprimen en la cabecera de facturas y boletas"
+      >
+        <div class="flex flex-col gap-4">
+          <app-ds-field
+            label="Razón social"
+            [required]="true"
+            htmlFor="f-razon"
+            [error]="errores().razonSocial ?? null"
+          >
+            <app-ds-input
+              id="f-razon"
+              size="lg"
+              placeholder="Nombre legal registrado en SUNAT"
+              [value]="form().razonSocial"
+              (valueChange)="cambiar('razonSocial', $event)"
+              [invalid]="!!errores().razonSocial"
+            />
+          </app-ds-field>
+
+          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <app-ds-field
+              label="RUC"
+              [required]="true"
+              htmlFor="f-ruc"
+              hint="11 dígitos, inicia con 10 o 20"
+              [error]="errores().ruc ?? null"
+            >
+              <app-ds-input
+                id="f-ruc"
+                size="lg"
+                placeholder="20548712345"
+                [value]="form().ruc"
+                (valueChange)="cambiar('ruc', $event)"
+                [invalid]="!!errores().ruc"
+              />
+            </app-ds-field>
+          </div>
+
+          <app-ds-field
+            label="Dirección fiscal"
+            [required]="true"
+            htmlFor="f-direccion"
+            [error]="errores().direccion ?? null"
+          >
+            <app-ds-input
+              id="f-direccion"
+              size="lg"
+              placeholder="Av. / Jr. / Calle, número, distrito, provincia"
+              [value]="form().direccion"
+              (valueChange)="cambiar('direccion', $event)"
+              [invalid]="!!errores().direccion"
+            />
+          </app-ds-field>
+
+          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <app-ds-field
+              label="Teléfono"
+              htmlFor="f-telefono"
+              [error]="errores().telefono ?? null"
+            >
+              <app-ds-input
+                id="f-telefono"
+                type="tel"
+                size="lg"
+                placeholder="01 234 5678"
+                [value]="form().telefono"
+                (valueChange)="cambiar('telefono', $event)"
+                [invalid]="!!errores().telefono"
+              />
+            </app-ds-field>
+            <app-ds-field label="Email" htmlFor="f-email" [error]="errores().email ?? null">
+              <app-ds-input
+                id="f-email"
+                type="email"
+                size="lg"
+                placeholder="facturacion@empresa.pe"
+                [value]="form().email"
+                (valueChange)="cambiar('email', $event)"
+                [invalid]="!!errores().email"
+              />
+            </app-ds-field>
+          </div>
+        </div>
+      </app-ds-card>
+
+      <app-ds-card title="Logo" subtitle="PNG o JPG · máximo 1 MB · fondo claro recomendado">
+        <div class="flex flex-col gap-4">
+          <div
+            class="flex aspect-square max-h-[200px] w-full items-center justify-center overflow-hidden rounded-lg border border-dashed border-border bg-muted"
+          >
+            @if (logoVisible(); as url) {
+              <img
+                [src]="url"
+                alt="Logo de la empresa"
+                class="max-h-full max-w-full object-contain"
+              />
+            } @else {
+              <span class="text-ds-sm text-muted-foreground">Sin logo</span>
+            }
+          </div>
+
+          <div class="flex flex-wrap gap-2">
+            <app-ds-button variant="secondary" (clicked)="elegirLogo()">
+              <span icon><app-ds-icon [img]="LucideUpload" [size]="16" /></span>
+              {{ logoVisible() ? 'Cambiar logo' : 'Subir logo' }}
+            </app-ds-button>
+            @if (logoVisible()) {
+              <app-ds-button variant="ghost" (clicked)="quitarLogo()">Quitar</app-ds-button>
+            }
+          </div>
+
+          @if (logoError()) {
+            <p role="alert" class="text-ds-sm text-destructive">{{ logoError() }}</p>
+          } @else if (!logoVisible()) {
+            <p class="text-ds-sm text-muted-foreground">
+              Sin logo, el comprobante muestra solo los datos de texto
+            </p>
+          }
+
+          <input
+            #selectorArchivo
+            type="file"
+            class="hidden"
+            accept="image/png,image/jpeg"
+            aria-label="Seleccionar logo de la empresa"
+            (change)="alElegirArchivo($event)"
+          />
+        </div>
+      </app-ds-card>
+    </div>
+  }
+</div>
