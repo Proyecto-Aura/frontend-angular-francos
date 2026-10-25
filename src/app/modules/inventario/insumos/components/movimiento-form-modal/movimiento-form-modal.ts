@@ -68,6 +68,10 @@ export class MovimientoFormModal {
   private siguienteFilaId = 1;
 
   open = input(false);
+  // Al abrir desde el icono "Registrar movimiento" de una fila (Stock de
+  // insumos), precarga ese insumo en la primera fila del formulario — la
+  // persona igual puede cambiarlo o agregar mas filas de otros insumos.
+  insumoPreseleccionado = input<Insumo | null>(null);
   closed = output<void>();
   saved = output<MovimientoInsumo[]>();
 
@@ -448,12 +452,18 @@ export class MovimientoFormModal {
     this.siguienteFilaId = 1;
     this.tipoMovimiento.set('entrada');
     this.motivoGeneral.set('');
-    this.filas.set([filaMovimientoVacia(this.siguienteFilaId++)]);
+    const preseleccionado = this.insumoPreseleccionado();
+    const filaInicial = filaMovimientoVacia(this.siguienteFilaId++);
+    this.filas.set([
+      preseleccionado ? { ...filaInicial, insumoId: String(preseleccionado.id) } : filaInicial,
+    ]);
     this.lotesPorInsumo.set({});
     this.cargandoLotesDe.set(new Set());
     this.errores.set({});
     this.errorGeneral.set(null);
     this.guardando.set(false);
+
+    if (preseleccionado) this.cargarLotesDeInsumo(String(preseleccionado.id));
   }
 
   private formActual(): MovimientoInsumoForm {

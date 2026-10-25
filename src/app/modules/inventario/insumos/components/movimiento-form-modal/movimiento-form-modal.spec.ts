@@ -132,6 +132,42 @@ describe('MovimientoFormModal', () => {
     expect(component.cantidadInsumosEnMovimiento()).toBe(0);
   });
 
+  it('preloads the insumo of the first fila and requests its active lotes when opened from a row ("Registrar movimiento" icon)', () => {
+    const fixture = TestBed.createComponent(MovimientoFormModal);
+    fixture.componentRef.setInput('open', true);
+    fixture.componentRef.setInput('insumoPreseleccionado', {
+      id: 9,
+      sku: 'FR-INS-9',
+      nombre: 'Harina de trigo',
+      descripcion: null,
+      unidadMedida: 'kg',
+      stockActual: 250,
+      stockMinimo: 50,
+      stockMaximo: 400,
+      tipo: 'materia_prima',
+      estado: true,
+    });
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.filas()).toEqual([
+      { id: 1, insumoId: '9', loteId: '', cantidad: '' },
+    ]);
+
+    httpMock
+      .expectOne((request) => request.url === INSUMOS_BASE)
+      .flush({ data: [makeInsumoDto()], meta: { total: 1, page: 1, limit: 100, total_pages: 1 } });
+    httpMock
+      .expectOne((request) => request.url === LOTES_BASE && request.params.get('insumo_id') === '9')
+      .flush({
+        data: [makeLoteDto()],
+        meta: { total: 1, page: 1, limit: 100, total_pages: 1 },
+      });
+
+    expect(fixture.componentInstance.lotesDeFila(fixture.componentInstance.filas()[0])).toEqual([
+      expect.objectContaining({ id: 1 }),
+    ]);
+  });
+
   it('adds and removes filas', () => {
     const fixture = openModal();
     const component = fixture.componentInstance;

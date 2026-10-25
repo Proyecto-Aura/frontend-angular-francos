@@ -53,8 +53,6 @@ import { LoteInsumoService } from '../../services/lote-insumo.service';
 import { MovimientoInsumoService } from '../../services/movimiento-insumo.service';
 
 const SIN_DATO = '—';
-// Umbral para la alerta "Vence en N días" en la pestaña Lotes.
-const DIAS_ALERTA_VENCIMIENTO = 10;
 
 const TIPO_LABEL: Record<TipoInsumo, string> = {
   materia_prima: 'Materia prima',
@@ -84,12 +82,14 @@ const NIVEL_ICON: Record<NivelStock, Type<unknown>> = {
 
 const ESTADO_LOTE_LABEL: Record<EstadoLote, string> = {
   activo: 'Activo',
+  por_vencer: 'Por vencer',
   agotado: 'Agotado',
   vencido: 'Vencido',
 };
 
 const ESTADO_LOTE_TONE: Record<EstadoLote, BadgeTone> = {
   activo: 'success',
+  por_vencer: 'warning',
   agotado: 'neutral',
   vencido: 'danger',
 };
@@ -307,8 +307,11 @@ export class InsumoDetalleModal implements AfterViewInit {
               cantidadActualMostrada: `${lote.cantidadActual} ${insumo.unidadMedida}`,
               estado: lote.estado,
               activo: lote.activo,
+              // "por_vencer" ya lo calcula el backend (activo y a 15 dias o
+              // menos de vencer) — solo se usa aca para mostrar el conteo
+              // exacto de dias junto a la fecha, no para decidir el estado.
               diasParaVencer:
-                lote.estado === 'activo' && lote.fechaVencimiento
+                lote.estado === 'por_vencer' && lote.fechaVencimiento
                   ? this.diasHasta(lote.fechaVencimiento)
                   : null,
             })),
@@ -384,10 +387,6 @@ export class InsumoDetalleModal implements AfterViewInit {
     return TONE_FG[this.tipoMovimientoTone(fila.tipo)];
   }
 
-  muestraAlertaVencimiento(dias: number | null): boolean {
-    return dias !== null && dias >= 0 && dias <= DIAS_ALERTA_VENCIMIENTO;
-  }
-
   estadoLoteLabel(estado: EstadoLote): string {
     return ESTADO_LOTE_LABEL[estado];
   }
@@ -441,12 +440,15 @@ export class InsumoDetalleModal implements AfterViewInit {
   // GET /lotes-insumo?insumo_id=X ya devuelve los lotes ordenados por
   // fecha_vencimiento ascendente (nulls al final) — confirmado con el
   // backend. Por eso alcanza con tomar el primero que siga vigente: estado
-  // "activo", no dado de baja (activo logico) y con fecha real (no null,
-  // que es el caso de los insumos tipo empaque, que no vencen).
+  // "activo" o "por_vencer" (ambos son stock utilizable, solo cambia que tan
+  // cerca esta de vencer), no dado de baja (activo logico) y con fecha real
+  // (no null, que es el caso de los insumos tipo empaque, que no vencen).
   proximoVencimiento = computed(() => {
     const primero = this.lotes().find(
       (lote) =>
-        lote.estado === 'activo' && lote.activo && lote.fechaVencimientoMostrada !== SIN_DATO,
+        (lote.estado === 'activo' || lote.estado === 'por_vencer') &&
+        lote.activo &&
+        lote.fechaVencimientoMostrada !== SIN_DATO,
     );
     return primero?.fechaVencimientoMostrada ?? SIN_DATO;
   });

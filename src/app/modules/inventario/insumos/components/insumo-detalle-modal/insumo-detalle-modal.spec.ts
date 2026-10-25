@@ -147,6 +147,16 @@ describe('InsumoDetalleModal', () => {
     expect(fixture.componentInstance.proximoVencimiento()).toBe(primero.fechaVencimientoMostrada);
   });
 
+  it('incluye un lote por_vencer al elegir proximoVencimiento (sigue siendo stock utilizable)', () => {
+    const fixture = createConLotes(makeInsumo(), [
+      makeLoteDto({ id: 1, estado: 'por_vencer', fecha_vencimiento: '2026-11-01' }),
+      makeLoteDto({ id: 2, fecha_vencimiento: '2026-12-01' }),
+    ]);
+
+    const primero = fixture.componentInstance.lotes()[0];
+    expect(fixture.componentInstance.proximoVencimiento()).toBe(primero.fechaVencimientoMostrada);
+  });
+
   it('skips a lote vencido, dado de baja o sin fecha al elegir proximoVencimiento, aunque venga primero en la lista', () => {
     const fixture = createConLotes(makeInsumo(), [
       makeLoteDto({ id: 1, estado: 'vencido', fecha_vencimiento: '2026-01-01' }),
@@ -216,25 +226,27 @@ describe('InsumoDetalleModal', () => {
         cantidadActualMostrada: '60 kg',
         estado: 'activo',
         activo: true,
-        diasParaVencer: expect.any(Number),
+        // "activo" (no "por_vencer") significa que al backend todavia le
+        // quedan mas de 15 dias — no hace falta el conteo de dias.
+        diasParaVencer: null,
       },
     ]);
   });
 
-  it('flags a lote as about to expire when it is activo and within 10 days of fecha_vencimiento', () => {
+  it('computes diasParaVencer y muestra la alerta cuando el backend ya clasifico el lote como por_vencer', () => {
     const fixture = create(makeInsumo());
     const hoy = new Date();
     const enCincoDias = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() + 5);
     const fechaVencimiento = `${enCincoDias.getFullYear()}-${String(enCincoDias.getMonth() + 1).padStart(2, '0')}-${String(enCincoDias.getDate()).padStart(2, '0')}`;
 
     expectLotesRequest().flush({
-      data: [makeLoteDto({ fecha_vencimiento: fechaVencimiento })],
+      data: [makeLoteDto({ estado: 'por_vencer', fecha_vencimiento: fechaVencimiento })],
       meta: { total: 1, page: 1, limit: 50, total_pages: 1 },
     });
 
     const [fila] = fixture.componentInstance.lotes();
     expect(fila.diasParaVencer).toBe(5);
-    expect(fixture.componentInstance.muestraAlertaVencimiento(fila.diasParaVencer)).toBe(true);
+    expect(fila.estado).toBe('por_vencer');
   });
 
   it('parses fecha_ingreso/fecha_vencimiento even when the backend sends a full datetime instead of a plain date', () => {
@@ -254,7 +266,6 @@ describe('InsumoDetalleModal', () => {
     const [fila] = fixture.componentInstance.lotes();
     expect(fila.fechaIngresoMostrada).toContain('2026');
     expect(fila.fechaVencimientoMostrada).toContain('2026');
-    expect(fila.diasParaVencer).not.toBeNaN();
   });
 
   it('does not flag a vencido lote as about to expire (ya paso, no es una alerta de proximidad)', () => {
@@ -267,7 +278,6 @@ describe('InsumoDetalleModal', () => {
 
     const [fila] = fixture.componentInstance.lotes();
     expect(fila.diasParaVencer).toBeNull();
-    expect(fixture.componentInstance.muestraAlertaVencimiento(fila.diasParaVencer)).toBe(false);
   });
 
   it('shows an error state with retry when the lotes request fails', () => {

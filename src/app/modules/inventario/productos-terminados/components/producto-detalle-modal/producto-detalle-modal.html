@@ -1,0 +1,96 @@
+<app-ds-modal
+  [open]="producto() !== null"
+  [title]="producto()?.productoNombre ?? ''"
+  [hasIcon]="true"
+  [hasFooter]="true"
+  [width]="980"
+  [maxHeight]="820"
+  (closed)="cerrar()"
+>
+  <span
+    icon
+    class="flex h-9 w-9 items-center justify-center rounded-md bg-[rgba(255,255,255,0.18)]"
+  >
+    <app-ds-icon [img]="LucidePackage" [size]="18" />
+  </span>
+
+  @if (producto(); as producto) {
+    <div class="flex flex-col gap-5">
+      <div class="flex items-center justify-between gap-3">
+        <app-ds-badge [tone]="producto.estado ? 'success' : 'neutral'" [dot]="true">
+          {{ producto.estado ? 'Activo' : 'Inactivo' }}
+        </app-ds-badge>
+        <app-ds-badge [tone]="nivelTone()" [dot]="true">{{ nivelLabel() }}</app-ds-badge>
+      </div>
+
+      <div class="grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-4">
+        <app-ds-kpi-card
+          label="Stock actual"
+          [value]="producto.stockActual"
+          caption="Suma de lotes disponibles"
+          [hasIcon]="true"
+          size="sm"
+        >
+          <span icon><app-ds-icon [img]="LucidePackage" [size]="16" /></span>
+        </app-ds-kpi-card>
+
+        <app-ds-kpi-card
+          label="Stock mínimo"
+          [value]="producto.stockMinimo"
+          caption="Umbral de reposición"
+          [hasIcon]="true"
+          size="sm"
+        >
+          <span icon><app-ds-icon [img]="LucideTrendingDown" [size]="16" /></span>
+        </app-ds-kpi-card>
+
+        <app-ds-kpi-card
+          label="Stock máximo"
+          [value]="producto.stockMaximo ?? '—'"
+          caption="Capacidad objetivo"
+          [hasIcon]="true"
+          size="sm"
+        >
+          <span icon><app-ds-icon [img]="LucideTrendingUp" [size]="16" /></span>
+        </app-ds-kpi-card>
+
+        <app-ds-kpi-card
+          label="Próximo vencimiento"
+          value="—"
+          caption="Sin lotes registrados"
+          [hasIcon]="true"
+          size="sm"
+        >
+          <span icon><app-ds-icon [img]="LucideCalendarClock" [size]="16" /></span>
+        </app-ds-kpi-card>
+      </div>
+
+      <app-ds-tabs [tabs]="tabs" [activeId]="tabActiva()" (changed)="cambiarTab($event)" />
+
+      @if (tabActiva() === 'informacion') {
+        <div>
+          <h3 class="text-ds-base font-medium text-foreground">Información del producto</h3>
+          <p class="text-ds-sm text-muted-foreground">Consulta de solo lectura.</p>
+        </div>
+        <div class="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-x-5 gap-y-4">
+          @for (c of campos(); track c.label) {
+            <div class="min-w-0">
+              <div class="text-ds-sm text-muted-foreground">{{ c.label }}</div>
+              <div class="mt-1 font-medium text-foreground">{{ c.value }}</div>
+            </div>
+          }
+        </div>
+      } @else if (tabActiva() === 'lotes') {
+        <p class="p-6 text-center text-muted-foreground">Lotes de producto — próximamente.</p>
+      } @else {
+        <p class="p-6 text-center text-muted-foreground">
+          Historial de movimientos — próximamente.
+        </p>
+      }
+    </div>
+  }
+
+  <span footer>
+    <app-ds-button variant="secondary" (clicked)="cerrar()">Cerrar</app-ds-button>
+  </span>
+</app-ds-modal>

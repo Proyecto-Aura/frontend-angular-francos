@@ -1,4 +1,4 @@
-export type EstadoLote = 'activo' | 'agotado' | 'vencido';
+export type EstadoLote = 'activo' | 'por_vencer' | 'agotado' | 'vencido';
 
 export interface LoteInsumo {
   id: number;

@@ -20,8 +20,12 @@ const LOTES_BASE = `${environment.apiUrl}/lotes-insumo`;
 export interface FiltrosLotesInsumo {
   search?: string;
   insumoId?: number;
-  estado?: 'activo' | 'agotado' | 'vencido';
+  estado?: 'activo' | 'por_vencer' | 'agotado' | 'vencido';
   activo?: boolean;
+  // Rango sobre fecha_vencimiento (YYYY-MM-DD) — confirmado por el backend,
+  // mismo criterio que el resto de filtros de fecha de la API.
+  venceDesde?: string;
+  venceHasta?: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -34,6 +38,8 @@ export class LoteInsumoService {
     if (filtros.insumoId !== undefined) params['insumo_id'] = filtros.insumoId;
     if (filtros.estado) params['estado'] = filtros.estado;
     if (filtros.activo !== undefined) params['activo'] = filtros.activo;
+    if (filtros.venceDesde) params['vence_desde'] = filtros.venceDesde;
+    if (filtros.venceHasta) params['vence_hasta'] = filtros.venceHasta;
 
     return this.http.get<LotesInsumoPageDto>(LOTES_BASE, { params }).pipe(map(toLotesInsumoPagina));
   }

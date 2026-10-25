@@ -12,6 +12,7 @@ import { StockInsumos } from './stock-insumos';
 
 const INSUMOS_BASE = `${environment.apiUrl}/insumos`;
 const INDICADORES_URL = `${INSUMOS_BASE}/indicadores`;
+const LOTES_BASE = `${environment.apiUrl}/lotes-insumo`;
 
 function makeInsumoDto(overrides: Partial<InsumoDto> = {}): InsumoDto {
   return {
@@ -67,9 +68,25 @@ describe('StockInsumos', () => {
 
   afterEach(() => httpMock.verify());
 
+  function expectLotesTotalRequest(): TestRequest {
+    return httpMock.expectOne(
+      (request) =>
+        request.url === LOTES_BASE &&
+        request.params.get('page') === '1' &&
+        request.params.get('limit') === '1',
+    );
+  }
+
+  // Todos los tests pasan por aca: se consume la peticion del contador de
+  // la pestaña "Lotes" (lotesTotal) apenas se crea el fixture, para que no
+  // quede pendiente y rompa httpMock.verify() en tests que no la necesitan.
   function create(): ComponentFixture<StockInsumos> {
     const fixture = TestBed.createComponent(StockInsumos);
     fixture.detectChanges();
+    expectLotesTotalRequest().flush({
+      data: [],
+      meta: { total: 0, page: 1, limit: 1, total_pages: 0 },
+    });
     return fixture;
   }
 
@@ -257,7 +274,7 @@ describe('StockInsumos', () => {
     flushIndicadores();
   });
 
-  it('opens and closes the movimiento modal from "Registrar movimiento"', () => {
+  it('opens and closes the movimiento modal from "Registrar movimiento", sin preseleccionar insumo', () => {
     const fixture = create();
     flushPage(expectPageRequest(1, 10));
     flushIndicadores();
@@ -266,9 +283,25 @@ describe('StockInsumos', () => {
 
     fixture.componentInstance.abrirRegistrarMovimiento();
     expect(fixture.componentInstance.modalMovimientoAbierto()).toBe(true);
+    expect(fixture.componentInstance.insumoParaMovimiento()).toBeNull();
 
     fixture.componentInstance.cerrarFormMovimiento();
     expect(fixture.componentInstance.modalMovimientoAbierto()).toBe(false);
+  });
+
+  it('opens the movimiento modal preseleccionando el insumo de la fila cuando se abre desde su icono', () => {
+    const fixture = create();
+    flushPage(expectPageRequest(1, 10));
+    flushIndicadores();
+
+    const insumo = makeInsumo({ id: 3, nombre: 'Azúcar rubia' });
+    fixture.componentInstance.abrirRegistrarMovimiento(insumo);
+
+    expect(fixture.componentInstance.modalMovimientoAbierto()).toBe(true);
+    expect(fixture.componentInstance.insumoParaMovimiento()).toBe(insumo);
+
+    fixture.componentInstance.cerrarFormMovimiento();
+    expect(fixture.componentInstance.insumoParaMovimiento()).toBeNull();
   });
 
   it('closes the movimiento modal and reloads the list and the summary when a movimiento is saved', () => {
@@ -282,5 +315,46 @@ describe('StockInsumos', () => {
     expect(fixture.componentInstance.modalMovimientoAbierto()).toBe(false);
     flushPage(expectPageRequest(1, 10));
     flushIndicadores();
+  });
+
+  it('loads the lotes count for the "Lotes" tab badge on initialization', () => {
+    const fixture = TestBed.createComponent(StockInsumos);
+    fixture.detectChanges();
+    flushPage(expectPageRequest(1, 10));
+    flushIndicadores();
+    expectLotesTotalRequest().flush({
+      data: [],
+      meta: { total: 5, page: 1, limit: 1, total_pages: 5 },
+    });
+
+    expect(fixture.componentInstance.lotesTotal()).toBe(5);
+    expect(fixture.componentInstance.tabs().find((t) => t.id === 'lotes')?.count).toBe(5);
+  });
+
+  it('resets the lotes count to zero when that request fails', () => {
+    const fixture = TestBed.createComponent(StockInsumos);
+    fixture.detectChanges();
+    flushPage(expectPageRequest(1, 10));
+    flushIndicadores();
+    expectLotesTotalRequest().flush('error', { status: 500, statusText: 'Server Error' });
+
+    expect(fixture.componentInstance.lotesTotal()).toBe(0);
+  });
+
+  it('switches to the "Lotes" tab and back to "Stock"', () => {
+    const fixture = create();
+    flushPage(expectPageRequest(1, 10));
+    flushIndicadores();
+
+    expect(fixture.componentInstance.activeTab()).toBe('stock');
+
+    fixture.componentInstance.cambiarTab('lotes');
+    expect(fixture.componentInstance.activeTab()).toBe('lotes');
+
+    fixture.componentInstance.cambiarTab('historial');
+    expect(fixture.componentInstance.activeTab()).toBe('historial');
+
+    fixture.componentInstance.cambiarTab('stock');
+    expect(fixture.componentInstance.activeTab()).toBe('stock');
   });
 });
