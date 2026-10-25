@@ -38,6 +38,12 @@ export const routes: Routes = [
       import('./modules/inventario/inventario.route').then((m) => m.INVENTARIO_ROUTES),
   },
   {
+    path: 'configuracion',
+    canActivate: [authGuard],
+    loadChildren: () =>
+      import('./modules/configuracion/configuracion.route').then((m) => m.CONFIGURACION_ROUTES),
+  },
+  {
     path: 'ds-showcase',
     loadComponent: () => import('./ds-showcase/ds-showcase').then((c) => c.DsShowcase),
   },
