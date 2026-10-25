@@ -1,5 +1,7 @@
-import { Component, computed, input, output } from '@angular/core';
+import { Component, computed, inject, input, output } from '@angular/core';
+import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { LucideEye } from '@lucide/angular';
+import { Observable, catchError, map, of, startWith, switchMap } from 'rxjs';
 import { Badge } from '../../../../../shared/ds/badge/badge';
 import { Button } from '../../../../../shared/ds/button/button';
 import { Icon } from '../../../../../shared/ds/icon/icon';
@@ -11,7 +13,9 @@ import {
   TIPO_DOCUMENTO_LABEL,
   nombreCliente,
 } from '../../interfaces/cliente.interface';
+import { HistorialPedidos } from '../../interfaces/pedido-historial.interface';
 import { textoUbicacion } from '../../interfaces/ubicacion.interface';
+import { ClientePedidosService } from '../../services/cliente-pedidos.service';
 
 const SIN_DATO = '—';
 
@@ -26,9 +30,12 @@ export function formatearFecha(fecha: string): string {
   return anio && mes && dia ? `${dia}/${mes}/${anio}` : SIN_DATO;
 }
 
-// Consulta de solo lectura con los datos que ya trae el listado.
-// TODO: cuando el módulo de Pedidos exponga el historial por cliente (RF-A21/22),
-// agregar aquí la pestaña de pedidos finalizados.
+const INACTIVO: HistorialPedidos = { estado: 'inactivo' };
+const CARGANDO: HistorialPedidos = { estado: 'cargando' };
+const ERROR: HistorialPedidos = { estado: 'error' };
+
+// Consulta de solo lectura: los datos que ya trae el listado y el historial de
+// pedidos finalizados del cliente (HU-A-006).
 @Component({
   imports: [Badge, Button, Icon, Modal],
   selector: 'app-cliente-detalle-modal',
@@ -39,7 +46,24 @@ export class ClienteDetalleModal {
   cliente = input<Cliente | null>(null);
   closed = output<void>();
 
+  private pedidosService = inject(ClientePedidosService);
+
   readonly LucideEye = LucideEye;
+
+  /** Se vuelve a consultar cada vez que cambia el cliente mostrado. */
+  private historial = toSignal(
+    toObservable(this.cliente).pipe(
+      switchMap((cliente) => (cliente ? this.cargarHistorial(cliente.id) : of(INACTIVO))),
+    ),
+    { initialValue: INACTIVO },
+  );
+
+  cargandoPedidos = computed(() => this.historial().estado === 'cargando');
+  errorPedidos = computed(() => this.historial().estado === 'error');
+  pedidos = computed(() => {
+    const historial = this.historial();
+    return historial.estado === 'listo' ? historial.pedidos : [];
+  });
 
   titulo = computed(() => {
     const cliente = this.cliente();
@@ -80,5 +104,13 @@ export class ClienteDetalleModal {
 
   cerrar(): void {
     this.closed.emit();
+  }
+
+  private cargarHistorial(clienteId: string): Observable<HistorialPedidos> {
+    return this.pedidosService.historial(clienteId).pipe(
+      map((pedidos): HistorialPedidos => ({ estado: 'listo', pedidos })),
+      catchError(() => of(ERROR)),
+      startWith(CARGANDO),
+    );
   }
 }
