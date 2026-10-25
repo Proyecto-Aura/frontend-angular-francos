@@ -1,3 +1,4 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import {
   Component,
   DestroyRef,
@@ -10,6 +11,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { LucideArrowLeftRight, LucidePlus, LucideTrash2 } from '@lucide/angular';
+import { finalize } from 'rxjs';
 import { Button } from '../../../../../shared/ds/button/button';
 import { Combobox } from '../../../../../shared/ds/combobox/combobox';
 import { Field } from '../../../../../shared/ds/field/field';
@@ -22,21 +24,32 @@ import { Insumo } from '../../interfaces/insumo.interface';
 import { LoteInsumo } from '../../interfaces/lote-insumo.interface';
 import {
   FilaMovimientoInsumoForm,
+  MovimientoInsumo,
   MovimientoInsumoForm,
   TipoMovimientoInsumo,
   filaMovimientoVacia,
 } from '../../interfaces/movimiento-insumo.interface';
 import { InsumoService } from '../../services/insumo.service';
 import { LoteInsumoService } from '../../services/lote-insumo.service';
+import { MovimientoInsumoService } from '../../services/movimiento-insumo.service';
 import { MovimientoFormErrores, validarMovimientoForm } from './movimiento-form.validaciones';
 
 const TIPOS_MOVIMIENTO: SelectOption[] = [
   { value: 'entrada', label: 'Entrada' },
   { value: 'salida', label: 'Salida' },
+  { value: 'ajuste', label: 'Ajuste' },
 ];
 
+// texto va en la columna "Lotes" ("FR-LT-001: −60"), resultado va aparte en
+// "Stock lote" ("0 kg") — separados en dos columnas en vez de un solo texto
+// largo por linea, para que no se vea tan cargado.
+export interface LineaFefo {
+  texto: string;
+  resultado: string;
+}
+
 export interface DesgloseFefo {
-  lineas: string[];
+  lineas: LineaFefo[];
   cargando: boolean;
   insuficiente: boolean;
 }
@@ -49,19 +62,14 @@ export interface DesgloseFefo {
 export class MovimientoFormModal {
   private insumoService = inject(InsumoService);
   private loteService = inject(LoteInsumoService);
+  private movimientoService = inject(MovimientoInsumoService);
   private destroyRef = inject(DestroyRef);
   private estabaAbierto = false;
   private siguienteFilaId = 1;
 
   open = input(false);
   closed = output<void>();
-  // TODO(backend): por ahora solo valida en el frontend y emite el payload
-  // armado. El backend ya definio los 3 endpoints
-  // (POST /movimientos-insumo/entrada|salida|ajuste) — falta que guardar()
-  // llame al servicio real en vez de solo emitir este evento, manejando el
-  // envio de varias filas (una llamada por fila) y sus posibles fallos
-  // parciales.
-  registrado = output<MovimientoInsumoForm>();
+  saved = output<MovimientoInsumo[]>();
 
   readonly LucideArrowLeftRight = LucideArrowLeftRight;
   readonly LucidePlus = LucidePlus;
@@ -76,17 +84,18 @@ export class MovimientoFormModal {
   insumosOptions = computed<SelectOption[]>(() =>
     this.insumos().map((insumo) => ({
       value: String(insumo.id),
-      label: `${insumo.sku} · ${insumo.nombre}`,
+      label: insumo.nombre,
+      secondary: insumo.sku,
     })),
   );
 
   // Lotes activos por insumo, cacheados por insumoId (string, igual que
   // Insumo.id en el resto del formulario) para no repetir el fetch si dos
-  // filas eligen el mismo insumo. Hacen falta en ambos tipos: en 'entrada'
-  // llenan el <select> de lote, en 'salida' alimentan la simulacion FEFO de
-  // abajo (ver desgloseFefoDeFila). El backend ya los devuelve ordenados
-  // por fecha_vencimiento ascendente (nulls last), asi que no hay que
-  // volver a ordenarlos aca.
+  // filas eligen el mismo insumo. Hacen falta en los 3 tipos: en
+  // 'entrada'/'ajuste' llenan el combobox de lote, en 'salida' alimentan la
+  // simulacion FEFO de abajo (ver desgloseFefoDeFila). El backend ya los
+  // devuelve ordenados por fecha_vencimiento ascendente (nulls last), asi
+  // que no hay que volver a ordenarlos aca.
   private lotesPorInsumo = signal<Record<string, LoteInsumo[]>>({});
   private cargandoLotesDe = signal<Set<string>>(new Set());
 
@@ -153,9 +162,15 @@ export class MovimientoFormModal {
     return insumo ? `${insumo.stockActual} ${insumo.unidadMedida}` : '—';
   }
 
-  stockMinimoDeFila(fila: FilaMovimientoInsumoForm): string {
+  // En 'entrada' lo que importa vigilar es no pasarse del maximo
+  // (sobre-stock); en 'salida', no bajar del minimo (quiebre) — por eso el
+  // limite que se muestra cambia segun tipoMovimiento en vez de ser siempre
+  // el minimo.
+  stockLimiteDeFila(fila: FilaMovimientoInsumoForm): string {
     const insumo = this.insumoDeFila(fila);
-    return insumo ? `${insumo.stockMinimo} ${insumo.unidadMedida}` : '—';
+    if (!insumo) return '—';
+    const limite = this.tipoMovimiento() === 'entrada' ? insumo.stockMaximo : insumo.stockMinimo;
+    return `${limite} ${insumo.unidadMedida}`;
   }
 
   cargandoLotesDeFila(fila: FilaMovimientoInsumoForm): boolean {
@@ -166,23 +181,77 @@ export class MovimientoFormModal {
     return this.lotesPorInsumo()[fila.insumoId] ?? [];
   }
 
-  // Opciones del <select> de lote en 'entrada': uno por lote activo del
-  // insumo elegido en esa fila.
+  // Lotes que de verdad se pueden mover: excluye los vencidos en
+  // 'entrada'/'salida' (no tiene sentido sumarle stock a algo vencido, ni
+  // despacharlo — el backend hace lo mismo del lado de salida, confirmado).
+  // En 'ajuste' NO se excluyen: ahi el objetivo es que el sistema refleje la
+  // realidad fisica del lote, este vencido o no (confirmado con el
+  // usuario).
+  lotesSeleccionablesDeFila(fila: FilaMovimientoInsumoForm): LoteInsumo[] {
+    const lotes = this.lotesDeFila(fila);
+    if (this.tipoMovimiento() === 'ajuste') return lotes;
+    return lotes.filter((lote) => lote.estado !== 'vencido');
+  }
+
+  // Opciones del combobox de lote en 'entrada'/'ajuste': uno por lote
+  // seleccionable del insumo elegido en esa fila.
   loteOptionsDeFila(fila: FilaMovimientoInsumoForm): SelectOption[] {
-    return this.lotesDeFila(fila).map((lote) => ({
+    return this.lotesSeleccionablesDeFila(fila).map((lote) => ({
       value: String(lote.id),
-      label: `${lote.codigoLote} · vence ${lote.fechaVencimiento ?? 'sin fecha'} · ${lote.cantidadActual} disp.`,
+      label: lote.codigoLote,
+      secondary: `${lote.cantidadActual} disp.`,
     }));
+  }
+
+  // Stock del lote elegido en 'entrada'/'ajuste' (no del insumo): "—" por
+  // defecto (sin lote elegido, o en 'salida', donde loteId siempre queda
+  // vacio y el detalle por lote lo da el desglose FEFO de abajo, no este
+  // campo). En 'entrada' con una cantidad cargada muestra el resultado
+  // (cantidadActual + cantidad). En 'ajuste', fila.cantidad YA ES el
+  // resultado (la cantidad real que la persona conto), no hay nada que
+  // sumar — se muestra tal cual.
+  stockLoteDeFila(fila: FilaMovimientoInsumoForm): string {
+    if (!fila.loteId) return '—';
+    const insumo = this.insumoDeFila(fila);
+    const lote = this.lotesDeFila(fila).find((l) => String(l.id) === fila.loteId);
+    if (!insumo || !lote) return '—';
+
+    if (this.tipoMovimiento() === 'ajuste') {
+      const cantidadReal = Number(fila.cantidad);
+      if (fila.cantidad === '' || Number.isNaN(cantidadReal)) {
+        return `${lote.cantidadActual} ${insumo.unidadMedida}`;
+      }
+      return `${cantidadReal} ${insumo.unidadMedida}`;
+    }
+
+    const cantidad = Number(fila.cantidad);
+    const resultante = lote.cantidadActual + (!fila.cantidad || Number.isNaN(cantidad) ? 0 : cantidad);
+    return `${resultante} ${insumo.unidadMedida}`;
+  }
+
+  // Referencia que se muestra al lado del campo "Cantidad" en 'ajuste', para
+  // que la persona vea contra que esta corrigiendo sin tener que ir a mirar
+  // la opcion del combobox de nuevo.
+  cantidadActualLoteDeFila(fila: FilaMovimientoInsumoForm): string {
+    const insumo = this.insumoDeFila(fila);
+    const lote = this.lotesDeFila(fila).find((l) => String(l.id) === fila.loteId);
+    if (!insumo || !lote) return '—';
+    return `${lote.cantidadActual} ${insumo.unidadMedida}`;
   }
 
   // Simula en el front el reparto FEFO que hace el backend en 'salida':
   // resta la cantidad pedida lote por lote, en el mismo orden en que ya
   // vienen (el backend los devuelve ordenados por fecha_vencimiento
-  // ascendente). Es solo una vista previa — quien decide de verdad al
-  // guardar es el backend, y podria diferir si justo hay otro movimiento
-  // concurrente sobre el mismo insumo.
+  // ascendente), excluyendo vencidos — igual que ahora hace el backend de
+  // verdad (antes era un hueco real: se podia despachar materia prima
+  // vencida). Es solo una vista previa — quien decide de verdad al guardar
+  // es el backend, y podria diferir si justo hay otro movimiento concurrente
+  // sobre el mismo insumo. "texto" va en la columna "Lotes" y "resultado" en
+  // "Stock lote" — misma fila visual, separados en dos columnas (no un solo
+  // texto largo por linea) para que no se vea cargado.
   desgloseFefoDeFila(fila: FilaMovimientoInsumoForm): DesgloseFefo {
     const cargando = this.cargandoLotesDeFila(fila);
+    const insumo = this.insumoDeFila(fila);
     const cantidad = Number(fila.cantidad);
     if (!fila.insumoId || !fila.cantidad || Number.isNaN(cantidad) || cantidad <= 0) {
       return { lineas: [], cargando, insuficiente: false };
@@ -192,28 +261,69 @@ export class MovimientoFormModal {
     }
 
     let restante = cantidad;
-    const lineas: string[] = [];
-    for (const lote of this.lotesDeFila(fila)) {
+    const lineas: LineaFefo[] = [];
+    for (const lote of this.lotesSeleccionablesDeFila(fila)) {
       if (restante <= 0) break;
       const tomar = Math.min(restante, lote.cantidadActual);
       if (tomar <= 0) continue;
-      lineas.push(`${lote.codigoLote}: −${tomar}`);
+      const quedan = lote.cantidadActual - tomar;
+      lineas.push({
+        texto: `${lote.codigoLote}: −${tomar}`,
+        resultado: `${quedan} ${insumo?.unidadMedida ?? ''}`,
+      });
       restante -= tomar;
     }
 
     return { lineas, cargando, insuficiente: restante > 0 };
   }
 
+  // El stock del insumo es un solo pozo compartido: si dos filas mueven el
+  // mismo insumo (por ej. entradas a dos lotes distintos), el resultado de
+  // una fila tiene que arrastrar lo que ya movieron las filas de ARRIBA
+  // (mismo insumo) — como una libreta contable leida de arriba hacia abajo,
+  // no cada fila aislada. Por eso se corta en el indice de esta fila: las de
+  // abajo no cuentan todavia, asi que cambiar una fila nunca mueve el
+  // resultado de las que estan antes que ella, pero si el de las que vienen
+  // despues. Al ser derivado de filas() (no un contador que se va
+  // actualizando a mano), se recalcula solo con cualquier cambio —
+  // agregar/quitar fila, tipear en cualquiera.
   stockResultanteDeFila(fila: FilaMovimientoInsumoForm): string {
     const insumo = this.insumoDeFila(fila);
-    const cantidad = Number(fila.cantidad);
-    if (!insumo || !fila.cantidad || Number.isNaN(cantidad)) return '—';
+    if (!insumo) return '—';
 
-    const resultante =
-      this.tipoMovimiento() === 'entrada'
-        ? insumo.stockActual + cantidad
-        : insumo.stockActual - cantidad;
+    const filas = this.filas();
+    const indiceFila = filas.findIndex((f) => f.id === fila.id);
+    const filasDelInsumoHastaAqui = filas
+      .slice(0, indiceFila + 1)
+      .filter((f) => f.insumoId === fila.insumoId);
+
+    const contribuciones = filasDelInsumoHastaAqui
+      .map((f) => this.contribucionDeFila(f))
+      .filter((contribucion): contribucion is number => contribucion !== null);
+    if (contribuciones.length === 0) return '—';
+
+    const total = contribuciones.reduce((suma, contribucion) => suma + contribucion, 0);
+    const resultante = insumo.stockActual + total;
     return `${resultante} ${insumo.unidadMedida}`;
+  }
+
+  // Cuanto suma o resta esta fila al stock del insumo, segun tipoMovimiento:
+  // entrada suma la cantidad tal cual, salida la resta, y ajuste aporta la
+  // DIFERENCIA entre la cantidad real escrita y lo que ya tenia el lote (no
+  // la cantidad real en si, que no es un delta). null cuando todavia no hay
+  // datos suficientes para calcularla (sin cantidad, o en ajuste sin el
+  // lote resuelto).
+  private contribucionDeFila(fila: FilaMovimientoInsumoForm): number | null {
+    if (!fila.cantidad) return null;
+    const cantidad = Number(fila.cantidad);
+    if (Number.isNaN(cantidad)) return null;
+
+    const tipo = this.tipoMovimiento();
+    if (tipo === 'entrada') return cantidad;
+    if (tipo === 'salida') return -cantidad;
+
+    const lote = this.lotesDeFila(fila).find((l) => String(l.id) === fila.loteId);
+    return lote ? cantidad - lote.cantidadActual : null;
   }
 
   errorDeFila(id: number, campo: 'insumoId' | 'loteId' | 'cantidad'): string | null {
@@ -224,13 +334,74 @@ export class MovimientoFormModal {
     const form = this.formActual();
     const errores = validarMovimientoForm(form);
 
+    // "La cantidad no cambió" es una regla de negocio (no una validacion de
+    // forma como las de validarMovimientoForm) porque necesita cruzar
+    // fila.cantidad contra el stock real del lote elegido, algo que esa
+    // funcion no conoce — vive aca, en el componente, que si tiene los
+    // lotes cargados.
+    if (form.tipoMovimiento === 'ajuste') {
+      for (const fila of form.filas) {
+        const lote = this.lotesDeFila(fila).find((l) => String(l.id) === fila.loteId);
+        if (lote && fila.cantidad !== '' && Number(fila.cantidad) === lote.cantidadActual) {
+          errores.porFila = {
+            ...errores.porFila,
+            [fila.id]: { ...errores.porFila?.[fila.id], cantidad: 'La cantidad no cambió.' },
+          };
+        }
+      }
+    }
+
     this.errores.set(errores);
     this.errorGeneral.set(null);
 
     if (Object.keys(errores).length > 0) return;
 
-    this.registrado.emit(form);
-    this.closed.emit();
+    this.guardando.set(true);
+    const razon = form.motivoGeneral;
+    const peticion =
+      form.tipoMovimiento === 'entrada'
+        ? this.movimientoService.registrarEntrada(
+            form.filas.map((fila) => ({
+              lote_insumo_id: Number(fila.loteId),
+              cantidad: Number(fila.cantidad),
+              razon,
+            })),
+          )
+        : form.tipoMovimiento === 'ajuste'
+          ? this.movimientoService.registrarAjuste(
+              form.filas.map((fila) => {
+                const lote = this.lotesDeFila(fila).find((l) => String(l.id) === fila.loteId);
+                const cantidadReal = Number(fila.cantidad);
+                return {
+                  lote_insumo_id: Number(fila.loteId),
+                  // El backend pide un delta con signo, no la cantidad real
+                  // que tipeo la persona — se calcula aca, nunca se le pide
+                  // a la persona que lo calcule a mano.
+                  cantidad: lote ? cantidadReal - lote.cantidadActual : cantidadReal,
+                  razon,
+                };
+              }),
+            )
+          : this.movimientoService.registrarSalida(
+              form.filas.map((fila) => ({
+                insumo_id: Number(fila.insumoId),
+                cantidad: Number(fila.cantidad),
+                razon,
+              })),
+            );
+
+    peticion
+      .pipe(
+        finalize(() => this.guardando.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (movimientos) => {
+          this.saved.emit(movimientos);
+          this.closed.emit();
+        },
+        error: (error: unknown) => this.manejarError(error),
+      });
   }
 
   private cargarInsumos(): void {
@@ -290,5 +461,35 @@ export class MovimientoFormModal {
       motivoGeneral: this.motivoGeneral().trim(),
       filas: this.filas(),
     };
+  }
+
+  private manejarError(error: unknown): void {
+    if (!(error instanceof HttpErrorResponse)) {
+      this.errorGeneral.set('No se pudo registrar el movimiento. Intente nuevamente.');
+      return;
+    }
+
+    if (error.status === 401 || error.status === 403) {
+      this.errorGeneral.set('No tiene permisos para registrar movimientos.');
+      return;
+    }
+
+    const apiError = error.error as { message?: string | string[] } | null;
+    const mensajes = Array.isArray(apiError?.message)
+      ? apiError.message
+      : apiError?.message
+        ? [apiError.message]
+        : [];
+    const mensaje = mensajes.join(' ');
+
+    // El backend identifica la fila con problema en el propio mensaje (ej.
+    // "Lote no encontrado (lote_insumo_id=99)") — se muestra tal cual, no
+    // hay forma de mapearlo de vuelta a una fila puntual del form.
+    if (error.status === 400 || error.status === 404 || error.status === 409) {
+      this.errorGeneral.set(mensaje || 'No se pudo registrar el movimiento. Intente nuevamente.');
+      return;
+    }
+
+    this.errorGeneral.set('No se pudo registrar el movimiento. Intente nuevamente.');
   }
 }

@@ -84,7 +84,17 @@ describe('InsumoService', () => {
         request.url === INSUMOS_BASE &&
         !request.params.has('search') &&
         !request.params.has('estado') &&
-        !request.params.has('tipo'),
+        !request.params.has('tipo') &&
+        !request.params.has('nivel'),
+    );
+    req.flush({ data: [], meta: { total: 0, page: 1, limit: 10, total_pages: 0 } });
+  });
+
+  it('sends nivel as a query param (calculado por el backend, no por el front)', () => {
+    service.listar(1, 10, { nivel: 'bajo' }).subscribe();
+
+    const req = httpMock.expectOne(
+      (request) => request.url === INSUMOS_BASE && request.params.get('nivel') === 'bajo',
     );
     req.flush({ data: [], meta: { total: 0, page: 1, limit: 10, total_pages: 0 } });
   });

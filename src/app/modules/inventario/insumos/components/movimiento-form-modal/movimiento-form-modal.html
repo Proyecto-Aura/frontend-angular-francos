@@ -3,7 +3,7 @@
   title="Registrar movimiento de insumo"
   [hasIcon]="true"
   [hasFooter]="true"
-  [width]="960"
+  [width]="1280"
   (closed)="cerrar()"
 >
   <span
@@ -49,7 +49,7 @@
   }
 
   <div class="mt-4 w-full overflow-x-auto rounded-lg border border-border">
-    <table class="w-full min-w-[720px] border-collapse text-ds-base">
+    <table class="w-full min-w-[840px] border-collapse text-ds-base">
       <thead>
         <tr>
           <th
@@ -65,12 +65,12 @@
           <th
             class="h-[52px] whitespace-nowrap bg-table-header px-5 text-left font-normal text-muted-foreground"
           >
-            Stock mínimo
+            {{ tipoMovimiento() === 'entrada' ? 'Stock máximo' : 'Stock mínimo' }}
           </th>
           <th
             class="h-[52px] min-w-[200px] whitespace-nowrap bg-table-header px-5 text-left font-normal text-muted-foreground"
           >
-            {{ tipoMovimiento() === 'entrada' ? 'Lote' : 'Lotes (FEFO)' }}
+            {{ tipoMovimiento() === 'salida' ? 'Lotes' : 'Lote' }}
           </th>
           <th
             class="h-[52px] w-[120px] whitespace-nowrap bg-table-header px-5 text-left font-normal text-muted-foreground"
@@ -80,7 +80,12 @@
           <th
             class="h-[52px] whitespace-nowrap bg-table-header px-5 text-left font-normal text-muted-foreground"
           >
-            Stock resultante
+            Stock lote
+          </th>
+          <th
+            class="h-[52px] whitespace-nowrap bg-table-header px-5 text-left font-normal text-muted-foreground"
+          >
+            Stock insumo
           </th>
           <th class="h-[52px] w-[52px] bg-table-header"></th>
         </tr>
@@ -112,11 +117,11 @@
               [class.border-b]="!isLast"
               [class.border-border]="!isLast"
             >
-              {{ stockMinimoDeFila(fila) }}
+              {{ stockLimiteDeFila(fila) }}
             </td>
             <td class="px-5 py-3" [class.border-b]="!isLast" [class.border-border]="!isLast">
-              @if (tipoMovimiento() === 'entrada') {
-                <app-ds-select
+              @if (tipoMovimiento() !== 'salida') {
+                <app-ds-combobox
                   [id]="'movimiento-lote-' + fila.id"
                   [value]="fila.loteId"
                   (valueChange)="seleccionarLoteDeFila(fila.id, $event)"
@@ -128,6 +133,7 @@
                         ? 'Cargando lotes…'
                         : 'Selecciona un lote'
                   "
+                  emptyMessage="Sin lotes disponibles."
                   [disabled]="!fila.insumoId || cargandoLotesDeFila(fila)"
                   size="sm"
                   [invalid]="!!errorDeFila(fila.id, 'loteId')"
@@ -140,8 +146,8 @@
                   <span class="text-ds-sm text-muted-foreground">—</span>
                 } @else {
                   <div class="flex flex-col gap-0.5 text-ds-sm">
-                    @for (linea of desglose.lineas; track linea) {
-                      <span class="text-foreground">{{ linea }}</span>
+                    @for (linea of desglose.lineas; track linea.texto) {
+                      <span class="text-foreground">{{ linea.texto }}</span>
                     }
                     @if (desglose.insuficiente) {
                       <span class="font-medium text-destructive">Stock insuficiente</span>
@@ -155,10 +161,35 @@
                 [id]="'movimiento-cantidad-' + fila.id"
                 [value]="fila.cantidad"
                 (valueChange)="actualizarCantidadDeFila(fila.id, $event)"
-                placeholder="0"
+                [placeholder]="tipoMovimiento() === 'ajuste' ? 'Cantidad real' : '0'"
                 size="sm"
                 [invalid]="!!errorDeFila(fila.id, 'cantidad')"
               />
+              @if (tipoMovimiento() === 'ajuste' && fila.loteId) {
+                <div class="mt-1 text-ds-sm text-muted-foreground">
+                  Actual: {{ cantidadActualLoteDeFila(fila) }}
+                </div>
+              }
+            </td>
+            <td
+              class="whitespace-nowrap px-5 py-3 text-muted-foreground"
+              [class.border-b]="!isLast"
+              [class.border-border]="!isLast"
+            >
+              @if (tipoMovimiento() !== 'salida') {
+                {{ stockLoteDeFila(fila) }}
+              } @else {
+                @let desglose = desgloseFefoDeFila(fila);
+                @if (desglose.lineas.length === 0) {
+                  <span>—</span>
+                } @else {
+                  <div class="flex flex-col gap-0.5 text-ds-sm">
+                    @for (linea of desglose.lineas; track linea.texto) {
+                      <span>{{ linea.resultado }}</span>
+                    }
+                  </div>
+                }
+              }
             </td>
             <td
               class="whitespace-nowrap px-5 py-3 text-muted-foreground"

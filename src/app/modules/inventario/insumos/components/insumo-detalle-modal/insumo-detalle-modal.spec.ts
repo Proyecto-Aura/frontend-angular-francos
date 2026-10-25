@@ -4,9 +4,11 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { environment } from '../../../../../../environments/environment';
 import { Insumo } from '../../interfaces/insumo.interface';
 import { LoteInsumoDto } from '../../interfaces/lote-insumo-dto.interface';
+import { MovimientoInsumoDto } from '../../interfaces/movimiento-insumo-dto.interface';
 import { InsumoDetalleModal } from './insumo-detalle-modal';
 
 const LOTES_BASE = `${environment.apiUrl}/lotes-insumo`;
+const MOVIMIENTOS_BASE = `${environment.apiUrl}/movimientos-insumo`;
 
 function makeInsumo(overrides: Partial<Insumo> = {}): Insumo {
   return {
@@ -37,6 +39,27 @@ function makeLoteDto(overrides: Partial<LoteInsumoDto> = {}): LoteInsumoDto {
     activo: true,
     created_at: '2026-09-10T00:00:00.000Z',
     updated_at: '2026-09-10T00:00:00.000Z',
+    ...overrides,
+  };
+}
+
+function makeMovimientoDto(overrides: Partial<MovimientoInsumoDto> = {}): MovimientoInsumoDto {
+  return {
+    id: 1,
+    codigo: 'FR-MV-001-261022-INS1',
+    lote_insumo_id: 1,
+    codigo_lote: 'FR-LT-001-261001-INS1',
+    insumo_id: 1,
+    insumo_nombre: 'Harina de trigo',
+    insumo_sku: 'FR-INS-1',
+    insumo_unidad_medida: 'kg',
+    tipo: 'entrada',
+    cantidad: 100,
+    stock_anterior: 170,
+    stock_resultante: 270,
+    razon: 'Ingreso de lote',
+    fecha: '2026-10-22T16:40:00.000Z',
+    created_at: '2026-10-22T16:40:00.000Z',
     ...overrides,
   };
 }
@@ -284,5 +307,95 @@ describe('InsumoDetalleModal', () => {
     });
 
     expect(component.lotes()).toHaveLength(1);
+  });
+
+  function expectMovimientosRequest() {
+    return httpMock.expectOne(
+      (request) => request.url === MOVIMIENTOS_BASE && request.params.get('insumo_id') === '1',
+    );
+  }
+
+  it('does not request movimientos until the historial tab is opened', () => {
+    createConLotes(makeInsumo());
+
+    httpMock.expectNone(
+      (request) => request.url === MOVIMIENTOS_BASE && request.params.get('insumo_id') === '1',
+    );
+  });
+
+  it('requests y mapea el historial de movimientos al abrir la pestaña, resolviendo signo y lote', () => {
+    const fixture = createConLotes(makeInsumo());
+    const component = fixture.componentInstance;
+
+    component.cambiarTab('historial');
+    fixture.detectChanges();
+    expectMovimientosRequest().flush({
+      data: [
+        makeMovimientoDto({ tipo: 'entrada', cantidad: 100 }),
+        makeMovimientoDto({
+          id: 2,
+          codigo: 'FR-MV-002-261022-INS1',
+          tipo: 'salida',
+          cantidad: 20,
+          razon: '',
+        }),
+        makeMovimientoDto({
+          id: 3,
+          codigo: 'FR-MV-003-261022-INS1',
+          tipo: 'ajuste',
+          cantidad: -15,
+        }),
+      ],
+      meta: { total: 3, page: 1, limit: 50, total_pages: 1 },
+    });
+
+    const [entrada, salida, ajuste] = component.movimientos();
+    expect(entrada).toMatchObject({
+      cantidad: 100,
+      cantidadMostrada: '+100 kg',
+      loteCodigo: 'FR-LT-001-261001-INS1',
+    });
+    expect(salida).toMatchObject({ cantidad: -20, cantidadMostrada: '-20 kg', razon: '—' });
+    expect(ajuste).toMatchObject({ cantidad: -15, cantidadMostrada: '-15 kg' });
+  });
+
+  it('does not re-request movimientos when re-entering the historial tab for the same insumo', () => {
+    const fixture = createConLotes(makeInsumo());
+    const component = fixture.componentInstance;
+
+    component.cambiarTab('historial');
+    fixture.detectChanges();
+    expectMovimientosRequest().flush({
+      data: [makeMovimientoDto()],
+      meta: { total: 1, page: 1, limit: 50, total_pages: 1 },
+    });
+
+    component.cambiarTab('informacion');
+    fixture.detectChanges();
+    component.cambiarTab('historial');
+    fixture.detectChanges();
+
+    httpMock.expectNone(
+      (request) => request.url === MOVIMIENTOS_BASE && request.params.get('insumo_id') === '1',
+    );
+  });
+
+  it('shows an error state with retry when the movimientos request fails', () => {
+    const fixture = createConLotes(makeInsumo());
+    const component = fixture.componentInstance;
+
+    component.cambiarTab('historial');
+    fixture.detectChanges();
+    expectMovimientosRequest().flush('error', { status: 500, statusText: 'Server Error' });
+
+    expect(component.errorMovimientos()).toBe(true);
+
+    component.cargarMovimientos(makeInsumo());
+    expectMovimientosRequest().flush({
+      data: [],
+      meta: { total: 0, page: 1, limit: 50, total_pages: 0 },
+    });
+
+    expect(component.errorMovimientos()).toBe(false);
   });
 });

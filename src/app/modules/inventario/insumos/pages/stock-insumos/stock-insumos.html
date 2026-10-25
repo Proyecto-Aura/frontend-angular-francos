@@ -60,6 +60,14 @@
       </div>
       <div filters class="w-[188px]">
         <app-ds-select
+          [value]="nivelFiltro()"
+          (valueChange)="setNivel($event)"
+          [options]="nivelOptions"
+          placeholder="Todos los niveles"
+        />
+      </div>
+      <div filters class="w-[188px]">
+        <app-ds-select
           [value]="estadoFiltro()"
           (valueChange)="setEstado($event)"
           [options]="estadoOptions"
@@ -104,9 +112,7 @@
       }
     </app-ds-card>
   } @else {
-    <app-ds-card>
-      <p class="p-6 text-center text-muted-foreground">Historial de movimientos — próximamente.</p>
-    </app-ds-card>
+    <app-historial-movimientos-insumo />
   }
 
   <app-insumo-form-modal
@@ -124,7 +130,11 @@
     (saved)="loteGuardado()"
   />
 
-  <app-movimiento-form-modal [open]="modalMovimientoAbierto()" (closed)="cerrarFormMovimiento()" />
+  <app-movimiento-form-modal
+    [open]="modalMovimientoAbierto()"
+    (closed)="cerrarFormMovimiento()"
+    (saved)="movimientoGuardado()"
+  />
 </div>
 
 <ng-template #insumoCell let-insumo>

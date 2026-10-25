@@ -1,0 +1,101 @@
+<app-ds-filter-bar [hasSearch]="true">
+  <app-ds-input
+    search
+    [value]="search()"
+    (valueChange)="setSearch($event)"
+    placeholder="Insumo o SKU…"
+    [hasIcon]="true"
+  >
+    <span icon><app-ds-icon [img]="LucideSearch" [size]="16" /></span>
+  </app-ds-input>
+
+  <div filters class="w-[188px]">
+    <app-ds-select
+      [value]="tipoFiltro()"
+      (valueChange)="setTipo($event)"
+      [options]="tipoOptions"
+      placeholder="Todos los tipos"
+    />
+  </div>
+
+  <div filters class="flex items-center gap-2 text-ds-sm text-muted-foreground">
+    <label for="movimientos-fecha-desde">Fecha desde</label>
+    <span class="w-[160px]">
+      <app-ds-input
+        id="movimientos-fecha-desde"
+        type="date"
+        [value]="fechaDesde()"
+        (valueChange)="setFechaDesde($event)"
+        [invalid]="rangoInvalido()"
+      />
+    </span>
+  </div>
+
+  <div filters class="flex items-center gap-2 text-ds-sm text-muted-foreground">
+    <label for="movimientos-fecha-hasta">Fecha hasta</label>
+    <span class="w-[160px]">
+      <app-ds-input
+        id="movimientos-fecha-hasta"
+        type="date"
+        [value]="fechaHasta()"
+        (valueChange)="setFechaHasta($event)"
+        [invalid]="rangoInvalido()"
+      />
+    </span>
+  </div>
+</app-ds-filter-bar>
+
+@if (rangoInvalido()) {
+  <p class="mt-2 text-ds-sm text-destructive">"Fecha desde" no puede ser posterior a "Fecha hasta".</p>
+}
+
+<app-ds-card [padded]="false" [hasFooter]="totalPaginas() > 1" class="mt-4 block">
+  @if (cargando()) {
+    <div class="p-12 text-center text-muted-foreground">Cargando…</div>
+  } @else if (errorCarga()) {
+    <div class="flex flex-col items-center gap-3 p-12 text-center">
+      <p class="text-muted-foreground">No se pudieron cargar los movimientos.</p>
+      <app-ds-button variant="secondary" (clicked)="cargarMovimientos()">Reintentar</app-ds-button>
+    </div>
+  } @else {
+    <app-ds-data-table
+      [columns]="columnas()"
+      [rows]="movimientos()"
+      empty="Sin movimientos registrados"
+    />
+  }
+
+  @if (totalPaginas() > 1) {
+    <div footer>
+      <app-ds-pagination
+        [page]="pagina()"
+        [pageCount]="totalPaginas()"
+        [total]="total()"
+        [pageSize]="tamanioPagina"
+        (changed)="cambiarPagina($event)"
+      />
+    </div>
+  }
+</app-ds-card>
+
+<ng-template #fechaCell let-fila>
+  <div class="flex flex-col gap-0.5 py-0.5">
+    <span>{{ fila.fechaMostrada }}</span>
+    <span class="text-ds-sm text-muted-foreground">{{ fila.horaMostrada }}</span>
+  </div>
+</ng-template>
+
+<ng-template #insumoCell let-fila>
+  <app-ds-cell-stack [primary]="fila.insumoNombre" [secondary]="fila.insumoSku" />
+</ng-template>
+
+<ng-template #tipoCell let-fila>
+  <app-ds-badge [tone]="tipoTone(fila.tipo)">
+    <app-ds-icon icon [img]="tipoIcon(fila.tipo)" [size]="14" />
+    {{ tipoLabel(fila.tipo) }}
+  </app-ds-badge>
+</ng-template>
+
+<ng-template #cantidadCell let-fila>
+  <span class="font-medium" [style.color]="cantidadColor(fila)">{{ fila.cantidadMostrada }}</span>
+</ng-template>

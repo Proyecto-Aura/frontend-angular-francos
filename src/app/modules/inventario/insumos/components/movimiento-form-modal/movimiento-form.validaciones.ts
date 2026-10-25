@@ -24,10 +24,14 @@ export function validarMovimientoForm(form: MovimientoInsumoForm): MovimientoFor
     return errores;
   }
 
-  // El backend pide lote_insumo_id en 'entrada' (suma a un lote existente
-  // puntual) — en 'salida' el reparto entre lotes lo decide solo por FEFO,
-  // asi que ahi no hace falta elegir ninguno.
-  const requiereLote = form.tipoMovimiento === 'entrada';
+  // El backend pide lote_insumo_id en 'entrada' y 'ajuste' (ambos apuntan a
+  // un lote existente puntual) — en 'salida' el reparto entre lotes lo
+  // decide solo por FEFO, asi que ahi no hace falta elegir ninguno.
+  const requiereLote = form.tipoMovimiento === 'entrada' || form.tipoMovimiento === 'ajuste';
+  // En 'ajuste' el campo "cantidad" es la cantidad REAL contada (no un
+  // delta) — 0 es un valor valido (lote agotado), asi que ahi no exige > 0
+  // como entrada/salida, solo que no sea negativo.
+  const esAjuste = form.tipoMovimiento === 'ajuste';
 
   const porFila: Record<number, FilaMovimientoErrores> = {};
   for (const fila of form.filas) {
@@ -38,8 +42,10 @@ export function validarMovimientoForm(form: MovimientoInsumoForm): MovimientoFor
     if (requiereLote && !fila.loteId) {
       filaErrores.loteId = 'Selecciona un lote.';
     }
-    if (!fila.cantidad || Number(fila.cantidad) <= 0) {
-      filaErrores.cantidad = 'Debe ser mayor a 0.';
+    if (fila.cantidad === '' || Number.isNaN(Number(fila.cantidad))) {
+      filaErrores.cantidad = esAjuste ? 'Ingresa la cantidad real.' : 'Debe ser mayor a 0.';
+    } else if (esAjuste ? Number(fila.cantidad) < 0 : Number(fila.cantidad) <= 0) {
+      filaErrores.cantidad = esAjuste ? 'No puede ser negativa.' : 'Debe ser mayor a 0.';
     }
     if (Object.keys(filaErrores).length > 0) {
       porFila[fila.id] = filaErrores;
@@ -49,9 +55,9 @@ export function validarMovimientoForm(form: MovimientoInsumoForm): MovimientoFor
     errores.porFila = porFila;
   }
 
-  // En 'entrada' lo que no puede repetirse es el lote (sumarle a uno mismo
-  // dos veces en el mismo envio deberia ser una sola fila con la suma). En
-  // 'salida' lo que no puede repetirse es el insumo.
+  // En 'entrada'/'ajuste' lo que no puede repetirse es el lote (dos filas
+  // del mismo lote deberian ser una sola). En 'salida' lo que no puede
+  // repetirse es el insumo.
   const claves = requiereLote
     ? form.filas.map((fila) => fila.loteId)
     : form.filas.map((fila) => fila.insumoId);
