@@ -1,5 +1,5 @@
 import { Component, inject, signal } from '@angular/core';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { form, required, FormField, FormRoot } from '@angular/forms/signals';
@@ -21,6 +21,8 @@ export class AuthFormLogin {
 
   rememberSession = signal(false);
   loginError = signal<string | null>(null);
+  // Tras restablecer la contraseña se llega aquí con ?restablecida=1.
+  passwordReset = inject(ActivatedRoute).snapshot.queryParamMap.get('restablecida') === '1';
 
   loginModel = signal({ username: '', password: '' });
 
@@ -51,6 +53,6 @@ export class AuthFormLogin {
   );
 
   onForgotPassword() {
-    // TODO: navegar a la pantalla de recuperar contraseña (auth-reset)
+    this.router.navigateByUrl('/auth/forgot-password');
   }
 }

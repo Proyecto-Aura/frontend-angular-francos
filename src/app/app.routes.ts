@@ -1,10 +1,17 @@
-import { Routes } from '@angular/router';
+import { inject } from '@angular/core';
+import { Router, Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
 
 export const routes: Routes = [
   {
     path: 'auth',
     loadChildren: () => import('./modules/auth/auth.route').then((c) => c.AUTH_ROUTES),
+  },
+  {
+    // Enlace del correo de recuperación (lo arma el backend): /reset-password?token=…
+    path: 'reset-password',
+    // Una redirección simple descartaría el ?token=; se pasa tal cual.
+    redirectTo: ({ queryParams }) => inject(Router).createUrlTree(['/auth/reset'], { queryParams }),
   },
   {
     path: 'home',

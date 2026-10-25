@@ -42,3 +42,23 @@ export interface MeResponseDto {
   username: string;
   roles: string[];
 }
+
+// POST /api/v1/auth/forgot-password — público. Responde siempre 200 con el mismo
+// mensaje genérico, exista o no el correo.
+export interface ForgotPasswordRequestDto {
+  email: string;
+}
+
+// POST /api/v1/auth/reset-password — público. El token llega en el enlace del
+// correo (1 hora, un solo uso). 400 si el enlace es inválido/expiró/ya se usó o
+// si la contraseña no cumple (8 a 255 caracteres y coincidir con la confirmación).
+export interface ResetPasswordRequestDto {
+  token: string;
+  nueva_contrasena: string;
+  confirmar_contrasena: string;
+}
+
+// Respuesta de forgot-password y reset-password.
+export interface MessageResponseDto {
+  message: string;
+}
