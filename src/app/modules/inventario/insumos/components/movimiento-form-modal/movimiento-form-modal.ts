@@ -225,7 +225,8 @@ export class MovimientoFormModal {
     }
 
     const cantidad = Number(fila.cantidad);
-    const resultante = lote.cantidadActual + (!fila.cantidad || Number.isNaN(cantidad) ? 0 : cantidad);
+    const resultante =
+      lote.cantidadActual + (!fila.cantidad || Number.isNaN(cantidad) ? 0 : cantidad);
     return `${resultante} ${insumo.unidadMedida}`;
   }
 

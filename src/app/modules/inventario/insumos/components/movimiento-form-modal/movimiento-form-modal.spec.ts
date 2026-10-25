@@ -631,6 +631,8 @@ describe('MovimientoFormModal', () => {
         { status: 500, statusText: 'Server Error' },
       );
 
-    expect(component.errorGeneral()).toBe('No se pudo registrar el movimiento. Intente nuevamente.');
+    expect(component.errorGeneral()).toBe(
+      'No se pudo registrar el movimiento. Intente nuevamente.',
+    );
   });
 });

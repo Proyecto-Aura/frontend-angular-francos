@@ -238,7 +238,8 @@ export class HistorialMovimientosInsumo implements OnInit, AfterViewInit {
   }
 
   private aFila(m: MovimientoInsumo): FilaMovimientoGeneral {
-    const cantidad = m.tipo === 'ajuste' ? m.cantidad : m.tipo === 'salida' ? -m.cantidad : m.cantidad;
+    const cantidad =
+      m.tipo === 'ajuste' ? m.cantidad : m.tipo === 'salida' ? -m.cantidad : m.cantidad;
     const { fecha, hora } = this.formatearFechaHora(m.fecha);
     return {
       codigo: m.codigo,

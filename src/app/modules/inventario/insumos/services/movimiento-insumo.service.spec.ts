@@ -131,9 +131,9 @@ describe('MovimientoInsumoService', () => {
   });
 
   it('registra una entrada mandando siempre un array, aunque sea de una sola fila', () => {
-    let result: ReturnType<MovimientoInsumoService['registrarEntrada']> extends import(
-      'rxjs'
-    ).Observable<infer T>
+    let result: ReturnType<
+      MovimientoInsumoService['registrarEntrada']
+    > extends import('rxjs').Observable<infer T>
       ? T
       : never;
     service
@@ -158,7 +158,9 @@ describe('MovimientoInsumoService', () => {
 
     const req = httpMock.expectOne(`${MOVIMIENTOS_BASE}/salida`);
     expect(req.request.method).toBe('POST');
-    expect(req.request.body).toEqual([{ insumo_id: 5, cantidad: 30, razon: 'Entrega a producción' }]);
+    expect(req.request.body).toEqual([
+      { insumo_id: 5, cantidad: 30, razon: 'Entrega a producción' },
+    ]);
     req.flush([
       makeMovimientoDto({ tipo: 'salida', id: 1 }),
       makeMovimientoDto({ tipo: 'salida', id: 2 }),

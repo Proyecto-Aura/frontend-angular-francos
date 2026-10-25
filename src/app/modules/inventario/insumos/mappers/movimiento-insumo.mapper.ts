@@ -2,7 +2,10 @@ import {
   MovimientoInsumoDto,
   MovimientosInsumoPageDto,
 } from '../interfaces/movimiento-insumo-dto.interface';
-import { MovimientoInsumo, MovimientosInsumoPagina } from '../interfaces/movimiento-insumo.interface';
+import {
+  MovimientoInsumo,
+  MovimientosInsumoPagina,
+} from '../interfaces/movimiento-insumo.interface';
 
 export function toMovimientoInsumo(dto: MovimientoInsumoDto): MovimientoInsumo {
   return {
@@ -23,7 +26,9 @@ export function toMovimientoInsumo(dto: MovimientoInsumoDto): MovimientoInsumo {
   };
 }
 
-export function toMovimientosInsumoPagina(pageDto: MovimientosInsumoPageDto): MovimientosInsumoPagina {
+export function toMovimientosInsumoPagina(
+  pageDto: MovimientosInsumoPageDto,
+): MovimientosInsumoPagina {
   return {
     movimientos: pageDto.data.map(toMovimientoInsumo),
     total: pageDto.meta.total,

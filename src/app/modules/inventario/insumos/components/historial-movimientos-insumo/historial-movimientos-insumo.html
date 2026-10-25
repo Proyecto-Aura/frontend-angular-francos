@@ -46,7 +46,9 @@
 </app-ds-filter-bar>
 
 @if (rangoInvalido()) {
-  <p class="mt-2 text-ds-sm text-destructive">"Fecha desde" no puede ser posterior a "Fecha hasta".</p>
+  <p class="mt-2 text-ds-sm text-destructive">
+    "Fecha desde" no puede ser posterior a "Fecha hasta".
+  </p>
 }
 
 <app-ds-card [padded]="false" [hasFooter]="totalPaginas() > 1" class="mt-4 block">
