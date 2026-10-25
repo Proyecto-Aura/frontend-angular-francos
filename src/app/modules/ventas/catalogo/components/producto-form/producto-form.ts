@@ -116,7 +116,7 @@ export class ProductoForm {
   protected nota = computed(() =>
     this.modo() === 'editar'
       ? 'El SKU y el slug se conservan; el producto terminado asociado no se vuelve a crear.'
-      : 'Al guardar se genera el SKU FR-P{productoID}-PR{presentacionID}, se crea un producto terminado por presentación (stock actual 0, stock mínimo 1) y la visibilidad en Portal B inicia desactivada.',
+      : 'Al guardar se genera el SKU FR-P{productoID}-PR{presentacionID}, se crea un producto terminado por presentación (stock actual 0, stock mínimo 1) y las presentaciones quedan Desactivadas hasta que las actives (así se ven en el Portal B).',
   );
 
   protected skuDePresentacion(p: PresentacionForm): string {
