@@ -128,9 +128,9 @@ describe('ClienteService', () => {
       nombres: 'Ana',
       numero_documento: '45288977',
       tipo_cliente: 'persona_natural',
-      categoria_cliente: 'minorista',
       email: 'ana@correo.com',
     });
+    expect(req.request.body).not.toHaveProperty('categoria_cliente');
     expect(req.request.body).not.toHaveProperty('username');
     expect(req.request.body).not.toHaveProperty('password');
     req.flush({

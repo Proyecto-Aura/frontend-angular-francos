@@ -295,6 +295,18 @@ describe('ClienteFormModal', () => {
     expect(component.esEmpresa()).toBe(false);
   });
 
+  it('does not ask for the client type when registering', () => {
+    abrir();
+
+    expect(fixture.nativeElement.querySelector('#cliente-categoria')).toBeNull();
+  });
+
+  it('asks for the client type when editing', () => {
+    abrir(makeCliente());
+
+    expect(fixture.nativeElement.querySelector('#cliente-categoria')).not.toBeNull();
+  });
+
   it('only the RUC 20 shows the company layout with the contact section', () => {
     abrir();
     const en = (id: string) => fixture.nativeElement.querySelector(`#${id}`);

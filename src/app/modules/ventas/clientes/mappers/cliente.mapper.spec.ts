@@ -168,9 +168,14 @@ describe('cliente.mapper', () => {
         direccion: 'Jr. Las Magnolias 312',
         distrito_id: '150131',
         tipo_cliente: 'persona_natural',
-        categoria_cliente: 'minorista',
         email: 'ana@correo.com',
       });
+    });
+
+    it('does not send the client category when registering', () => {
+      const body = toRegistrarClienteRequest(makeForm({ categoria: 'mayorista' }));
+
+      expect(body).not.toHaveProperty('categoria_cliente');
     });
 
     it('sends the business name only for a company', () => {

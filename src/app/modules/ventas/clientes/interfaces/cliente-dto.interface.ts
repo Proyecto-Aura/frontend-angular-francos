@@ -72,7 +72,8 @@ export interface RegistrarClienteRequestDto {
   distrito_id?: string;
   tipo_cliente: TipoClienteDto;
   razon_social?: string;
-  categoria_cliente: CategoriaClienteDto;
+  /** Solo se envía al editar; en el alta el backend asigna minorista. */
+  categoria_cliente?: CategoriaClienteDto;
   email: string;
 }
 

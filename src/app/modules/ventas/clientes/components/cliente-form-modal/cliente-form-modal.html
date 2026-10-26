@@ -201,14 +201,17 @@
 
     <!-- Campos comerciales: se pintan como celdas de la grilla de arriba en ambos modos. -->
     <ng-template #datosComerciales>
-      <app-ds-field label="Tipo de cliente" htmlFor="cliente-categoria" [required]="true">
-        <app-ds-select
-          id="cliente-categoria"
-          [value]="f().categoria"
-          (valueChange)="onCategoria($event)"
-          [options]="categoriaOptions"
-        />
-      </app-ds-field>
+      @if (modoEdicion()) {
+        <!-- Al registrar no se pide: el backend deja al cliente como minorista. -->
+        <app-ds-field label="Tipo de cliente" htmlFor="cliente-categoria" [required]="true">
+          <app-ds-select
+            id="cliente-categoria"
+            [value]="f().categoria"
+            (valueChange)="onCategoria($event)"
+            [options]="categoriaOptions"
+          />
+        </app-ds-field>
+      }
       <app-ds-field label="Teléfono" htmlFor="cliente-telefono" [required]="true">
         <app-ds-input
           id="cliente-telefono"
