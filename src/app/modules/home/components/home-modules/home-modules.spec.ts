@@ -88,6 +88,26 @@ describe('HomeModules', () => {
     expect(titles).toEqual(['Ventas', 'Inventario', 'Gestión Estratégica']);
   });
 
+  it('shows the Configuración card, last, when the API returns it', () => {
+    const fixture = create();
+    httpMock
+      .expectOne(TREE_URL)
+      .flush([
+        nodo({ nombre: 'configuracion', etiqueta: 'Configuración', descripcion: 'Desc config' }),
+        nodo({ nombre: 'ventas', etiqueta: 'Ventas' }),
+      ]);
+    fixture.detectChanges();
+
+    const modules = fixture.componentInstance['modules']();
+    expect(modules.map((m: { title: string }) => m.title)).toEqual(['Ventas', 'Configuración']);
+    expect(modules[1]).toEqual({
+      icon: '/icons/module_configuracion.svg',
+      title: 'Configuración',
+      description: 'Desc config',
+      routerLink: '/configuracion',
+    });
+  });
+
   it('filters out a module the API returns that has no known MODULE_CARD_INFO entry (no real page yet)', () => {
     const fixture = create();
     httpMock

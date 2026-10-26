@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { LucideBuilding2 } from '@lucide/angular';
+import { permisoGuard } from '../../core/guards/permiso.guard';
 
 export const CONFIGURACION_ROUTES: Routes = [
   {
@@ -7,15 +7,13 @@ export const CONFIGURACION_ROUTES: Routes = [
     loadComponent: () =>
       import('../../layouts/module-layout/module-layout').then((c) => c.ModuleLayout),
     data: {
-      sidebarTitle: 'Configuración',
-      // Menú propio mientras el backend no publique el módulo en /rutas/mi-menu.
-      sidebarLinks: [
-        { label: 'Datos de empresa', path: '/configuracion/empresa', icon: LucideBuilding2 },
-      ],
+      // El sidebar sale de /rutas/mi-menu (nombre real del módulo en la BD).
+      moduleNombre: 'configuracion',
     },
     children: [
       {
         path: 'empresa',
+        canActivate: [permisoGuard],
         loadComponent: () =>
           import('./empresa/pages/datos-empresa/datos-empresa').then((c) => c.DatosEmpresa),
       },
