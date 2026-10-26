@@ -1,0 +1,90 @@
+<div class="flex flex-col gap-5 p-(--page-padding)">
+  <app-ds-breadcrumb [items]="migas" />
+
+  <div>
+    <h1 class="text-ds-2xl font-semibold text-foreground">Mi perfil</h1>
+    <p class="mt-1 text-ds-base text-muted-foreground">Datos personales y roles asignados</p>
+  </div>
+
+  @if (cargando()) {
+    <p
+      class="rounded-lg border border-border bg-card p-8 text-center text-ds-base text-muted-foreground"
+    >
+      Cargando perfil…
+    </p>
+  } @else if (error()) {
+    <div
+      class="flex flex-col items-center gap-3 rounded-lg border border-border bg-card p-8 text-center"
+    >
+      <p class="text-ds-base text-muted-foreground">{{ error() }}</p>
+      <app-ds-button variant="secondary" (clicked)="cargar()">Reintentar</app-ds-button>
+    </div>
+  } @else if (perfil(); as datos) {
+    <div class="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(260px,1fr)_minmax(0,2fr)]">
+      <app-ds-card title="Cuenta">
+        <div class="flex flex-col items-center gap-3 text-center">
+          <app-ds-avatar [name]="datos.nombre_completo" size="lg" />
+          <div>
+            <p class="font-semibold text-foreground">{{ datos.nombre_completo }}</p>
+            <p class="text-ds-sm text-muted-foreground">&#64;{{ datos.username }}</p>
+          </div>
+          <div class="flex flex-wrap justify-center gap-1.5">
+            @for (rol of datos.roles; track rol) {
+              <app-ds-badge tone="brand">{{ etiquetaDeRol(rol) }}</app-ds-badge>
+            }
+          </div>
+        </div>
+      </app-ds-card>
+
+      <div class="flex flex-col gap-4">
+        <app-ds-card title="Datos personales">
+          <dl class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <dt class="text-ds-sm text-muted-foreground">Nombres</dt>
+              <dd class="text-ds-base text-foreground">{{ datos.nombres }}</dd>
+            </div>
+            <div>
+              <dt class="text-ds-sm text-muted-foreground">Apellidos</dt>
+              <dd class="text-ds-base text-foreground">
+                {{ datos.apellido_paterno }} {{ datos.apellido_materno }}
+              </dd>
+            </div>
+            <div>
+              <dt class="text-ds-sm text-muted-foreground">Email</dt>
+              <dd class="text-ds-base text-foreground">{{ datos.email }}</dd>
+            </div>
+            <div>
+              <dt class="text-ds-sm text-muted-foreground">Username</dt>
+              <dd class="text-ds-base text-foreground">{{ datos.username }}</dd>
+            </div>
+          </dl>
+          <p class="mt-4 text-ds-sm text-muted-foreground">
+            Los cambios de datos y roles los realiza un administrador.
+          </p>
+        </app-ds-card>
+
+        <app-ds-card
+          title="Permisos de acceso"
+          subtitle="Módulos y pantallas a los que puede entrar"
+        >
+          @if (modulos().length === 0) {
+            <p class="text-ds-base text-muted-foreground">No tiene módulos asignados.</p>
+          } @else {
+            <div class="flex flex-col gap-3">
+              @for (modulo of modulos(); track modulo.id) {
+                <div>
+                  <p class="font-semibold text-foreground">{{ modulo.etiqueta }}</p>
+                  <div class="mt-1.5 flex flex-wrap gap-1.5">
+                    @for (pantalla of modulo.children; track pantalla.id) {
+                      <app-ds-badge tone="neutral">{{ pantalla.etiqueta }}</app-ds-badge>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        </app-ds-card>
+      </div>
+    </div>
+  }
+</div>

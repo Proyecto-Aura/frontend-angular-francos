@@ -1,0 +1,124 @@
+<div class="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(240px,1fr)_minmax(0,2fr)]">
+  <app-ds-card title="Roles" subtitle="Seleccione un rol para ver sus permisos">
+    <ul class="flex flex-col gap-2" aria-label="Roles">
+      @for (rol of roles(); track rol.id) {
+        <li>
+          <button
+            type="button"
+            (click)="seleccionar(rol)"
+            [attr.aria-pressed]="rol.id === rolId()"
+            class="flex w-full cursor-pointer items-start justify-between gap-3 rounded-lg border px-3.5 py-3 text-left transition-colors duration-[120ms]"
+            [class.border-primary]="rol.id === rolId()"
+            [class.bg-accent]="rol.id === rolId()"
+            [class.border-border]="rol.id !== rolId()"
+            [class.bg-card]="rol.id !== rolId()"
+          >
+            <span class="min-w-0">
+              <span class="block font-semibold text-foreground">{{ rol.etiqueta }}</span>
+              @if (rol.descripcion) {
+                <span class="mt-0.5 block text-ds-sm text-muted-foreground">
+                  {{ rol.descripcion }}
+                </span>
+              }
+            </span>
+            @if (cantidades()[rol.nombre] !== undefined) {
+              <app-ds-badge tone="neutral">
+                {{ cantidades()[rol.nombre] }}
+                {{ cantidades()[rol.nombre] === 1 ? 'usuario' : 'usuarios' }}
+              </app-ds-badge>
+            }
+          </button>
+        </li>
+      }
+    </ul>
+  </app-ds-card>
+
+  <app-ds-card [title]="titulo()" subtitle="Módulos y pantallas a los que puede entrar este rol">
+    <div class="flex flex-col gap-4">
+      <app-aviso-banner [texto]="aviso().mensaje" [tono]="aviso().tono" (closed)="cerrarAviso()" />
+
+      @if (cargandoArbol()) {
+        <p class="p-6 text-center text-ds-base text-muted-foreground">Cargando permisos…</p>
+      } @else if (errorArbol()) {
+        <div class="flex flex-col items-center gap-3 p-6 text-center">
+          <p class="text-ds-base text-muted-foreground">{{ errorArbol() }}</p>
+          <app-ds-button variant="secondary" (clicked)="cargarArbol()">Reintentar</app-ds-button>
+        </div>
+      } @else {
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <span class="flex items-center gap-2">
+            <app-ds-button variant="ghost" size="sm" (clicked)="expandirTodo()">
+              Expandir todo
+            </app-ds-button>
+            <app-ds-button variant="ghost" size="sm" (clicked)="contraerTodo()">
+              Contraer todo
+            </app-ds-button>
+          </span>
+          <span class="flex items-center gap-2">
+            <app-ds-button
+              variant="secondary"
+              size="sm"
+              [disabled]="!hayCambios() || guardando()"
+              (clicked)="descartar()"
+            >
+              Descartar
+            </app-ds-button>
+            <app-ds-button
+              size="sm"
+              [disabled]="!hayCambios() || guardando()"
+              (clicked)="guardar()"
+            >
+              {{ guardando() ? 'Guardando…' : 'Guardar permisos' }}
+            </app-ds-button>
+          </span>
+        </div>
+
+        @if (esAdmin()) {
+          <p class="text-ds-sm text-muted-foreground">
+            El rol Admin tiene acceso total y sus permisos no se pueden modificar.
+          </p>
+        }
+
+        @if (cargandoAccesos()) {
+          <p class="p-6 text-center text-ds-base text-muted-foreground">
+            Cargando permisos del rol…
+          </p>
+        } @else {
+          <ul class="flex flex-col" aria-label="Permisos por módulo">
+            @for (fila of filas(); track fila.nodo.id) {
+              <li
+                class="flex items-center gap-2 border-b border-border py-2 last:border-b-0"
+                [style.paddingLeft.px]="fila.nivel * 24"
+              >
+                @if (fila.tieneHijos) {
+                  <button
+                    type="button"
+                    (click)="alternarRama(fila.nodo)"
+                    [attr.aria-expanded]="fila.expandido"
+                    [attr.aria-label]="
+                      (fila.expandido ? 'Contraer ' : 'Expandir ') + fila.nodo.etiqueta
+                    "
+                    class="flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded border-none bg-transparent text-muted-foreground"
+                  >
+                    <app-ds-icon
+                      [img]="fila.expandido ? LucideChevronDown : LucideChevronRight"
+                      [size]="16"
+                    />
+                  </button>
+                } @else {
+                  <span class="h-6 w-6 shrink-0"></span>
+                }
+                <app-ds-switch
+                  [label]="fila.nodo.etiqueta"
+                  [checked]="fila.activo"
+                  [disabled]="esAdmin() || guardando()"
+                  (checkedChange)="alternar(fila.nodo)"
+                />
+              </li>
+            }
+          </ul>
+        }
+      }
+    </div>
+  </app-ds-card>
+</div>

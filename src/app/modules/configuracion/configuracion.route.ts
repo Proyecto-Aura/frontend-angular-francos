@@ -18,6 +18,20 @@ export const CONFIGURACION_ROUTES: Routes = [
           import('./empresa/pages/datos-empresa/datos-empresa').then((c) => c.DatosEmpresa),
       },
       {
+        path: 'usuarios',
+        canActivate: [permisoGuard],
+        loadComponent: () =>
+          import('./usuarios/pages/gestionar-usuarios/gestionar-usuarios').then(
+            (c) => c.GestionarUsuarios,
+          ),
+      },
+      {
+        // Pantalla del propio usuario: no es un permiso de menú, basta con estar logueado.
+        path: 'perfil',
+        loadComponent: () =>
+          import('./usuarios/pages/perfil-usuario/perfil-usuario').then((c) => c.PerfilUsuario),
+      },
+      {
         path: '',
         redirectTo: 'empresa',
         pathMatch: 'full',

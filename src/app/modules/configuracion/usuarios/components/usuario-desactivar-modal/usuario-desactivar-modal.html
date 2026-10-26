@@ -1,0 +1,33 @@
+<app-ds-modal
+  [open]="open()"
+  title="Desactivar usuario"
+  [hasFooter]="true"
+  [width]="480"
+  (closed)="cerrar()"
+>
+  @if (usuario(); as usuarioActual) {
+    <div class="flex flex-col gap-4">
+      <p class="text-ds-base text-foreground">
+        {{ usuarioActual.nombreCompleto }} no podrá ingresar al sistema. Sus datos e historial se
+        conservan y puede reactivarse en cualquier momento.
+      </p>
+      @if (errorGeneral()) {
+        <div
+          role="alert"
+          class="rounded-lg bg-destructive/10 px-3.5 py-3 text-ds-sm text-destructive"
+        >
+          {{ errorGeneral() }}
+        </div>
+      }
+    </div>
+  }
+
+  <span footer class="flex gap-2">
+    <app-ds-button variant="secondary" [disabled]="desactivando()" (clicked)="cerrar()">
+      Cancelar
+    </app-ds-button>
+    <app-ds-button variant="destructive" [disabled]="desactivando()" (clicked)="desactivar()">
+      {{ desactivando() ? 'Desactivando…' : 'Desactivar' }}
+    </app-ds-button>
+  </span>
+</app-ds-modal>
