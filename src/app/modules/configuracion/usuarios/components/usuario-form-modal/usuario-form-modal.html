@@ -1,0 +1,194 @@
+<app-ds-modal
+  [open]="open()"
+  [title]="modo() === 'nuevo' ? 'Nuevo usuario' : 'Editar usuario'"
+  [hasFooter]="true"
+  hint="Los campos con * son obligatorios"
+  [width]="640"
+  (closed)="cerrar()"
+>
+  <div class="flex flex-col gap-4">
+    @if (errorGeneral()) {
+      <div
+        role="alert"
+        class="rounded-lg bg-destructive/10 px-3.5 py-3 text-ds-sm text-destructive"
+      >
+        {{ errorGeneral() }}
+      </div>
+    }
+
+    <app-ds-field
+      label="Nombres"
+      [required]="true"
+      htmlFor="u-nombres"
+      [error]="errores().nombres ?? null"
+    >
+      <app-ds-input
+        id="u-nombres"
+        size="lg"
+        placeholder="Nombres"
+        [value]="form().nombres"
+        (valueChange)="cambiar('nombres', $event)"
+        [invalid]="!!errores().nombres"
+      />
+    </app-ds-field>
+
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <app-ds-field
+        label="Apellido paterno"
+        [required]="true"
+        htmlFor="u-apellido-paterno"
+        [error]="errores().apellidoPaterno ?? null"
+      >
+        <app-ds-input
+          id="u-apellido-paterno"
+          size="lg"
+          placeholder="Apellido paterno"
+          [value]="form().apellidoPaterno"
+          (valueChange)="cambiar('apellidoPaterno', $event)"
+          [invalid]="!!errores().apellidoPaterno"
+        />
+      </app-ds-field>
+      <app-ds-field
+        label="Apellido materno"
+        [required]="true"
+        htmlFor="u-apellido-materno"
+        [error]="errores().apellidoMaterno ?? null"
+      >
+        <app-ds-input
+          id="u-apellido-materno"
+          size="lg"
+          placeholder="Apellido materno"
+          [value]="form().apellidoMaterno"
+          (valueChange)="cambiar('apellidoMaterno', $event)"
+          [invalid]="!!errores().apellidoMaterno"
+        />
+      </app-ds-field>
+    </div>
+
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <app-ds-field
+        label="Tipo de documento"
+        [required]="true"
+        htmlFor="u-tipo-documento"
+        [hint]="modo() === 'editar' ? 'No editable' : null"
+      >
+        <app-ds-select
+          id="u-tipo-documento"
+          size="lg"
+          [value]="form().tipoDocumento"
+          (valueChange)="cambiarTipoDocumento($event)"
+          [options]="tiposDocumento"
+          [disabled]="modo() === 'editar'"
+        />
+      </app-ds-field>
+      <app-ds-field
+        label="Número de documento"
+        [required]="true"
+        htmlFor="u-numero-documento"
+        [hint]="modo() === 'editar' ? 'No editable' : null"
+        [error]="errores().numeroDocumento ?? null"
+      >
+        <app-ds-input
+          id="u-numero-documento"
+          size="lg"
+          placeholder="Número de documento"
+          [value]="form().numeroDocumento"
+          (valueChange)="cambiar('numeroDocumento', $event)"
+          [invalid]="!!errores().numeroDocumento"
+          [disabled]="modo() === 'editar'"
+        />
+      </app-ds-field>
+    </div>
+
+    <app-ds-field
+      label="Email"
+      [required]="true"
+      htmlFor="u-email"
+      [hint]="modo() === 'editar' ? 'No editable' : null"
+      [error]="errores().email ?? null"
+    >
+      <app-ds-input
+        id="u-email"
+        type="email"
+        size="lg"
+        placeholder="correo@francos.com"
+        [value]="form().email"
+        (valueChange)="cambiar('email', $event)"
+        [invalid]="!!errores().email"
+        [disabled]="modo() === 'editar'"
+      />
+    </app-ds-field>
+
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <app-ds-field
+        label="Username"
+        [required]="true"
+        htmlFor="u-username"
+        hint="3 a 50 caracteres: letras, números, punto, guion o guion bajo"
+        [error]="errores().username ?? null"
+      >
+        <app-ds-input
+          id="u-username"
+          size="lg"
+          placeholder="usuario"
+          [value]="form().username"
+          (valueChange)="cambiar('username', $event)"
+          [invalid]="!!errores().username"
+        />
+      </app-ds-field>
+      <app-ds-field
+        [label]="modo() === 'nuevo' ? 'Contraseña' : 'Nueva contraseña'"
+        [required]="modo() === 'nuevo'"
+        htmlFor="u-contrasena"
+        [hint]="modo() === 'nuevo' ? 'Mínimo 8 caracteres' : 'Dejar vacío para mantener la actual'"
+        [error]="errores().contrasena ?? null"
+      >
+        <app-ds-input
+          id="u-contrasena"
+          type="password"
+          size="lg"
+          placeholder="••••••••"
+          [value]="form().contrasena"
+          (valueChange)="cambiar('contrasena', $event)"
+          [invalid]="!!errores().contrasena"
+        />
+      </app-ds-field>
+    </div>
+
+    <app-ds-field label="Rol" [required]="true" htmlFor="u-rol" [error]="errores().rolId ?? null">
+      <app-ds-select
+        id="u-rol"
+        size="lg"
+        placeholder="Seleccionar rol"
+        [value]="form().rolId"
+        (valueChange)="cambiar('rolId', $event)"
+        [options]="opcionesRol()"
+        [invalid]="!!errores().rolId"
+      />
+    </app-ds-field>
+
+    @if (modo() === 'nuevo') {
+      <div class="flex flex-col gap-1">
+        <app-ds-switch
+          label="Activo"
+          [checked]="form().activo"
+          (checkedChange)="cambiar('activo', $event)"
+        />
+        <p class="text-ds-sm text-muted-foreground">
+          {{
+            form().activo ? 'Puede ingresar al sistema' : 'No podrá ingresar hasta ser reactivado'
+          }}
+        </p>
+      </div>
+    }
+  </div>
+
+  <span footer class="flex gap-2">
+    <app-ds-button variant="secondary" [disabled]="guardando()" (clicked)="cerrar()">
+      Cancelar
+    </app-ds-button>
+    <app-ds-button [disabled]="guardando()" (clicked)="guardar()">
+      {{ guardando() ? 'Guardando…' : modo() === 'nuevo' ? 'Crear usuario' : 'Guardar cambios' }}
+    </app-ds-button>
+  </span>
+</app-ds-modal>

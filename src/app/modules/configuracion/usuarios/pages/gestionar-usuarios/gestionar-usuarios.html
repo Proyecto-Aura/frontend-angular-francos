@@ -1,0 +1,132 @@
+<div class="flex flex-col gap-5 p-(--page-padding)">
+  <app-ds-breadcrumb [items]="migas" />
+
+  <div>
+    <h1 class="text-ds-2xl font-semibold text-foreground">Gestionar usuarios internos</h1>
+    <p class="mt-1 text-ds-base text-muted-foreground">
+      Cuentas de acceso, roles y permisos del equipo interno
+    </p>
+  </div>
+
+  <app-ds-tabs [tabs]="pestanas()" [activeId]="pestana()" (changed)="cambiarPestana($event)" />
+
+  <app-aviso-banner [texto]="aviso().mensaje" [tono]="aviso().tono" (closed)="cerrarAviso()" />
+
+  @if (pestana() === 'usuarios') {
+    <app-ds-filter-bar [hasSearch]="true" [hasActions]="true">
+      <app-ds-input
+        search
+        [value]="busqueda()"
+        (valueChange)="busqueda.set($event)"
+        placeholder="Buscar por nombre o username"
+        [hasIcon]="true"
+      >
+        <span icon><app-ds-icon [img]="LucideSearch" [size]="16" /></span>
+      </app-ds-input>
+
+      <div filters class="w-[188px]">
+        <app-ds-select
+          [value]="filtros().rol"
+          (valueChange)="cambiarRol($event)"
+          [options]="opcionesRol()"
+          placeholder="Todos los roles"
+        />
+      </div>
+      <div filters class="w-[188px]">
+        <app-ds-select
+          [value]="filtros().estado"
+          (valueChange)="cambiarEstado($event)"
+          [options]="opcionesEstado"
+          placeholder="Todos los estados"
+        />
+      </div>
+
+      <span actions class="flex items-center gap-2">
+        @if (hayFiltros()) {
+          <app-ds-button variant="ghost" size="sm" (clicked)="limpiarFiltros()">
+            Limpiar filtros
+          </app-ds-button>
+        }
+        <app-ds-button size="sm" (clicked)="nuevo()">
+          <span icon><app-ds-icon [img]="LucidePlus" [size]="16" /></span>
+          Nuevo usuario
+        </app-ds-button>
+      </span>
+    </app-ds-filter-bar>
+
+    @if (cargando()) {
+      <p
+        class="rounded-lg border border-border bg-card p-8 text-center text-ds-base text-muted-foreground"
+      >
+        Cargando usuarios…
+      </p>
+    } @else if (errorCarga()) {
+      <div
+        class="flex flex-col items-center gap-3 rounded-lg border border-border bg-card p-8 text-center"
+      >
+        <p class="text-ds-base text-muted-foreground">{{ errorCarga() }}</p>
+        <app-ds-button variant="secondary" (clicked)="recargar()">Reintentar</app-ds-button>
+      </div>
+    } @else {
+      <p class="text-ds-sm text-muted-foreground">
+        {{ total() }} {{ total() === 1 ? 'usuario' : 'usuarios' }}
+      </p>
+      <app-ds-data-table
+        [columns]="columns()"
+        [rows]="usuarios()"
+        empty="No hay usuarios que coincidan con los filtros"
+      />
+      <app-ds-pagination
+        [page]="filtros().pagina"
+        [pageCount]="totalPaginas()"
+        [total]="total()"
+        [pageSize]="porPagina"
+        (changed)="irAPagina($event)"
+      />
+    }
+  } @else {
+    <app-usuarios-roles-permisos [roles]="roles()" />
+  }
+</div>
+
+<app-usuario-form-modal
+  [open]="formAbierto()"
+  [usuario]="usuarioEnEdicion()"
+  [roles]="roles()"
+  (closed)="cerrarForm()"
+  (saved)="alGuardar($event)"
+/>
+
+<app-usuario-desactivar-modal
+  [open]="!!usuarioADesactivar()"
+  [usuario]="usuarioADesactivar()"
+  (closed)="usuarioADesactivar.set(null)"
+  (deactivated)="alDesactivar($event)"
+/>
+
+<ng-template #usuarioCell let-u>
+  <span class="flex items-center gap-3">
+    <app-ds-avatar [name]="u.nombreCompleto" size="sm" />
+    <app-ds-cell-stack [primary]="u.nombreCompleto" [secondary]="'@' + u.username" />
+  </span>
+</ng-template>
+
+<ng-template #rolCell let-u>
+  <app-ds-badge [tone]="tonoDeRol(u)">{{ rolDe(u) }}</app-ds-badge>
+</ng-template>
+
+<ng-template #estadoCell let-u>
+  <app-ds-badge [tone]="u.activo ? 'success' : 'neutral'" [dot]="true">
+    {{ u.activo ? 'Activo' : 'Inactivo' }}
+  </app-ds-badge>
+</ng-template>
+
+<ng-template #accionesCell let-u>
+  <app-ds-dropdown-menu [items]="accionesPorUsuario().get(u.id) ?? []">
+    <span trigger>
+      <app-ds-icon-button [label]="'Acciones de ' + u.nombreCompleto">
+        <app-ds-icon [img]="LucideEllipsis" [size]="16" />
+      </app-ds-icon-button>
+    </span>
+  </app-ds-dropdown-menu>
+</ng-template>
