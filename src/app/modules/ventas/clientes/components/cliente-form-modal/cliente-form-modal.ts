@@ -1,3 +1,4 @@
+import { NgTemplateOutlet } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import {
   Component,
@@ -43,17 +44,20 @@ const MENSAJE_ERROR_UBICACION =
 // Ayuda bajo el número de documento, según el tipo elegido (mismos formatos que valida el backend).
 const PISTA_DOCUMENTO: Record<TipoDocumento, string> = {
   dni: 'Debe tener 8 caracteres.',
-  ruc: 'Debe tener 11 caracteres. RUC 10 = persona natural · RUC 20 = empresa.',
+  ruc: 'Debe tener 11 caracteres. RUC 10 abre el formulario de persona natural; RUC 20, el de empresa.',
   ce: 'Debe tener de 9 a 12 letras o números.',
   pasaporte: 'Debe tener de 6 a 12 letras o números.',
 };
+
+const PISTA_CORREO_ALTA = 'Recibe el correo de verificación con las credenciales por defecto.';
+const PISTA_CORREO_EDICION = 'El correo pertenece a la cuenta de acceso y no se edita aquí.';
 
 const aOpciones = (items: UbigeoItem[]): SelectOption[] =>
   items.map((item) => ({ value: item.id, label: item.nombre }));
 
 /** Alta y edición de clientes. Sin `cliente` registra uno nuevo; con `cliente` lo edita (PATCH). */
 @Component({
-  imports: [Button, Field, Icon, Input, Modal, Select],
+  imports: [Button, Field, Icon, Input, Modal, NgTemplateOutlet, Select],
   selector: 'app-cliente-form-modal',
   templateUrl: './cliente-form-modal.html',
 })
@@ -94,6 +98,7 @@ export class ClienteFormModal {
   modoEdicion = computed(() => this.cliente() !== null);
   titulo = computed(() => (this.modoEdicion() ? 'Editar cliente' : 'Registrar cliente'));
   pistaDocumento = computed(() => PISTA_DOCUMENTO[this.f().tipoDocumento]);
+  pistaCorreo = computed(() => (this.modoEdicion() ? PISTA_CORREO_EDICION : PISTA_CORREO_ALTA));
   tituloIcon = computed(() => (this.modoEdicion() ? LucidePencil : LucidePlus));
   esEmpresa = computed(
     () =>
