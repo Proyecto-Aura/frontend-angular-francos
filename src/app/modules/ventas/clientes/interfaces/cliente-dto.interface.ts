@@ -39,6 +39,10 @@ export interface ClienteDto {
   direccion: string | null;
   ubicacion: UbicacionDto | null;
   email: string | null;
+  // Datos de la cuenta de acceso. Opcionales: el detalle los muestra
+  // solo cuando el backend los incluye en la respuesta.
+  username?: string | null;
+  email_verificado?: boolean | null;
 }
 
 export interface ClientesPageDto {
@@ -68,7 +72,8 @@ export interface RegistrarClienteRequestDto {
   distrito_id?: string;
   tipo_cliente: TipoClienteDto;
   razon_social?: string;
-  categoria_cliente: CategoriaClienteDto;
+  /** Solo se envía al editar; en el alta el backend asigna minorista. */
+  categoria_cliente?: CategoriaClienteDto;
   email: string;
 }
 

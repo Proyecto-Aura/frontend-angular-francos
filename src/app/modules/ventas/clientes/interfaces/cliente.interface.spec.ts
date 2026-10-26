@@ -190,6 +190,12 @@ describe('cliente.interface', () => {
       ]);
     });
 
+    it('names the email as the contact one when the client is a company', () => {
+      const errores = validarClienteForm(makeFormEmpresa({ email: '' }), false);
+
+      expect(errores).toEqual(['correo electrónico del contacto']);
+    });
+
     it('asks for the full location of a natural person', () => {
       const errores = validarClienteForm(
         makeFormNatural({ departamentoId: '15', provinciaId: '', distritoId: '' }),

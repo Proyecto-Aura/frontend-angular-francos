@@ -104,6 +104,22 @@ describe('cliente.mapper', () => {
       });
     });
 
+    it('maps the access account only when it comes', () => {
+      expect(toCliente(makeClienteDto())).not.toHaveProperty('usuario');
+
+      const cliente = toCliente(
+        makeClienteDto({
+          username: 'andes.20548712345',
+          email_verificado: false,
+        }),
+      );
+
+      expect(cliente).toMatchObject({
+        usuario: 'andes.20548712345',
+        correoVerificado: false,
+      });
+    });
+
     it('keeps the business name of a company', () => {
       const cliente = toCliente(
         makeClienteDto({ tipo_cliente: 'empresa', razon_social: 'Hotel Costa Verde S.A.' }),
@@ -152,9 +168,14 @@ describe('cliente.mapper', () => {
         direccion: 'Jr. Las Magnolias 312',
         distrito_id: '150131',
         tipo_cliente: 'persona_natural',
-        categoria_cliente: 'minorista',
         email: 'ana@correo.com',
       });
+    });
+
+    it('does not send the client category when registering', () => {
+      const body = toRegistrarClienteRequest(makeForm({ categoria: 'mayorista' }));
+
+      expect(body).not.toHaveProperty('categoria_cliente');
     });
 
     it('sends the business name only for a company', () => {

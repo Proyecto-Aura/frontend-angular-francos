@@ -39,6 +39,10 @@ export function toCliente(dto: ClienteDto): Cliente {
         }
       : null,
     email: dto.email ?? '',
+    ...(dto.username ? { usuario: dto.username } : {}),
+    ...(typeof dto.email_verificado === 'boolean'
+      ? { correoVerificado: dto.email_verificado }
+      : {}),
   };
 }
 
@@ -77,7 +81,6 @@ function datosDelCliente(form: ClienteForm): Omit<RegistrarClienteRequestDto, 'e
     ...(form.distritoId ? { distrito_id: form.distritoId } : {}),
     tipo_cliente: tipoCliente,
     ...(tipoCliente === 'empresa' && razonSocial ? { razon_social: razonSocial } : {}),
-    categoria_cliente: form.categoria,
   };
 }
 
@@ -88,6 +91,7 @@ export function toRegistrarClienteRequest(form: ClienteForm): RegistrarClienteRe
   };
 }
 
+// Al editar sí se envía la categoría; al registrar no (el backend asigna minorista).
 export function toActualizarClienteRequest(form: ClienteForm): ActualizarClienteRequestDto {
-  return datosDelCliente(form);
+  return { ...datosDelCliente(form), categoria_cliente: form.categoria };
 }

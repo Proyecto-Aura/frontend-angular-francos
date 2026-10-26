@@ -21,7 +21,7 @@ describe('toPedidoHistorial', () => {
     expect(toPedidoHistorial(makePedidoDto())).toMatchObject({
       id: 1,
       codigo: 'PED-000001',
-      fecha: '09/09/2026',
+      fecha: '09 Sep 2026',
       tipoEntrega: 'Delivery',
       total: 'S/ 124.80',
       estado: 'Entregado',
@@ -33,7 +33,7 @@ describe('toPedidoHistorial', () => {
     // 02:00 UTC del día 10 son las 21:00 del día 9 en Lima.
     const pedido = toPedidoHistorial(makePedidoDto({ created_at: '2026-09-10T02:00:00.000Z' }));
 
-    expect(pedido.fecha).toBe('09/09/2026');
+    expect(pedido.fecha).toBe('09 Sep 2026');
   });
 
   it('labels the store pickup', () => {

@@ -50,27 +50,26 @@
           placeholder="Número de documento"
         />
       </app-ds-field>
-    </div>
 
-    @if (esEmpresa()) {
-      <p class="text-ds-sm font-semibold text-foreground">Datos de empresa</p>
-      <app-ds-field label="Razón social" htmlFor="cliente-razon-social" [required]="true">
-        <app-ds-input
-          id="cliente-razon-social"
-          [value]="f().razonSocial"
-          (valueChange)="setCampo('razonSocial', $event)"
-          placeholder="Razón social"
-        />
-      </app-ds-field>
-
-      <p class="text-ds-sm font-semibold text-foreground">Datos del contacto</p>
-      <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      @if (esEmpresa()) {
+        <!-- Solo el RUC 20 cambia el formulario: empresa arriba, contacto en su propia sección. -->
+        <app-ds-field label="Razón social" htmlFor="cliente-razon-social" [required]="true">
+          <app-ds-input
+            id="cliente-razon-social"
+            [value]="f().razonSocial"
+            (valueChange)="setCampo('razonSocial', $event)"
+            placeholder="Ej. Distribuidora Andes S.A.C."
+          />
+        </app-ds-field>
+        <ng-container *ngTemplateOutlet="datosComerciales" />
+      } @else {
+        <!-- DNI, carné de extranjería, pasaporte y RUC 10: un solo bloque de persona natural. -->
         <app-ds-field label="Nombres" htmlFor="cliente-nombres" [required]="true">
           <app-ds-input
             id="cliente-nombres"
             [value]="f().nombres"
             (valueChange)="setCampo('nombres', $event)"
-            placeholder="Nombres"
+            placeholder="Ej. Ana María"
           />
         </app-ds-field>
         <app-ds-field label="Apellido paterno" htmlFor="cliente-apellido-paterno" [required]="true">
@@ -78,7 +77,7 @@
             id="cliente-apellido-paterno"
             [value]="f().apellidoPaterno"
             (valueChange)="setCampo('apellidoPaterno', $event)"
-            placeholder="Apellido paterno"
+            placeholder="Ej. Vega"
           />
         </app-ds-field>
         <app-ds-field label="Apellido materno" htmlFor="cliente-apellido-materno" [required]="true">
@@ -86,19 +85,7 @@
             id="cliente-apellido-materno"
             [value]="f().apellidoMaterno"
             (valueChange)="setCampo('apellidoMaterno', $event)"
-            placeholder="Apellido materno"
-          />
-        </app-ds-field>
-      </div>
-    } @else {
-      <p class="text-ds-sm font-semibold text-foreground">Datos personales</p>
-      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <app-ds-field label="Nombres" htmlFor="cliente-nombres" [required]="true">
-          <app-ds-input
-            id="cliente-nombres"
-            [value]="f().nombres"
-            (valueChange)="setCampo('nombres', $event)"
-            placeholder="Nombres"
+            placeholder="Ej. Torres"
           />
         </app-ds-field>
         <app-ds-field label="Fecha de nacimiento" htmlFor="cliente-nacimiento" [required]="true">
@@ -109,24 +96,6 @@
             (valueChange)="setCampo('fechaNacimiento', $event)"
           />
         </app-ds-field>
-        <app-ds-field label="Apellido paterno" htmlFor="cliente-apellido-paterno" [required]="true">
-          <app-ds-input
-            id="cliente-apellido-paterno"
-            [value]="f().apellidoPaterno"
-            (valueChange)="setCampo('apellidoPaterno', $event)"
-            placeholder="Apellido paterno"
-          />
-        </app-ds-field>
-        <app-ds-field label="Apellido materno" htmlFor="cliente-apellido-materno" [required]="true">
-          <app-ds-input
-            id="cliente-apellido-materno"
-            [value]="f().apellidoMaterno"
-            (valueChange)="setCampo('apellidoMaterno', $event)"
-            placeholder="Apellido materno"
-          />
-        </app-ds-field>
-      </div>
-      <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <app-ds-field label="Departamento" htmlFor="cliente-departamento" [required]="true">
           <app-ds-select
             id="cliente-departamento"
@@ -156,55 +125,119 @@
             [disabled]="!f().provinciaId"
           />
         </app-ds-field>
-      </div>
-      <app-ds-field label="Dirección" htmlFor="cliente-direccion" [required]="true">
-        <app-ds-input
-          id="cliente-direccion"
-          [value]="f().direccion"
-          (valueChange)="setCampo('direccion', $event)"
-          placeholder="Ej. Av. Grau 245, Urb. Los Pinos"
-        />
-      </app-ds-field>
+        <app-ds-field label="Dirección" htmlFor="cliente-direccion" [required]="true">
+          <app-ds-input
+            id="cliente-direccion"
+            [value]="f().direccion"
+            (valueChange)="setCampo('direccion', $event)"
+            placeholder="Ej. Av. Grau 245, Urb. Los Pinos"
+          />
+        </app-ds-field>
+        <ng-container *ngTemplateOutlet="datosComerciales" />
+      }
+    </div>
+
+    @if (esEmpresa()) {
+      <section
+        class="flex flex-col gap-4 border-t border-border pt-5"
+        aria-label="Datos del contacto"
+      >
+        <div>
+          <h3 class="text-ds-lg font-semibold text-foreground">Datos del contacto</h3>
+          <p class="mt-1 text-ds-sm text-muted-foreground">Persona responsable de la cuenta</p>
+        </div>
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <app-ds-field label="Nombres" htmlFor="cliente-nombres" [required]="true">
+            <app-ds-input
+              id="cliente-nombres"
+              [value]="f().nombres"
+              (valueChange)="setCampo('nombres', $event)"
+              placeholder="Ej. Jorge Luis"
+            />
+          </app-ds-field>
+          <app-ds-field
+            label="Apellido paterno"
+            htmlFor="cliente-apellido-paterno"
+            [required]="true"
+          >
+            <app-ds-input
+              id="cliente-apellido-paterno"
+              [value]="f().apellidoPaterno"
+              (valueChange)="setCampo('apellidoPaterno', $event)"
+              placeholder="Ej. Medina"
+            />
+          </app-ds-field>
+          <app-ds-field
+            label="Apellido materno"
+            htmlFor="cliente-apellido-materno"
+            [required]="true"
+          >
+            <app-ds-input
+              id="cliente-apellido-materno"
+              [value]="f().apellidoMaterno"
+              (valueChange)="setCampo('apellidoMaterno', $event)"
+              placeholder="Ej. Salas"
+            />
+          </app-ds-field>
+          <!-- Empresa: el único correo es el del contacto; ahí llega la verificación. -->
+          <app-ds-field
+            label="Correo electrónico del contacto"
+            htmlFor="cliente-email"
+            [required]="!modoEdicion()"
+            [hint]="pistaCorreo()"
+          >
+            <app-ds-input
+              id="cliente-email"
+              type="email"
+              [value]="f().email"
+              (valueChange)="setCampo('email', $event)"
+              placeholder="jmedina@gmail.com"
+              [disabled]="modoEdicion()"
+            />
+          </app-ds-field>
+        </div>
+      </section>
     }
 
-    <p class="text-ds-sm font-semibold text-foreground">Datos comerciales</p>
-    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-      <app-ds-field label="Tipo de cliente" htmlFor="cliente-categoria" [required]="true">
-        <app-ds-select
-          id="cliente-categoria"
-          [value]="f().categoria"
-          (valueChange)="onCategoria($event)"
-          [options]="categoriaOptions"
-        />
-      </app-ds-field>
-      <app-ds-field label="Teléfono" htmlFor="cliente-telefono" [required]="true" hint="9 dígitos">
+    <!-- Campos comerciales: se pintan como celdas de la grilla de arriba en ambos modos. -->
+    <ng-template #datosComerciales>
+      @if (modoEdicion()) {
+        <!-- Al registrar no se pide: el backend deja al cliente como minorista. -->
+        <app-ds-field label="Tipo de cliente" htmlFor="cliente-categoria" [required]="true">
+          <app-ds-select
+            id="cliente-categoria"
+            [value]="f().categoria"
+            (valueChange)="onCategoria($event)"
+            [options]="categoriaOptions"
+          />
+        </app-ds-field>
+      }
+      <app-ds-field label="Teléfono" htmlFor="cliente-telefono" [required]="true">
         <app-ds-input
           id="cliente-telefono"
           [value]="f().telefono"
           (valueChange)="setCampo('telefono', $event)"
-          placeholder="987654321"
+          placeholder="9 dígitos"
         />
       </app-ds-field>
-    </div>
-    <app-ds-field
-      [label]="esEmpresa() ? 'Correo de la empresa' : 'Correo'"
-      htmlFor="cliente-email"
-      [required]="!modoEdicion()"
-      [hint]="
-        modoEdicion()
-          ? 'El correo pertenece a la cuenta de acceso y no se edita aquí.'
-          : 'Recibe el correo de verificación con las credenciales por defecto.'
-      "
-    >
-      <app-ds-input
-        id="cliente-email"
-        type="email"
-        [value]="f().email"
-        (valueChange)="setCampo('email', $event)"
-        placeholder="correo@dominio.com"
-        [disabled]="modoEdicion()"
-      />
-    </app-ds-field>
+      @if (!esEmpresa()) {
+        <app-ds-field
+          label="Correo"
+          htmlFor="cliente-email"
+          [required]="!modoEdicion()"
+          [hint]="pistaCorreo()"
+        >
+          <app-ds-input
+            id="cliente-email"
+            type="email"
+            [value]="f().email"
+            (valueChange)="setCampo('email', $event)"
+            placeholder="correo@dominio.com"
+            [disabled]="modoEdicion()"
+          />
+        </app-ds-field>
+      }
+    </ng-template>
 
     @if (!modoEdicion()) {
       <p class="text-ds-sm text-muted-foreground">

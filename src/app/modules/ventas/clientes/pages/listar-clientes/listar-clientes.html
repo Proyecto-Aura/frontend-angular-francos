@@ -8,43 +8,52 @@
 
   <app-aviso-banner [texto]="aviso()" [tono]="avisoTono()" (closed)="aviso.set('')" />
 
-  <app-ds-filter-bar [hasSearch]="true" [hasActions]="true">
-    <app-ds-input
-      search
-      [value]="query()"
-      (valueChange)="setQuery($event)"
-      placeholder="Nombre, razón social o documento…"
-      [hasIcon]="true"
-    >
-      <span icon><app-ds-icon [img]="LucideSearch" [size]="16" /></span>
-    </app-ds-input>
-
-    <div filters class="w-[180px]">
-      <app-ds-select
-        [value]="categoriaFiltro()"
-        (valueChange)="setCategoria($event)"
-        [options]="categoriaOptions"
-        placeholder="Todos los tipos"
-      />
+  <app-ds-card [padded]="false" [hasFooter]="mostrarPie()">
+    <!-- Panel de filtros: parte de la misma tarjeta que la tabla (como en el prototipo). -->
+    <div class="flex flex-wrap items-end gap-3 border-b border-border bg-muted p-4">
+      <div class="flex max-w-[320px] min-w-[220px] flex-[1_1_300px] flex-col gap-2">
+        <label for="clientes-buscar" class="text-[13px] font-semibold text-foreground"
+          >Buscar</label
+        >
+        <app-ds-input
+          id="clientes-buscar"
+          [value]="query()"
+          (valueChange)="setQuery($event)"
+          placeholder="Nombre, razón social o documento..."
+        />
+      </div>
+      <div class="flex w-[168px] flex-col gap-2">
+        <label for="clientes-tipo" class="text-[13px] font-semibold text-foreground">
+          Tipo de cliente
+        </label>
+        <app-ds-select
+          id="clientes-tipo"
+          [value]="categoriaFiltro()"
+          (valueChange)="setCategoria($event)"
+          [options]="categoriaOptions"
+          placeholder="Todos los tipos"
+        />
+      </div>
+      <div class="flex w-[170px] flex-col gap-2">
+        <label for="clientes-estado" class="text-[13px] font-semibold text-foreground">
+          Estado
+        </label>
+        <app-ds-select
+          id="clientes-estado"
+          [value]="estadoFiltro()"
+          (valueChange)="setEstado($event)"
+          [options]="estadoOptions"
+          placeholder="Todos los estados"
+        />
+      </div>
+      <div class="ml-auto">
+        <app-ds-button size="lg" (clicked)="nuevoCliente()">
+          <span icon><app-ds-icon [img]="LucideUserPlus" [size]="16" /></span>
+          Registrar cliente
+        </app-ds-button>
+      </div>
     </div>
-    <div filters class="w-[190px]">
-      <app-ds-select
-        [value]="estadoFiltro()"
-        (valueChange)="setEstado($event)"
-        [options]="estadoOptions"
-        placeholder="Todos los estados"
-      />
-    </div>
 
-    <span actions>
-      <app-ds-button size="sm" (clicked)="nuevoCliente()">
-        <span icon><app-ds-icon [img]="LucidePlus" [size]="16" /></span>
-        Registrar cliente
-      </app-ds-button>
-    </span>
-  </app-ds-filter-bar>
-
-  <app-ds-card [padded]="false" [hasFooter]="totalPaginas() > 1">
     @if (cargando()) {
       <div class="p-12 text-center text-muted-foreground">Cargando…</div>
     } @else if (errorCarga()) {
@@ -60,15 +69,18 @@
       />
     }
 
-    @if (totalPaginas() > 1) {
-      <div footer>
-        <app-ds-pagination
-          [page]="pagina()"
-          [pageCount]="totalPaginas()"
-          [total]="total()"
-          [pageSize]="tamanioPagina"
-          (changed)="cambiarPagina($event)"
-        />
+    @if (mostrarPie()) {
+      <div footer class="flex flex-wrap items-center justify-between gap-4">
+        <span class="text-ds-base text-muted-foreground">
+          {{ clientes().length }} de {{ total() }} {{ total() === 1 ? 'cliente' : 'clientes' }}
+        </span>
+        @if (totalPaginas() > 1) {
+          <app-ds-pagination
+            [page]="pagina()"
+            [pageCount]="totalPaginas()"
+            (changed)="cambiarPagina($event)"
+          />
+        }
       </div>
     }
   </app-ds-card>
@@ -80,7 +92,11 @@
     (saved)="clienteGuardado($event)"
   />
 
-  <app-cliente-detalle-modal [cliente]="clienteEnDetalle()" (closed)="clienteEnDetalle.set(null)" />
+  <app-cliente-detalle-modal
+    [cliente]="clienteEnDetalle()"
+    (closed)="clienteEnDetalle.set(null)"
+    (editarCliente)="editarDesdeDetalle($event)"
+  />
 
   <!-- Confirmar desactivación (lógica: el cliente se conserva en el historial) -->
   <app-ds-modal
@@ -107,6 +123,10 @@
   </app-ds-modal>
 </div>
 
+<ng-template #codigoCell let-c>
+  <span class="font-semibold text-foreground">{{ c.codigo }}</span>
+</ng-template>
+
 <ng-template #clienteCell let-c>
   <span class="inline-flex min-w-0 items-center gap-3">
     <app-ds-avatar [name]="nombreCliente(c)" size="sm" />
@@ -115,11 +135,7 @@
 </ng-template>
 
 <ng-template #documentoCell let-c>
-  <app-ds-cell-stack
-    [primary]="c.numeroDocumento"
-    [secondary]="documentoLabel(c)"
-    [strong]="false"
-  />
+  <app-ds-cell-stack [primary]="c.numeroDocumento" [secondary]="documentoLabel(c)" />
 </ng-template>
 
 <ng-template #categoriaCell let-c>
@@ -134,36 +150,43 @@
 
 <ng-template #accionesCell let-c>
   <span class="inline-flex items-center justify-end gap-1.5">
-    <app-ds-button variant="secondary" size="sm" (clicked)="verCliente(c)">
-      <span icon><app-ds-icon [img]="LucideEye" [size]="16" /></span>
-      Ver detalle
-    </app-ds-button>
-    <app-ds-icon-button
-      label="Editar cliente"
-      variant="secondary"
-      size="sm"
-      (clicked)="editarCliente(c)"
+    <button
+      type="button"
+      (click)="verCliente(c)"
+      class="inline-flex h-7 cursor-pointer items-center gap-1.5 rounded-md border border-primary/25 bg-card px-3 text-[13px] font-medium text-primary transition-colors duration-[120ms] ease-linear hover:bg-accent"
     >
-      <app-ds-icon [img]="LucidePencil" [size]="16" />
-    </app-ds-icon-button>
+      <app-ds-icon [img]="LucideEye" [size]="14" />
+      Ver detalle
+    </button>
+    <button
+      type="button"
+      aria-label="Editar cliente"
+      title="Editar cliente"
+      (click)="editarCliente(c)"
+      class="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-primary/25 bg-card text-amber-700 transition-colors duration-[120ms] ease-linear hover:bg-muted"
+    >
+      <app-ds-icon [img]="LucidePencil" [size]="14" />
+    </button>
     @if (c.estado) {
-      <app-ds-icon-button
-        label="Desactivar cliente"
-        variant="secondary"
-        size="sm"
-        (clicked)="pedirDesactivar(c)"
+      <button
+        type="button"
+        aria-label="Desactivar cliente"
+        title="Desactivar cliente"
+        (click)="pedirDesactivar(c)"
+        class="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-primary/25 bg-card text-primary transition-colors duration-[120ms] ease-linear hover:bg-accent"
       >
-        <app-ds-icon [img]="LucideTrash2" [size]="16" />
-      </app-ds-icon-button>
+        <app-ds-icon [img]="LucideTrash2" [size]="14" />
+      </button>
     } @else {
-      <app-ds-icon-button
-        label="Reactivar cliente"
-        variant="secondary"
-        size="sm"
-        (clicked)="reactivarCliente(c)"
+      <button
+        type="button"
+        aria-label="Reactivar cliente"
+        title="Reactivar cliente"
+        (click)="reactivarCliente(c)"
+        class="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-primary/25 bg-card text-success transition-colors duration-[120ms] ease-linear hover:bg-muted"
       >
-        <app-ds-icon [img]="LucideRotateCcw" [size]="16" />
-      </app-ds-icon-button>
+        <app-ds-icon [img]="LucideRotateCcw" [size]="14" />
+      </button>
     }
   </span>
 </ng-template>

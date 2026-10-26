@@ -88,14 +88,14 @@ describe('ListarClientes', () => {
         request.method === 'GET' &&
         request.url === CLIENTES_BASE &&
         request.params.get('page') === String(pagina) &&
-        request.params.get('limit') === '8',
+        request.params.get('limit') === '5',
     );
   }
 
   function flushList(
     req: TestRequest,
     data: ClienteDto[] = [],
-    meta = { total: data.length, page: 1, limit: 8, total_pages: data.length > 0 ? 1 : 0 },
+    meta = { total: data.length, page: 1, limit: 5, total_pages: data.length > 0 ? 1 : 0 },
   ): void {
     req.flush({ data, meta });
   }
@@ -125,6 +125,18 @@ describe('ListarClientes', () => {
       'estado',
       'acciones',
     ]);
+  });
+
+  it('shows the footer only when there are clients to count', () => {
+    create([makeClienteDto(), makeClienteDto({ id: 'c2' })]);
+    expect(page.mostrarPie()).toBe(true);
+
+    page.setQuery('zzz');
+    flushList(
+      httpMock.expectOne((r) => r.url === CLIENTES_BASE && r.params.get('search') === 'zzz'),
+      [],
+    );
+    expect(page.mostrarPie()).toBe(false);
   });
 
   it('shows the loading state until the backend answers', () => {
@@ -204,7 +216,7 @@ describe('ListarClientes', () => {
     flushList(expectListRequest(2), [makeClienteDto({ id: 'c9' })], {
       total: 9,
       page: 2,
-      limit: 8,
+      limit: 5,
       total_pages: 2,
     });
 
@@ -251,6 +263,18 @@ describe('ListarClientes', () => {
     page.verCliente(cliente);
 
     expect(page.clienteEnDetalle()).toBe(cliente);
+  });
+
+  it('closes the detail and opens the edit form when editing from the detail', () => {
+    create();
+    const cliente = page.clientes()[0];
+    page.verCliente(cliente);
+
+    page.editarDesdeDetalle(cliente);
+
+    expect(page.clienteEnDetalle()).toBeNull();
+    expect(page.clienteEnEdicion()).toBe(cliente);
+    expect(page.modalFormAbierto()).toBe(true);
   });
 
   it('asks for confirmation before deactivating and can cancel', () => {

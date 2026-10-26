@@ -5,6 +5,7 @@ import {
   OnInit,
   TemplateRef,
   ViewChild,
+  computed,
   inject,
   signal,
 } from '@angular/core';
@@ -12,10 +13,9 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   LucideEye,
   LucidePencil,
-  LucidePlus,
   LucideRotateCcw,
-  LucideSearch,
   LucideTrash2,
+  LucideUserPlus,
 } from '@lucide/angular';
 import { finalize } from 'rxjs';
 import { Avatar } from '../../../../../shared/ds/avatar/avatar';
@@ -24,9 +24,7 @@ import { Button } from '../../../../../shared/ds/button/button';
 import { Card } from '../../../../../shared/ds/card/card';
 import { CellStack } from '../../../../../shared/ds/cell-stack/cell-stack';
 import { DataTable, DsColumn } from '../../../../../shared/ds/data-table/data-table';
-import { FilterBar } from '../../../../../shared/ds/filter-bar/filter-bar';
 import { Icon } from '../../../../../shared/ds/icon/icon';
-import { IconButton } from '../../../../../shared/ds/icon-button/icon-button';
 import { Input } from '../../../../../shared/ds/input/input';
 import { Modal } from '../../../../../shared/ds/modal/modal';
 import { Pagination } from '../../../../../shared/ds/pagination/pagination';
@@ -56,9 +54,7 @@ const MENSAJE_ERROR_ESTADO = 'No se pudo cambiar el estado del cliente. Intente 
     ClienteDetalleModal,
     ClienteFormModal,
     DataTable,
-    FilterBar,
     Icon,
-    IconButton,
     Input,
     Modal,
     Pagination,
@@ -70,6 +66,9 @@ const MENSAJE_ERROR_ESTADO = 'No se pudo cambiar el estado del cliente. Intente 
 export class ListarClientes implements OnInit, AfterViewInit {
   private clienteService = inject(ClienteService);
   private destroyRef = inject(DestroyRef);
+
+  @ViewChild('codigoCell', { static: true })
+  codigoCellTpl!: TemplateRef<{ $implicit: Cliente; index: number }>;
 
   @ViewChild('clienteCell', { static: true })
   clienteCellTpl!: TemplateRef<{ $implicit: Cliente; index: number }>;
@@ -88,13 +87,12 @@ export class ListarClientes implements OnInit, AfterViewInit {
 
   readonly LucideEye = LucideEye;
   readonly LucidePencil = LucidePencil;
-  readonly LucidePlus = LucidePlus;
   readonly LucideRotateCcw = LucideRotateCcw;
-  readonly LucideSearch = LucideSearch;
   readonly LucideTrash2 = LucideTrash2;
+  readonly LucideUserPlus = LucideUserPlus;
 
   readonly nombreCliente = nombreCliente;
-  readonly tamanioPagina = 8;
+  readonly tamanioPagina = 5;
 
   readonly categoriaOptions: SelectOption[] = (
     Object.keys(CATEGORIA_LABEL) as CategoriaCliente[]
@@ -122,6 +120,9 @@ export class ListarClientes implements OnInit, AfterViewInit {
 
   columnas = signal<DsColumn[]>([]);
 
+  /** El pie ("n de N clientes" y paginación) solo aparece cuando hay resultados que contar. */
+  mostrarPie = computed(() => !this.cargando() && !this.errorCarga() && this.total() > 0);
+
   aviso = signal('');
   avisoTono = signal<'ok' | 'error'>('ok');
 
@@ -137,7 +138,7 @@ export class ListarClientes implements OnInit, AfterViewInit {
 
   ngAfterViewInit(): void {
     this.columnas.set([
-      { key: 'codigo', header: 'Código', width: '120px' },
+      { key: 'codigo', header: 'Código', width: '120px', cellTemplate: this.codigoCellTpl },
       { key: 'nombre', header: 'Cliente', cellTemplate: this.clienteCellTpl },
       {
         key: 'documento',
@@ -230,6 +231,12 @@ export class ListarClientes implements OnInit, AfterViewInit {
   nuevoCliente(): void {
     this.clienteEnEdicion.set(null);
     this.modalFormAbierto.set(true);
+  }
+
+  /** Desde el detalle: lo cierra y abre el formulario de edición del mismo cliente. */
+  editarDesdeDetalle(cliente: Cliente): void {
+    this.clienteEnDetalle.set(null);
+    this.editarCliente(cliente);
   }
 
   editarCliente(cliente: Cliente): void {

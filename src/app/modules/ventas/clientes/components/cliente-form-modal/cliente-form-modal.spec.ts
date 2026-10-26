@@ -295,6 +295,71 @@ describe('ClienteFormModal', () => {
     expect(component.esEmpresa()).toBe(false);
   });
 
+  it('does not ask for the client type when registering', () => {
+    abrir();
+
+    expect(fixture.nativeElement.querySelector('#cliente-categoria')).toBeNull();
+  });
+
+  it('asks for the client type when editing', () => {
+    abrir(makeCliente());
+
+    expect(fixture.nativeElement.querySelector('#cliente-categoria')).not.toBeNull();
+  });
+
+  it('only the RUC 20 shows the company layout with the contact section', () => {
+    abrir();
+    const en = (id: string) => fixture.nativeElement.querySelector(`#${id}`);
+    const contacto = () => fixture.nativeElement.querySelector('[aria-label="Datos del contacto"]');
+
+    // DNI: bloque de persona natural.
+    expect(en('cliente-nacimiento')).not.toBeNull();
+    expect(en('cliente-razon-social')).toBeNull();
+    expect(contacto()).toBeNull();
+
+    for (const [tipo, numero] of [
+      ['ruc', '10512477903'],
+      ['ce', '123456789'],
+      ['pasaporte', 'A1234567'],
+    ]) {
+      component.onTipoDocumento(tipo);
+      component.onNumeroDocumento(numero);
+      fixture.detectChanges();
+      expect(en('cliente-nacimiento')).not.toBeNull();
+      expect(contacto()).toBeNull();
+    }
+
+    component.onTipoDocumento('ruc');
+    component.onNumeroDocumento('20548712345');
+    fixture.detectChanges();
+    expect(en('cliente-razon-social')).not.toBeNull();
+    expect(en('cliente-nacimiento')).toBeNull();
+    expect(contacto()).not.toBeNull();
+  });
+
+  it('asks for a single email in a company: the contact one, in the contact section', () => {
+    abrir();
+    const correos = () => fixture.nativeElement.querySelectorAll('#cliente-email');
+    const etiqueta = () =>
+      (fixture.nativeElement.querySelector('label[for="cliente-email"]') as HTMLElement)
+        .textContent;
+
+    expect(correos().length).toBe(1);
+    expect(etiqueta()).toContain('Correo');
+    expect(etiqueta()).not.toContain('contacto');
+
+    component.onTipoDocumento('ruc');
+    component.onNumeroDocumento('20548712345');
+    fixture.detectChanges();
+
+    expect(correos().length).toBe(1);
+    expect(etiqueta()).toContain('Correo electrónico del contacto');
+    expect(
+      fixture.nativeElement.querySelector('[aria-label="Datos del contacto"] #cliente-email'),
+    ).not.toBeNull();
+    expect(component.pistaCorreo()).toContain('correo de verificación');
+  });
+
   it('clears the business name when the document stops being an RUC 20', () => {
     abrir();
     component.onTipoDocumento('ruc');

@@ -46,6 +46,11 @@ export interface Cliente {
   /** null si el cliente aún no registró su ubicación. */
   ubicacion: UbicacionCliente | null;
   email: string;
+  // Solo existen si el backend los envía; el detalle oculta el campo que falte.
+  /** Usuario de la cuenta de acceso. */
+  usuario?: string;
+  /** true = correo verificado; false = verificación enviada y pendiente. */
+  correoVerificado?: boolean;
 }
 
 export interface ClientesPagina {
@@ -244,7 +249,7 @@ export function validarClienteForm(form: ClienteForm, editando: boolean): string
   if (!editando) {
     const email = form.email.trim();
     if (!email) {
-      errores.push('correo');
+      errores.push(tipo === 'empresa' ? 'correo electrónico del contacto' : 'correo');
     } else if (!EMAIL_RE.test(email)) {
       errores.push('el correo no tiene un formato válido');
     } else if (email.length > 150) {
