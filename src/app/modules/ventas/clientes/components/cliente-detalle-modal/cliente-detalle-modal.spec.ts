@@ -4,7 +4,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { environment } from '../../../../../../environments/environment';
 import { PedidoResumenDto } from '../../../mis-pedidos/interfaces/pedido-dto.interface';
 import { Cliente } from '../../interfaces/cliente.interface';
-import { ClienteDetalleModal, formatearFecha } from './cliente-detalle-modal';
+import { ClienteDetalleModal } from './cliente-detalle-modal';
 
 const PEDIDOS_BASE = `${environment.apiUrl}/pedidos`;
 
@@ -96,26 +96,30 @@ describe('ClienteDetalleModal', () => {
     mostrar(null);
 
     expect(component.titulo()).toBe('');
-    expect(component.campos()).toEqual([]);
-    expect(component.pedidos()).toEqual([]);
+    expect(component.resumen()).toEqual([]);
     httpMock.expectNone((r) => r.url === PEDIDOS_BASE);
   });
 
-  it('shows the data of a natural person', () => {
+  it('shows the summary of a natural person', () => {
     mostrar(makeCliente());
 
     expect(component.titulo()).toBe('Ana Vega Torres');
-    expect(component.campos()).toEqual([
-      { label: 'Código', value: 'CLI-000001' },
-      { label: 'Tipo de persona', value: 'Persona natural' },
+    expect(component.esEmpresa()).toBe(false);
+    expect(component.resumen()).toEqual([
+      { label: 'Documento', value: 'DNI 45288977' },
+      { label: 'Nombre completo', value: 'Ana Vega Torres' },
       { label: 'Tipo de cliente', value: 'Minorista' },
-      { label: 'DNI', value: '45288977' },
-      { label: 'Fecha de nacimiento', value: '17/04/1989' },
-      { label: 'Ubicación', value: 'San Isidro, Lima, Lima' },
-      { label: 'Dirección', value: 'Jr. Las Magnolias 312' },
       { label: 'Teléfono', value: '944208877' },
       { label: 'Correo', value: 'ana@correo.com' },
     ]);
+  });
+
+  it('does not show the location nor the code in the detail', () => {
+    mostrar(makeCliente());
+
+    const etiquetas = component.resumen().map((c) => c.label);
+    expect(etiquetas).not.toContain('Ubicación');
+    expect(etiquetas).not.toContain('Código');
   });
 
   it('shows the business name and the contact of a company', () => {
@@ -126,7 +130,7 @@ describe('ClienteDetalleModal', () => {
         categoria: 'mayorista',
         tipoDocumento: 'ruc',
         numeroDocumento: '20548712345',
-        nombres: 'Rosa',
+        nombres: 'Rosa Elena',
         apellidoPaterno: 'Quispe',
         apellidoMaterno: 'Huamán',
         fechaNacimiento: '',
@@ -135,35 +139,82 @@ describe('ClienteDetalleModal', () => {
     );
 
     expect(component.titulo()).toBe('Distribuidora Andes S.A.C.');
-    expect(component.campos()).toEqual([
-      { label: 'Código', value: 'CLI-000001' },
-      { label: 'Tipo de persona', value: 'Empresa' },
-      { label: 'Tipo de cliente', value: 'Mayorista' },
-      { label: 'RUC', value: '20548712345' },
+    expect(component.esEmpresa()).toBe(true);
+    expect(component.resumen()).toEqual([
+      { label: 'Documento', value: 'RUC 20548712345' },
       { label: 'Razón social', value: 'Distribuidora Andes S.A.C.' },
-      { label: 'Contacto', value: 'Rosa Quispe Huamán' },
+      { label: 'Tipo de cliente', value: 'Mayorista' },
       { label: 'Teléfono', value: '944208877' },
-      { label: 'Correo de la empresa', value: 'ana@correo.com' },
+    ]);
+    expect(component.nombreContacto()).toBe('Rosa Elena Quispe Huamán');
+    // El único correo de una empresa es el del contacto y va en su sección.
+    expect(component.camposContacto()).toEqual([
+      { label: 'Nombre del contacto', value: 'Rosa Elena Quispe Huamán' },
+      { label: 'Correo del contacto', value: 'ana@correo.com' },
     ]);
   });
 
-  it('shows a dash for the data the client does not have', () => {
+  it('adds the access account when the backend sends it', () => {
     mostrar(
       makeCliente({
-        telefono: '',
-        email: '',
-        fechaNacimiento: '',
-        direccion: '',
-        ubicacion: null,
+        tipoCliente: 'empresa',
+        razonSocial: 'Distribuidora Andes S.A.C.',
+        tipoDocumento: 'ruc',
+        numeroDocumento: '20548712345',
+        usuario: 'andes.20548712345',
+        correoVerificado: false,
       }),
     );
 
-    const valores = Object.fromEntries(component.campos().map((c) => [c.label, c.value]));
+    expect(component.filaSecundaria().map((c) => c.label)).toEqual(['Usuario', 'Verificación']);
+    expect(component.resumen().find((c) => c.label === 'Verificación')?.value).toBe(
+      'Correo enviado',
+    );
+
+    mostrarSinResponder(makeCliente({ correoVerificado: true }));
+    responderHistorial([]);
+    expect(component.resumen().find((c) => c.label === 'Verificación')?.value).toBe('Verificado');
+  });
+
+  it('splits the summary in the first four fields and the rest', () => {
+    mostrar(makeCliente());
+
+    expect(component.filaPrincipal().map((c) => c.label)).toEqual([
+      'Documento',
+      'Nombre completo',
+      'Tipo de cliente',
+      'Teléfono',
+    ]);
+    expect(component.filaSecundaria().map((c) => c.label)).toEqual(['Correo']);
+  });
+
+  it('shows a dash for the data the client does not have', () => {
+    mostrar(makeCliente({ telefono: '', email: '' }));
+
+    const valores = Object.fromEntries(component.resumen().map((c) => [c.label, c.value]));
     expect(valores['Teléfono']).toBe('—');
     expect(valores['Correo']).toBe('—');
-    expect(valores['Fecha de nacimiento']).toBe('—');
-    expect(valores['Dirección']).toBe('—');
-    expect(valores['Ubicación']).toBe('—');
+  });
+
+  it('asks the page to edit the client shown', () => {
+    const cliente = makeCliente();
+    const pedidos: Cliente[] = [];
+    component.editarCliente.subscribe((c) => pedidos.push(c));
+    mostrar(cliente);
+
+    component.editar();
+
+    expect(pedidos).toEqual([cliente]);
+  });
+
+  it('does not ask to edit when there is no client', () => {
+    const pedidos: Cliente[] = [];
+    component.editarCliente.subscribe((c) => pedidos.push(c));
+    mostrar(null);
+
+    component.editar();
+
+    expect(pedidos).toEqual([]);
   });
 
   it('closes', () => {
@@ -214,7 +265,7 @@ describe('ClienteDetalleModal', () => {
 
       expect(component.errorPedidos()).toBe(true);
       expect(component.pedidos()).toEqual([]);
-      expect(component.campos().length).toBeGreaterThan(0);
+      expect(component.resumen().length).toBeGreaterThan(0);
     });
 
     it('asks again when another client is shown', () => {
@@ -224,16 +275,6 @@ describe('ClienteDetalleModal', () => {
       mostrar(makeCliente({ id: 'c2' }), []);
 
       expect(component.pedidos()).toEqual([]);
-    });
-  });
-
-  describe('formatearFecha', () => {
-    it('formats AAAA-MM-DD as DD/MM/AAAA without time zone shifts', () => {
-      expect(formatearFecha('1989-04-17')).toBe('17/04/1989');
-    });
-
-    it('returns a dash for an invalid date', () => {
-      expect(formatearFecha('')).toBe('—');
     });
   });
 });

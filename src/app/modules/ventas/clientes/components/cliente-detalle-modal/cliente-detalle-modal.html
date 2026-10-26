@@ -3,7 +3,7 @@
   [title]="titulo()"
   [hasIcon]="true"
   [hasFooter]="true"
-  [width]="640"
+  [width]="760"
   (closed)="cerrar()"
 >
   <span
@@ -15,65 +15,105 @@
 
   @if (cliente(); as c) {
     <div class="flex flex-col gap-5">
-      <div>
-        <app-ds-badge [tone]="c.estado ? 'success' : 'neutral'" [dot]="true">
-          {{ c.estado ? 'Activo' : 'Inactivo' }}
-        </app-ds-badge>
+      <!-- Resumen del cliente -->
+      <div class="flex flex-col gap-6 rounded-lg border border-border bg-muted p-5">
+        <div class="flex flex-wrap gap-x-8 gap-y-6">
+          @for (campo of filaPrincipal(); track campo.label) {
+            <div class="min-w-0">
+              <div class="text-[13px] text-muted-foreground">{{ campo.label }}</div>
+              <div class="mt-1 break-words text-ds-base font-medium text-foreground">
+                {{ campo.value }}
+              </div>
+            </div>
+          }
+        </div>
+        <div class="flex flex-wrap items-center gap-x-8 gap-y-6">
+          @for (campo of filaSecundaria(); track campo.label) {
+            <div class="min-w-0">
+              <div class="text-[13px] text-muted-foreground">{{ campo.label }}</div>
+              <div class="mt-1 break-words text-ds-base font-medium text-foreground">
+                {{ campo.value }}
+              </div>
+            </div>
+          }
+          <span class="ml-auto">
+            <app-ds-badge [tone]="c.estado ? 'success' : 'neutral'" [dot]="true" size="md">
+              {{ c.estado ? 'Activo' : 'Inactivo' }}
+            </app-ds-badge>
+          </span>
+        </div>
       </div>
 
-      <div class="grid grid-cols-[repeat(auto-fit,minmax(170px,1fr))] gap-x-5 gap-y-4">
-        @for (campo of campos(); track campo.label) {
-          <div class="min-w-0">
-            <div class="text-ds-sm text-muted-foreground">{{ campo.label }}</div>
-            <div class="mt-1 break-words font-medium text-foreground">{{ campo.value }}</div>
+      @if (esEmpresa()) {
+        <section
+          class="overflow-hidden rounded-lg border border-border bg-card"
+          aria-label="Datos del contacto"
+        >
+          <h4
+            class="border-b border-border bg-table-header px-5 py-3 text-ds-sm font-normal text-muted-foreground"
+          >
+            Datos del contacto
+          </h4>
+          <div class="flex flex-wrap gap-x-8 gap-y-4 px-5 py-4">
+            @for (campo of camposContacto(); track campo.label) {
+              <div class="min-w-0">
+                <div class="text-[13px] text-muted-foreground">{{ campo.label }}</div>
+                <div class="mt-1 break-words text-ds-base font-medium text-foreground">
+                  {{ campo.value }}
+                </div>
+              </div>
+            }
           </div>
-        }
-      </div>
+        </section>
+      }
 
-      <section class="flex flex-col gap-3" aria-label="Historial de pedidos finalizados">
-        <h4 class="font-semibold text-foreground">Historial de pedidos finalizados</h4>
+      <!-- Historial de pedidos finalizados -->
+      <section
+        class="overflow-hidden rounded-lg border border-border bg-card"
+        aria-label="Historial de pedidos finalizados"
+      >
+        <h4
+          class="border-b border-border bg-table-header px-5 py-3 text-ds-sm font-normal text-muted-foreground"
+        >
+          Historial de pedidos finalizados
+        </h4>
 
         @if (cargandoPedidos()) {
-          <p class="text-ds-sm text-muted-foreground">Cargando pedidos…</p>
+          <p class="px-5 py-6 text-center text-ds-base text-muted-foreground">Cargando pedidos…</p>
         } @else if (errorPedidos()) {
-          <p role="alert" class="text-ds-sm text-muted-foreground">
+          <p role="alert" class="px-5 py-6 text-center text-ds-base text-muted-foreground">
             No se pudo cargar el historial de pedidos.
           </p>
         } @else if (pedidos().length === 0) {
-          <p class="text-ds-sm text-muted-foreground">Sin pedidos finalizados</p>
+          <p class="px-5 py-6 text-center text-ds-base text-muted-foreground">
+            Sin pedidos finalizados
+          </p>
         } @else {
-          <div class="overflow-x-auto rounded-lg border border-border">
-            <table class="w-full text-ds-sm">
-              <thead class="bg-muted text-left text-muted-foreground">
-                <tr>
-                  <th class="px-3 py-2 font-medium">Pedido</th>
-                  <th class="px-3 py-2 font-medium">Fecha</th>
-                  <th class="px-3 py-2 font-medium">Entrega</th>
-                  <th class="px-3 py-2 text-right font-medium">Total</th>
-                  <th class="px-3 py-2 font-medium">Estado</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (p of pedidos(); track p.id) {
-                  <tr class="border-t border-border">
-                    <td class="px-3 py-2 font-medium text-foreground">{{ p.codigo }}</td>
-                    <td class="px-3 py-2 tabular-nums text-muted-foreground">{{ p.fecha }}</td>
-                    <td class="px-3 py-2 text-muted-foreground">{{ p.tipoEntrega }}</td>
-                    <td class="px-3 py-2 text-right font-medium tabular-nums">{{ p.total }}</td>
-                    <td class="px-3 py-2">
-                      <app-ds-badge [tone]="p.tono" [dot]="true">{{ p.estado }}</app-ds-badge>
-                    </td>
-                  </tr>
-                }
-              </tbody>
-            </table>
-          </div>
+          <ul>
+            @for (p of pedidos(); track p.id) {
+              <li
+                class="flex flex-wrap items-center gap-x-6 gap-y-1 px-5 py-3.5 not-last:border-b not-last:border-border"
+              >
+                <span class="w-28 font-semibold text-foreground">{{ p.codigo }}</span>
+                <span class="w-28 text-ds-base text-muted-foreground">{{ p.fecha }}</span>
+                <span class="min-w-0 flex-1 text-ds-base text-muted-foreground">{{
+                  p.tipoEntrega
+                }}</span>
+                <span class="font-semibold tabular-nums text-foreground">{{ p.total }}</span>
+                <app-ds-badge [tone]="p.tono" [dot]="true">{{ p.estado }}</app-ds-badge>
+              </li>
+            }
+          </ul>
         }
       </section>
     </div>
   }
 
-  <span footer>
+  <span footer class="flex gap-2">
     <app-ds-button variant="secondary" (clicked)="cerrar()">Cerrar</app-ds-button>
+    <app-ds-button (clicked)="editar()">
+      <span icon><app-ds-icon [img]="LucidePencil" [size]="16" /></span>
+      Editar cliente
+    </app-ds-button>
   </span>
 </app-ds-modal>

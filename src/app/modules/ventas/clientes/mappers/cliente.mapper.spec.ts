@@ -104,6 +104,22 @@ describe('cliente.mapper', () => {
       });
     });
 
+    it('maps the access account only when it comes', () => {
+      expect(toCliente(makeClienteDto())).not.toHaveProperty('usuario');
+
+      const cliente = toCliente(
+        makeClienteDto({
+          username: 'andes.20548712345',
+          email_verificado: false,
+        }),
+      );
+
+      expect(cliente).toMatchObject({
+        usuario: 'andes.20548712345',
+        correoVerificado: false,
+      });
+    });
+
     it('keeps the business name of a company', () => {
       const cliente = toCliente(
         makeClienteDto({ tipo_cliente: 'empresa', razon_social: 'Hotel Costa Verde S.A.' }),

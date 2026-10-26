@@ -4,7 +4,7 @@ import { BadgeTone } from '../../../../shared/ds/badge/badge';
 export interface PedidoHistorial {
   id: number;
   codigo: string;
-  /** DD/MM/AAAA, en hora de Lima. */
+  /** «09 Sep 2026», en hora de Lima. */
   fecha: string;
   creado: Date;
   tipoEntrega: string;

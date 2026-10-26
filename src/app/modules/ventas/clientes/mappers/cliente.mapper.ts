@@ -39,6 +39,10 @@ export function toCliente(dto: ClienteDto): Cliente {
         }
       : null,
     email: dto.email ?? '',
+    ...(dto.username ? { usuario: dto.username } : {}),
+    ...(typeof dto.email_verificado === 'boolean'
+      ? { correoVerificado: dto.email_verificado }
+      : {}),
   };
 }
 

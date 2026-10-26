@@ -39,6 +39,10 @@ export interface ClienteDto {
   direccion: string | null;
   ubicacion: UbicacionDto | null;
   email: string | null;
+  // Datos de la cuenta de acceso. Opcionales: el detalle los muestra
+  // solo cuando el backend los incluye en la respuesta.
+  username?: string | null;
+  email_verificado?: boolean | null;
 }
 
 export interface ClientesPageDto {
