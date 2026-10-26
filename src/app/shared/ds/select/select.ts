@@ -4,6 +4,11 @@ export type FieldSize = 'sm' | 'md' | 'lg';
 export interface SelectOption {
   value: string;
   label: string;
+  // Solo lo usa app-ds-combobox (el <select> nativo no tiene como mostrar
+  // dos columnas en un <option>) — texto secundario alineado a la derecha
+  // de la fila, para separar visualmente un dato como el codigo del label
+  // principal en vez de concatenarlos en un solo string.
+  secondary?: string;
 }
 
 const HEIGHTS: Record<FieldSize, string> = { sm: '36px', md: '44px', lg: '48px' };

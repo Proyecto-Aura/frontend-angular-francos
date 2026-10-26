@@ -1,1 +1,213 @@
-<p>stock-productos works!</p>
+<div class="flex flex-col gap-6 p-(--page-padding)">
+  <div>
+    <h1 class="text-ds-2xl font-medium text-foreground">Stock de productos</h1>
+  </div>
+
+  <div class="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-4">
+    <app-ds-kpi-card label="Total de productos" [value]="resumen().total" [hasIcon]="true">
+      <span icon><app-ds-icon [img]="LucidePackage" [size]="16" /></span>
+    </app-ds-kpi-card>
+
+    <app-ds-kpi-card label="Stock normal" [value]="resumen().normal" [hasIcon]="true">
+      <span icon><app-ds-icon [img]="LucideCircleCheck" [size]="16" /></span>
+    </app-ds-kpi-card>
+
+    <app-ds-kpi-card label="Stock alto" [value]="resumen().alto" [hasIcon]="true">
+      <span icon><app-ds-icon [img]="LucideTrendingUp" [size]="16" /></span>
+    </app-ds-kpi-card>
+
+    <app-ds-kpi-card label="Stock bajo" [value]="resumen().bajo" [hasIcon]="true">
+      <span icon><app-ds-icon [img]="LucideTrendingDown" [size]="16" /></span>
+    </app-ds-kpi-card>
+
+    <app-ds-kpi-card label="Agotados" [value]="resumen().agotados" [hasIcon]="true">
+      <span icon><app-ds-icon [img]="LucideCircleAlert" [size]="16" /></span>
+    </app-ds-kpi-card>
+  </div>
+
+  <app-ds-tabs [tabs]="tabs()" [activeId]="activeTab()" (changed)="cambiarTab($event)" />
+
+  @if (activeTab() === 'stock') {
+    <div class="flex flex-wrap justify-end gap-3">
+      <app-ds-button variant="primary" (clicked)="abrirRegistrarMovimiento()">
+        <span icon><app-ds-icon [img]="LucideArrowLeftRight" [size]="16" /></span>
+        Registrar movimiento
+      </app-ds-button>
+    </div>
+
+    <app-ds-filter-bar [hasSearch]="true">
+      <app-ds-input
+        search
+        [value]="search()"
+        (valueChange)="setSearch($event)"
+        placeholder="Producto o SKU…"
+        [hasIcon]="true"
+      >
+        <span icon><app-ds-icon [img]="LucideSearch" [size]="16" /></span>
+      </app-ds-input>
+
+      <div filters class="w-[188px]">
+        <app-ds-select
+          [value]="categoriaFiltro()"
+          (valueChange)="setCategoria($event)"
+          [options]="categoriaOptions()"
+          placeholder="Todas las categorías"
+        />
+      </div>
+      <div filters class="w-[188px]">
+        <app-ds-select
+          [value]="presentacionFiltro()"
+          (valueChange)="setPresentacion($event)"
+          [options]="presentacionOptions()"
+          placeholder="Toda presentación"
+        />
+      </div>
+      <div filters class="w-[188px]">
+        <app-ds-select
+          [value]="nivelFiltro()"
+          (valueChange)="setNivel($event)"
+          [options]="nivelOptions"
+          placeholder="Todo el stock"
+        />
+      </div>
+      <div filters class="w-[188px]">
+        <app-ds-select
+          [value]="estadoFiltro()"
+          (valueChange)="setEstado($event)"
+          [options]="estadoOptions"
+          placeholder="Todos los estados"
+        />
+      </div>
+    </app-ds-filter-bar>
+
+    <app-ds-card [padded]="false" [hasFooter]="totalPaginas() > 1">
+      @if (cargando()) {
+        <div class="p-12 text-center text-muted-foreground">Cargando…</div>
+      } @else if (errorCarga()) {
+        <div class="flex flex-col items-center gap-3 p-12 text-center">
+          <p class="text-muted-foreground">No se pudieron cargar los productos.</p>
+          <app-ds-button variant="secondary" (clicked)="cargarProductos()"
+            >Reintentar</app-ds-button
+          >
+        </div>
+      } @else {
+        <app-ds-data-table
+          [columns]="columnas()"
+          [rows]="productos()"
+          empty="Sin productos registrados"
+        />
+      }
+
+      @if (totalPaginas() > 1) {
+        <div footer>
+          <app-ds-pagination
+            [page]="pagina()"
+            [pageCount]="totalPaginas()"
+            [total]="total()"
+            [pageSize]="tamanioPagina"
+            (changed)="cambiarPagina($event)"
+          />
+        </div>
+      }
+    </app-ds-card>
+  } @else {
+    <app-ds-card>
+      <p class="p-6 text-center text-muted-foreground">Historial de movimientos — próximamente.</p>
+    </app-ds-card>
+  }
+
+  <app-ds-modal
+    [open]="modalMovimientoAbierto()"
+    title="Registrar movimiento de producto"
+    [hasIcon]="true"
+    [hasFooter]="true"
+    (closed)="cerrarRegistrarMovimiento()"
+  >
+    <span
+      icon
+      class="flex h-9 w-9 items-center justify-center rounded-md bg-[rgba(255,255,255,0.18)]"
+    >
+      <app-ds-icon [img]="LucideArrowLeftRight" [size]="18" />
+    </span>
+    <p class="text-muted-foreground">
+      Registrar movimientos de producto terminado (entrada, salida y ajuste) todavía no está
+      disponible — queda para una próxima historia.
+    </p>
+    <span footer>
+      <app-ds-button variant="secondary" (clicked)="cerrarRegistrarMovimiento()"
+        >Cerrar</app-ds-button
+      >
+    </span>
+  </app-ds-modal>
+
+  <app-producto-detalle-modal
+    [producto]="productoEnDetalle()"
+    (closed)="productoEnDetalle.set(null)"
+  />
+
+  <app-editar-stock-modal
+    [producto]="productoEnEdicion()"
+    (closed)="cerrarEditar()"
+    (saved)="productoEditado()"
+  />
+</div>
+
+<ng-template #productoCell let-fila>
+  <app-ds-cell-stack [primary]="fila.productoNombre" [secondary]="fila.sku" />
+</ng-template>
+
+<ng-template #nivelCell let-fila>
+  <app-ds-badge [tone]="nivelTone(fila.nivel)" [dot]="true">{{
+    nivelLabel(fila.nivel)
+  }}</app-ds-badge>
+</ng-template>
+
+<ng-template #estadoCell let-fila>
+  <app-ds-badge [tone]="fila.estado ? 'success' : 'neutral'" [dot]="true">
+    {{ fila.estado ? 'Activo' : 'Inactivo' }}
+  </app-ds-badge>
+</ng-template>
+
+<ng-template #accionesCell let-fila>
+  <div class="flex justify-end gap-2">
+    <app-ds-icon-button
+      label="Ver detalle"
+      variant="secondary"
+      size="md"
+      (clicked)="productoEnDetalle.set(fila.producto)"
+    >
+      <app-ds-icon [img]="LucideEye" [size]="16" />
+    </app-ds-icon-button>
+
+    <app-ds-icon-button
+      label="Editar"
+      variant="secondary"
+      size="md"
+      (clicked)="abrirEditar(fila.producto)"
+    >
+      <app-ds-icon [img]="LucidePencil" [size]="16" />
+    </app-ds-icon-button>
+
+    <app-ds-icon-button
+      label="Registrar movimiento"
+      variant="secondary"
+      size="md"
+      (clicked)="abrirRegistrarMovimiento()"
+    >
+      <app-ds-icon [img]="LucideArrowLeftRight" [size]="16" />
+    </app-ds-icon-button>
+
+    <app-ds-icon-button
+      [label]="fila.estado ? 'Desactivar' : 'Reactivar'"
+      variant="secondary"
+      size="md"
+      (clicked)="alternarEstado(fila.producto)"
+    >
+      @if (fila.estado) {
+        <app-ds-icon [img]="LucideBan" [size]="16" />
+      } @else {
+        <app-ds-icon [img]="LucideRotateCcw" [size]="16" />
+      }
+    </app-ds-icon-button>
+  </div>
+</ng-template>

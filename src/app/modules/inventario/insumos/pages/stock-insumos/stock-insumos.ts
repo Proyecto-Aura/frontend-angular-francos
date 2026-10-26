@@ -40,9 +40,11 @@ import { KpiCard } from '../../../../../shared/ds/kpi-card/kpi-card';
 import { Pagination } from '../../../../../shared/ds/pagination/pagination';
 import { Select, SelectOption } from '../../../../../shared/ds/select/select';
 import { DsTab, Tabs } from '../../../../../shared/ds/tabs/tabs';
+import { HistorialMovimientosInsumo } from '../../components/historial-movimientos-insumo/historial-movimientos-insumo';
 import { InsumoDetalleModal } from '../../components/insumo-detalle-modal/insumo-detalle-modal';
 import { InsumoFormModal } from '../../components/insumo-form-modal/insumo-form-modal';
 import { LoteFormModal } from '../../components/lote-form-modal/lote-form-modal';
+import { LotesInsumoGeneral } from '../../components/lotes-insumo-general/lotes-insumo-general';
 import { MovimientoFormModal } from '../../components/movimiento-form-modal/movimiento-form-modal';
 import {
   Insumo,
@@ -52,23 +54,22 @@ import {
   calcularNivelStock,
 } from '../../interfaces/insumo.interface';
 import { InsumoService } from '../../services/insumo.service';
+import { LoteInsumoService } from '../../services/lote-insumo.service';
 
 const RESUMEN_VACIO: ResumenInsumos = { total: 0, normal: 0, alto: 0, bajo: 0, agotados: 0 };
 
 // KPIs + tabs Stock/Historial + filtros + tabla, reutilizando el design
 // system tal cual lo usa plan-estrategico-home.ts. Los botones de accion
 // quedan dentro del contenido del tab "Stock" (no en el header de la
-// pagina) porque no aplican al tab "Historial de movimientos", que todavia
-// no tiene datos propios (backend no la expone aun).
+// pagina) porque no aplican al tab "Historial de movimientos".
 //
-// "Registrar movimiento" abre MovimientoFormModal, pero ese modal todavia
-// es estatico: el backend ya expone /movimientos-insumo/salida (por
-// insumo, reparte FEFO solo) y /movimientos-insumo/ajuste (por lote, con
-// cantidad con signo), un contrato distinto al formulario generico de
-// "insumo + cantidad por fila" que hay hoy — falta rediseñarlo antes de
-// conectarlo de verdad. Por ahora solo valida en el frontend y emite el
-// payload armado (ver TODO en movimiento-form-modal.ts). "Registrar lote"
-// si esta conectado (CRUD de /lotes-insumo).
+// El tab "Historial de movimientos" delega todo en HistorialMovimientosInsumo
+// (autonomo, carga sus propios datos) — distinto de la pestaña homonima
+// dentro de InsumoDetalleModal, que ya viene acotada a un solo insumo.
+//
+// "Registrar movimiento" abre MovimientoFormModal, conectado a
+// POST /movimientos-insumo/entrada|salida|ajuste (batch transaccional, todo
+// o nada).
 const TIPO_LABEL: Record<TipoInsumo, string> = {
   materia_prima: 'Materia prima',
   empaque: 'Empaque',
@@ -96,6 +97,7 @@ const NIVEL_TONE: Record<NivelStock, BadgeTone> = {
     CellStack,
     DataTable,
     FilterBar,
+    HistorialMovimientosInsumo,
     Icon,
     IconButton,
     Input,
@@ -103,6 +105,7 @@ const NIVEL_TONE: Record<NivelStock, BadgeTone> = {
     InsumoFormModal,
     KpiCard,
     LoteFormModal,
+    LotesInsumoGeneral,
     MovimientoFormModal,
     Pagination,
     Select,
@@ -113,6 +116,7 @@ const NIVEL_TONE: Record<NivelStock, BadgeTone> = {
 })
 export class StockInsumos implements OnInit, AfterViewInit {
   private insumoService = inject(InsumoService);
+  private loteService = inject(LoteInsumoService);
   private destroyRef = inject(DestroyRef);
 
   @ViewChild('insumoCell', { static: true })
@@ -159,16 +163,25 @@ export class StockInsumos implements OnInit, AfterViewInit {
     { value: 'false', label: 'Inactivo' },
   ];
 
-  activeTab = signal<'stock' | 'historial'>('stock');
+  readonly nivelOptions: SelectOption[] = [
+    { value: 'normal', label: 'Normal' },
+    { value: 'alto', label: 'Stock alto' },
+    { value: 'bajo', label: 'Stock bajo' },
+    { value: 'agotado', label: 'Agotado' },
+  ];
+
+  activeTab = signal<'stock' | 'historial' | 'lotes'>('stock');
   columnas = signal<DsColumn[]>([]);
 
-  // --- Filtros (van contra el backend: search/estado/tipo son query params
-  // reales de GET /insumos). No hay filtro por "nivel" porque no es un
-  // campo del backend — se calcula en el front y no se puede pedir por
-  // query param sin traer todas las paginas.
+  // --- Filtros (van contra el backend: search/estado/tipo/nivel son query
+  // params reales de GET /insumos). "nivel" lo calcula el backend con el
+  // mismo criterio que /insumos/indicadores (confirmado por el backend) —
+  // asi la paginacion sigue siendo la del servidor, sin traer todo el
+  // catalogo para filtrar por nivel en el front.
   search = signal('');
   tipoFiltro = signal('');
   estadoFiltro = signal('');
+  nivelFiltro = signal('');
 
   insumos = signal<Insumo[]>([]);
   total = signal(0);
@@ -181,20 +194,31 @@ export class StockInsumos implements OnInit, AfterViewInit {
   // el backend con el mismo criterio que calcularNivelStock() de abajo.
   resumen = signal<ResumenInsumos>(RESUMEN_VACIO);
 
+  // Solo para el contador de la pestaña "Lotes" — se pide aparte (limit=1,
+  // solo interesa meta.total) porque LotesInsumoGeneral es autonomo (carga
+  // sus propios datos, igual que HistorialMovimientosInsumo) y no expone su
+  // total hacia este componente.
+  lotesTotal = signal(0);
+
   modalFormAbierto = signal(false);
   insumoEnEdicion = signal<Insumo | null>(null);
   insumoEnDetalle = signal<Insumo | null>(null);
   modalLoteAbierto = signal(false);
   modalMovimientoAbierto = signal(false);
+  // Insumo de origen cuando se abre desde el icono "Registrar movimiento" de
+  // una fila (null = se abrio desde el boton general, sin preseleccion).
+  insumoParaMovimiento = signal<Insumo | null>(null);
 
   tabs = computed<DsTab[]>(() => [
     { id: 'stock', label: 'Stock', icon: LucidePackage, count: this.resumen().total },
     { id: 'historial', label: 'Historial de movimientos', icon: LucideClock, count: 0 },
+    { id: 'lotes', label: 'Lotes', icon: LucideLayers, count: this.lotesTotal() },
   ]);
 
   ngOnInit(): void {
     this.cargarInsumos();
     this.cargarResumen();
+    this.cargarLotesTotal();
   }
 
   ngAfterViewInit(): void {
@@ -221,6 +245,7 @@ export class StockInsumos implements OnInit, AfterViewInit {
         search: this.search().trim() || undefined,
         estado: this.estadoFiltro() === '' ? undefined : this.estadoFiltro() === 'true',
         tipo: this.tipoFiltro() || undefined,
+        nivel: (this.nivelFiltro() as NivelStock) || undefined,
       })
       .pipe(
         finalize(() => this.cargando.set(false)),
@@ -252,6 +277,16 @@ export class StockInsumos implements OnInit, AfterViewInit {
       });
   }
 
+  cargarLotesTotal(): void {
+    this.loteService
+      .listar(1, 1)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (pagina) => this.lotesTotal.set(pagina.total),
+        error: () => this.lotesTotal.set(0),
+      });
+  }
+
   recargarTodo(): void {
     this.cargarInsumos(this.pagina());
     this.cargarResumen();
@@ -272,6 +307,11 @@ export class StockInsumos implements OnInit, AfterViewInit {
     this.cargarInsumos(1);
   }
 
+  setNivel(valor: string): void {
+    this.nivelFiltro.set(valor);
+    this.cargarInsumos(1);
+  }
+
   cambiarPagina(pagina: number): void {
     if (pagina !== this.pagina() && pagina >= 1 && pagina <= this.totalPaginas()) {
       this.cargarInsumos(pagina);
@@ -279,7 +319,11 @@ export class StockInsumos implements OnInit, AfterViewInit {
   }
 
   cambiarTab(id: string): void {
-    this.activeTab.set(id === 'historial' ? 'historial' : 'stock');
+    if (id === 'historial' || id === 'lotes') {
+      this.activeTab.set(id);
+      return;
+    }
+    this.activeTab.set('stock');
   }
 
   abrirNuevoInsumo(): void {
@@ -315,12 +359,19 @@ export class StockInsumos implements OnInit, AfterViewInit {
     this.recargarTodo();
   }
 
-  abrirRegistrarMovimiento(): void {
+  abrirRegistrarMovimiento(insumo: Insumo | null = null): void {
+    this.insumoParaMovimiento.set(insumo);
     this.modalMovimientoAbierto.set(true);
   }
 
   cerrarFormMovimiento(): void {
     this.modalMovimientoAbierto.set(false);
+    this.insumoParaMovimiento.set(null);
+  }
+
+  movimientoGuardado(): void {
+    this.cerrarFormMovimiento();
+    this.recargarTodo();
   }
 
   /** Activar/desactivar: logico (toggle de estado), sin confirmacion — mismo criterio que catalogo. */

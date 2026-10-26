@@ -4,9 +4,11 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { environment } from '../../../../../../environments/environment';
 import { Insumo } from '../../interfaces/insumo.interface';
 import { LoteInsumoDto } from '../../interfaces/lote-insumo-dto.interface';
+import { MovimientoInsumoDto } from '../../interfaces/movimiento-insumo-dto.interface';
 import { InsumoDetalleModal } from './insumo-detalle-modal';
 
 const LOTES_BASE = `${environment.apiUrl}/lotes-insumo`;
+const MOVIMIENTOS_BASE = `${environment.apiUrl}/movimientos-insumo`;
 
 function makeInsumo(overrides: Partial<Insumo> = {}): Insumo {
   return {
@@ -37,6 +39,27 @@ function makeLoteDto(overrides: Partial<LoteInsumoDto> = {}): LoteInsumoDto {
     activo: true,
     created_at: '2026-09-10T00:00:00.000Z',
     updated_at: '2026-09-10T00:00:00.000Z',
+    ...overrides,
+  };
+}
+
+function makeMovimientoDto(overrides: Partial<MovimientoInsumoDto> = {}): MovimientoInsumoDto {
+  return {
+    id: 1,
+    codigo: 'FR-MV-001-261022-INS1',
+    lote_insumo_id: 1,
+    codigo_lote: 'FR-LT-001-261001-INS1',
+    insumo_id: 1,
+    insumo_nombre: 'Harina de trigo',
+    insumo_sku: 'FR-INS-1',
+    insumo_unidad_medida: 'kg',
+    tipo: 'entrada',
+    cantidad: 100,
+    stock_anterior: 170,
+    stock_resultante: 270,
+    razon: 'Ingreso de lote',
+    fecha: '2026-10-22T16:40:00.000Z',
+    created_at: '2026-10-22T16:40:00.000Z',
     ...overrides,
   };
 }
@@ -124,6 +147,16 @@ describe('InsumoDetalleModal', () => {
     expect(fixture.componentInstance.proximoVencimiento()).toBe(primero.fechaVencimientoMostrada);
   });
 
+  it('incluye un lote por_vencer al elegir proximoVencimiento (sigue siendo stock utilizable)', () => {
+    const fixture = createConLotes(makeInsumo(), [
+      makeLoteDto({ id: 1, estado: 'por_vencer', fecha_vencimiento: '2026-11-01' }),
+      makeLoteDto({ id: 2, fecha_vencimiento: '2026-12-01' }),
+    ]);
+
+    const primero = fixture.componentInstance.lotes()[0];
+    expect(fixture.componentInstance.proximoVencimiento()).toBe(primero.fechaVencimientoMostrada);
+  });
+
   it('skips a lote vencido, dado de baja o sin fecha al elegir proximoVencimiento, aunque venga primero en la lista', () => {
     const fixture = createConLotes(makeInsumo(), [
       makeLoteDto({ id: 1, estado: 'vencido', fecha_vencimiento: '2026-01-01' }),
@@ -193,25 +226,27 @@ describe('InsumoDetalleModal', () => {
         cantidadActualMostrada: '60 kg',
         estado: 'activo',
         activo: true,
-        diasParaVencer: expect.any(Number),
+        // "activo" (no "por_vencer") significa que al backend todavia le
+        // quedan mas de 15 dias — no hace falta el conteo de dias.
+        diasParaVencer: null,
       },
     ]);
   });
 
-  it('flags a lote as about to expire when it is activo and within 10 days of fecha_vencimiento', () => {
+  it('computes diasParaVencer y muestra la alerta cuando el backend ya clasifico el lote como por_vencer', () => {
     const fixture = create(makeInsumo());
     const hoy = new Date();
     const enCincoDias = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() + 5);
     const fechaVencimiento = `${enCincoDias.getFullYear()}-${String(enCincoDias.getMonth() + 1).padStart(2, '0')}-${String(enCincoDias.getDate()).padStart(2, '0')}`;
 
     expectLotesRequest().flush({
-      data: [makeLoteDto({ fecha_vencimiento: fechaVencimiento })],
+      data: [makeLoteDto({ estado: 'por_vencer', fecha_vencimiento: fechaVencimiento })],
       meta: { total: 1, page: 1, limit: 50, total_pages: 1 },
     });
 
     const [fila] = fixture.componentInstance.lotes();
     expect(fila.diasParaVencer).toBe(5);
-    expect(fixture.componentInstance.muestraAlertaVencimiento(fila.diasParaVencer)).toBe(true);
+    expect(fila.estado).toBe('por_vencer');
   });
 
   it('parses fecha_ingreso/fecha_vencimiento even when the backend sends a full datetime instead of a plain date', () => {
@@ -231,7 +266,6 @@ describe('InsumoDetalleModal', () => {
     const [fila] = fixture.componentInstance.lotes();
     expect(fila.fechaIngresoMostrada).toContain('2026');
     expect(fila.fechaVencimientoMostrada).toContain('2026');
-    expect(fila.diasParaVencer).not.toBeNaN();
   });
 
   it('does not flag a vencido lote as about to expire (ya paso, no es una alerta de proximidad)', () => {
@@ -244,7 +278,6 @@ describe('InsumoDetalleModal', () => {
 
     const [fila] = fixture.componentInstance.lotes();
     expect(fila.diasParaVencer).toBeNull();
-    expect(fixture.componentInstance.muestraAlertaVencimiento(fila.diasParaVencer)).toBe(false);
   });
 
   it('shows an error state with retry when the lotes request fails', () => {
@@ -284,5 +317,95 @@ describe('InsumoDetalleModal', () => {
     });
 
     expect(component.lotes()).toHaveLength(1);
+  });
+
+  function expectMovimientosRequest() {
+    return httpMock.expectOne(
+      (request) => request.url === MOVIMIENTOS_BASE && request.params.get('insumo_id') === '1',
+    );
+  }
+
+  it('does not request movimientos until the historial tab is opened', () => {
+    createConLotes(makeInsumo());
+
+    httpMock.expectNone(
+      (request) => request.url === MOVIMIENTOS_BASE && request.params.get('insumo_id') === '1',
+    );
+  });
+
+  it('requests y mapea el historial de movimientos al abrir la pestaña, resolviendo signo y lote', () => {
+    const fixture = createConLotes(makeInsumo());
+    const component = fixture.componentInstance;
+
+    component.cambiarTab('historial');
+    fixture.detectChanges();
+    expectMovimientosRequest().flush({
+      data: [
+        makeMovimientoDto({ tipo: 'entrada', cantidad: 100 }),
+        makeMovimientoDto({
+          id: 2,
+          codigo: 'FR-MV-002-261022-INS1',
+          tipo: 'salida',
+          cantidad: 20,
+          razon: '',
+        }),
+        makeMovimientoDto({
+          id: 3,
+          codigo: 'FR-MV-003-261022-INS1',
+          tipo: 'ajuste',
+          cantidad: -15,
+        }),
+      ],
+      meta: { total: 3, page: 1, limit: 50, total_pages: 1 },
+    });
+
+    const [entrada, salida, ajuste] = component.movimientos();
+    expect(entrada).toMatchObject({
+      cantidad: 100,
+      cantidadMostrada: '+100 kg',
+      loteCodigo: 'FR-LT-001-261001-INS1',
+    });
+    expect(salida).toMatchObject({ cantidad: -20, cantidadMostrada: '-20 kg', razon: '—' });
+    expect(ajuste).toMatchObject({ cantidad: -15, cantidadMostrada: '-15 kg' });
+  });
+
+  it('does not re-request movimientos when re-entering the historial tab for the same insumo', () => {
+    const fixture = createConLotes(makeInsumo());
+    const component = fixture.componentInstance;
+
+    component.cambiarTab('historial');
+    fixture.detectChanges();
+    expectMovimientosRequest().flush({
+      data: [makeMovimientoDto()],
+      meta: { total: 1, page: 1, limit: 50, total_pages: 1 },
+    });
+
+    component.cambiarTab('informacion');
+    fixture.detectChanges();
+    component.cambiarTab('historial');
+    fixture.detectChanges();
+
+    httpMock.expectNone(
+      (request) => request.url === MOVIMIENTOS_BASE && request.params.get('insumo_id') === '1',
+    );
+  });
+
+  it('shows an error state with retry when the movimientos request fails', () => {
+    const fixture = createConLotes(makeInsumo());
+    const component = fixture.componentInstance;
+
+    component.cambiarTab('historial');
+    fixture.detectChanges();
+    expectMovimientosRequest().flush('error', { status: 500, statusText: 'Server Error' });
+
+    expect(component.errorMovimientos()).toBe(true);
+
+    component.cargarMovimientos(makeInsumo());
+    expectMovimientosRequest().flush({
+      data: [],
+      meta: { total: 0, page: 1, limit: 50, total_pages: 0 },
+    });
+
+    expect(component.errorMovimientos()).toBe(false);
   });
 });

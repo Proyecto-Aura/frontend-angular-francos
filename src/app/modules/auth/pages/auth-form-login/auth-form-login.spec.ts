@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { submit } from '@angular/forms/signals';
@@ -13,17 +13,23 @@ describe('AuthFormLogin', () => {
   let router: { navigateByUrl: ReturnType<typeof vi.fn> };
   let httpMock: HttpTestingController;
 
-  beforeEach(() => {
+  function configure(query: Record<string, string> = {}) {
     router = { navigateByUrl: vi.fn() };
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: Router, useValue: router },
+        {
+          provide: ActivatedRoute,
+          useValue: { snapshot: { queryParamMap: convertToParamMap(query) } },
+        },
       ],
     });
     httpMock = TestBed.inject(HttpTestingController);
-  });
+  }
+
+  beforeEach(() => configure());
 
   afterEach(() => httpMock.verify());
 
@@ -35,6 +41,23 @@ describe('AuthFormLogin', () => {
 
   it('creates', () => {
     expect(create().componentInstance).toBeTruthy();
+  });
+
+  it('"¿Has olvidado tu contraseña?" navigates to /auth/forgot-password', () => {
+    create().componentInstance.onForgotPassword();
+    expect(router.navigateByUrl).toHaveBeenCalledWith('/auth/forgot-password');
+  });
+
+  it('does not show the "password updated" notice by default', () => {
+    const fixture = create();
+    expect(fixture.nativeElement.querySelector('[role="status"]')).toBeNull();
+  });
+
+  it('shows the "password updated" notice when arriving with ?restablecida=1', () => {
+    TestBed.resetTestingModule();
+    configure({ restablecida: '1' });
+    const notice = create().nativeElement.querySelector('[role="status"]');
+    expect(notice?.textContent).toContain('Ya puedes iniciar sesión');
   });
 
   it('marks username and password as invalid when empty', () => {

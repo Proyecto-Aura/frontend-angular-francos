@@ -23,11 +23,12 @@ const MODULE_CARD_INFO: Record<string, { icon: string; routerLink: string }> = {
     icon: '/icons/module-gestion-estrategica.png',
     routerLink: '/gestion-estrategica',
   },
+  configuracion: { icon: '/icons/module_configuracion.svg', routerLink: '/configuracion' },
 };
 
 // Fallback mientras responde /rutas/mi-menu (o si falla) — solo los modulos
-// que hoy tienen pagina real detras, ya no la lista vieja con Produccion /
-// Configuracion, que nunca tuvieron ruta ni pantalla.
+// que todo usuario del portal puede ver. Configuracion no va aqui: es solo
+// del admin y aparece cuando el backend se lo devuelve.
 const FALLBACK_MODULES: ModuleCard[] = [
   {
     icon: MODULE_CARD_INFO['ventas'].icon,
@@ -50,11 +51,10 @@ const FALLBACK_MODULES: ModuleCard[] = [
 ];
 
 // Orden pedido a mano: Ventas, Inventario, Gestion Estrategica, Produccion,
-// Despacho, Configuracion. Los primeros 3 nombres son reales (confirmados
-// contra el backend); produccion/despacho/configuracion todavia no existen
-// en la BD, asi que son nombres SUPUESTOS — si el backend los crea con otro
-// nombre cuando los carguen, hay que ajustar esta lista para que el orden
-// siga funcionando (mientras tanto no tienen efecto: MODULE_CARD_INFO ni
+// Despacho, Configuracion. ventas, inventario, estrategico y configuracion
+// son nombres reales de la BD; produccion/despacho todavia no existen, asi
+// que son nombres SUPUESTOS — si el backend los crea con otro nombre hay que
+// ajustar esta lista (mientras tanto no tienen efecto: MODULE_CARD_INFO ni
 // los conoce, asi que ni aparecen).
 const MODULE_ORDER = [
   'ventas',

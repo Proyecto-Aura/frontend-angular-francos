@@ -10,8 +10,10 @@ export interface LoteInsumoDto {
   cantidad_inicial: number;
   cantidad_actual: number;
   // Ciclo de negocio del lote — distinto de "activo" (baja logica
-  // administrativa, igual que en insumos).
-  estado: 'activo' | 'agotado' | 'vencido';
+  // administrativa, igual que en insumos). "por_vencer" lo calcula el
+  // backend al leer (no se persiste): activo y a 15 dias o menos de
+  // fecha_vencimiento (confirmado por el backend).
+  estado: 'activo' | 'por_vencer' | 'agotado' | 'vencido';
   activo: boolean;
   created_at: string;
   updated_at: string;

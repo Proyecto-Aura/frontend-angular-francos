@@ -9,7 +9,13 @@ import {
   InsumoDto,
   InsumosPageDto,
 } from '../interfaces/insumo-dto.interface';
-import { Insumo, InsumoForm, InsumosPagina, ResumenInsumos } from '../interfaces/insumo.interface';
+import {
+  Insumo,
+  InsumoForm,
+  InsumosPagina,
+  NivelStock,
+  ResumenInsumos,
+} from '../interfaces/insumo.interface';
 import {
   toActualizarInsumoRequest,
   toCrearInsumoRequest,
@@ -27,6 +33,10 @@ export interface FiltrosInsumos {
   // devuelve 400 "estado must be a boolean value".
   estado?: boolean;
   tipo?: string;
+  // Calculado por el backend con el mismo criterio que /insumos/indicadores
+  // (confirmado por el backend) — ya no hace falta traer todo el catalogo y
+  // filtrar por nivel en el front.
+  nivel?: NivelStock;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -38,6 +48,7 @@ export class InsumoService {
     if (filtros.search) params['search'] = filtros.search;
     if (filtros.estado !== undefined) params['estado'] = filtros.estado;
     if (filtros.tipo) params['tipo'] = filtros.tipo;
+    if (filtros.nivel) params['nivel'] = filtros.nivel;
 
     return this.http.get<InsumosPageDto>(INSUMOS_BASE, { params }).pipe(map(toInsumosPagina));
   }

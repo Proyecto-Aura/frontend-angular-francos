@@ -307,7 +307,7 @@ export class CatalogoService {
         }
       : {
           tono: 'ok',
-          mensaje: `Producto registrado · SKU ${skus} · producto terminado creado por presentación (stock actual 0, stock mínimo 1) · visible en Portal B inicia desactivado.`,
+          mensaje: `Producto registrado · SKU ${skus} · producto terminado creado por presentación (stock actual 0, stock mínimo 1) · queda Desactivado: actívalo para que se vea en el Portal B.`,
         };
   }
 }

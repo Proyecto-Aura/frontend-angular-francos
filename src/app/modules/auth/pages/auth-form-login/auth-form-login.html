@@ -9,6 +9,12 @@
     </p>
   </div>
 
+  @if (passwordReset) {
+    <p class="-mt-5 text-sm font-medium text-success" role="status">
+      Tu contraseña se actualizó. Ya puedes iniciar sesión.
+    </p>
+  }
+
   <div class="flex flex-col gap-5">
     <div class="flex flex-col gap-1">
       <app-auth-input label="Usuario" placeholder="admin" [formField]="loginForm.username" />

@@ -1,10 +1,17 @@
-import { Routes } from '@angular/router';
+import { inject } from '@angular/core';
+import { Router, Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
 
 export const routes: Routes = [
   {
     path: 'auth',
     loadChildren: () => import('./modules/auth/auth.route').then((c) => c.AUTH_ROUTES),
+  },
+  {
+    // Enlace del correo de recuperación (lo arma el backend): /reset-password?token=…
+    path: 'reset-password',
+    // Una redirección simple descartaría el ?token=; se pasa tal cual.
+    redirectTo: ({ queryParams }) => inject(Router).createUrlTree(['/auth/reset'], { queryParams }),
   },
   {
     path: 'home',
@@ -29,6 +36,12 @@ export const routes: Routes = [
     canActivate: [authGuard],
     loadChildren: () =>
       import('./modules/inventario/inventario.route').then((m) => m.INVENTARIO_ROUTES),
+  },
+  {
+    path: 'configuracion',
+    canActivate: [authGuard],
+    loadChildren: () =>
+      import('./modules/configuracion/configuracion.route').then((m) => m.CONFIGURACION_ROUTES),
   },
   {
     path: 'ds-showcase',

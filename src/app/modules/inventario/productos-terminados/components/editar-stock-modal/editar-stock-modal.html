@@ -1,0 +1,110 @@
+<app-ds-modal
+  [open]="producto() !== null"
+  title="Editar producto"
+  [hasIcon]="true"
+  [hasFooter]="true"
+  (closed)="cerrar()"
+>
+  <span
+    icon
+    class="flex h-9 w-9 items-center justify-center rounded-md bg-[rgba(255,255,255,0.18)]"
+  >
+    <app-ds-icon [img]="LucidePencil" [size]="18" />
+  </span>
+
+  @if (producto(); as producto) {
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <app-ds-field label="SKU" htmlFor="editar-producto-sku" hint="No editable.">
+        <app-ds-input id="editar-producto-sku" [value]="producto.sku" [disabled]="true" />
+      </app-ds-field>
+
+      <app-ds-field label="Nombre del producto" htmlFor="editar-producto-nombre">
+        <app-ds-input
+          id="editar-producto-nombre"
+          [value]="producto.productoNombre"
+          [disabled]="true"
+        />
+      </app-ds-field>
+
+      <app-ds-field label="Descripción" htmlFor="editar-producto-descripcion">
+        <app-ds-textarea
+          id="editar-producto-descripcion"
+          [value]="producto.productoDescripcion ?? ''"
+          [rows]="2"
+          [disabled]="true"
+        />
+      </app-ds-field>
+
+      <app-ds-field label="Categoría" htmlFor="editar-producto-categoria">
+        <app-ds-input
+          id="editar-producto-categoria"
+          [value]="producto.categoriaNombre"
+          [disabled]="true"
+        />
+      </app-ds-field>
+
+      <app-ds-field label="Presentación" htmlFor="editar-producto-presentacion">
+        <app-ds-input
+          id="editar-producto-presentacion"
+          [value]="
+            etiquetaPresentacion(producto.presentacionCantidad, producto.presentacionUnidadMedida)
+          "
+          [disabled]="true"
+        />
+      </app-ds-field>
+
+      <app-ds-field
+        label="Stock mínimo"
+        htmlFor="editar-stock-minimo"
+        [required]="true"
+        [error]="errores().stockMinimo ?? null"
+      >
+        <app-ds-input
+          id="editar-stock-minimo"
+          [(value)]="stockMinimo"
+          placeholder="0"
+          [invalid]="!!errores().stockMinimo"
+        />
+      </app-ds-field>
+
+      <app-ds-field
+        label="Stock máximo"
+        htmlFor="editar-stock-maximo"
+        [required]="true"
+        [error]="errores().stockMaximo ?? null"
+      >
+        <app-ds-input
+          id="editar-stock-maximo"
+          [(value)]="stockMaximo"
+          placeholder="0"
+          [invalid]="!!errores().stockMaximo"
+        />
+      </app-ds-field>
+
+      <app-ds-field
+        label="Stock actual"
+        htmlFor="editar-stock-actual"
+        hint="Solo se modifica mediante movimientos."
+      >
+        <app-ds-input
+          id="editar-stock-actual"
+          [value]="producto.stockActual + ' ' + producto.presentacionUnidadMedida"
+          [disabled]="true"
+        />
+      </app-ds-field>
+    </div>
+
+    @if (errorGeneral()) {
+      <div class="mt-4 rounded-lg bg-destructive/10 px-3.5 py-3 text-ds-sm text-destructive">
+        {{ errorGeneral() }}
+      </div>
+    }
+  }
+
+  <span footer class="flex gap-2">
+    <app-ds-button variant="secondary" (clicked)="cerrar()">Cancelar</app-ds-button>
+    <app-ds-button variant="primary" [disabled]="guardando()" (clicked)="guardar()">
+      {{ guardando() ? 'Guardando…' : 'Guardar cambios' }}
+    </app-ds-button>
+  </span>
+</app-ds-modal>

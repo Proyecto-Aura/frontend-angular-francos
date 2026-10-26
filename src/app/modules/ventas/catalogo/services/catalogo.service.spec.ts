@@ -130,7 +130,9 @@ describe('CatalogoService', () => {
 
       expect(resultado?.tono).toBe('ok');
       expect(resultado?.mensaje).toContain('Producto registrado · SKU FR-P8-PR1');
-      expect(resultado?.mensaje).toContain('visible en Portal B inicia desactivado');
+      expect(resultado?.mensaje).toContain(
+        'queda Desactivado: actívalo para que se vea en el Portal B',
+      );
     });
 
     it('creates the promotion of each presentation that has one', () => {

@@ -149,6 +149,28 @@ describe('AuthService', () => {
       .flush(makeMeResponse({ nombre_completo: 'Usuario de Ventas' }));
   });
 
+  it('forgotPassword POSTs { email } to /auth/forgot-password and returns the backend message', () => {
+    let message: string | undefined;
+    service.forgotPassword('ana@francos.test').subscribe((res) => (message = res.message));
+
+    const req = httpMock.expectOne(`${AUTH_BASE}/forgot-password`);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ email: 'ana@francos.test' });
+    req.flush({ message: 'Si el correo está registrado, recibirás un enlace' });
+
+    expect(message).toBe('Si el correo está registrado, recibirás un enlace');
+  });
+
+  it('resetPassword POSTs { token, nueva_contrasena, confirmar_contrasena } to /auth/reset-password', () => {
+    const body = { token: 'abc', nueva_contrasena: 'nueva1234', confirmar_contrasena: 'nueva1234' };
+    service.resetPassword(body).subscribe();
+
+    const req = httpMock.expectOne(`${AUTH_BASE}/reset-password`);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual(body);
+    req.flush({ message: 'Contraseña restablecida correctamente' });
+  });
+
   it('getCurrentUser cache is invalidated by logout', () => {
     service.getCurrentUser().subscribe();
     httpMock.expectOne(`${AUTH_BASE}/me`).flush(makeMeResponse());
