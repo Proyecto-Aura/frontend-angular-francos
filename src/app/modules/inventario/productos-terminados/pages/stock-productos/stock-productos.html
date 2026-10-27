@@ -110,35 +110,18 @@
         </div>
       }
     </app-ds-card>
+  } @else if (activeTab() === 'historial') {
+    <app-historial-movimientos-producto-terminado />
   } @else {
-    <app-ds-card>
-      <p class="p-6 text-center text-muted-foreground">Historial de movimientos — próximamente.</p>
-    </app-ds-card>
+    <app-lotes-producto-terminado-general />
   }
 
-  <app-ds-modal
+  <app-movimiento-producto-terminado-form-modal
     [open]="modalMovimientoAbierto()"
-    title="Registrar movimiento de producto"
-    [hasIcon]="true"
-    [hasFooter]="true"
-    (closed)="cerrarRegistrarMovimiento()"
-  >
-    <span
-      icon
-      class="flex h-9 w-9 items-center justify-center rounded-md bg-[rgba(255,255,255,0.18)]"
-    >
-      <app-ds-icon [img]="LucideArrowLeftRight" [size]="18" />
-    </span>
-    <p class="text-muted-foreground">
-      Registrar movimientos de producto terminado (entrada, salida y ajuste) todavía no está
-      disponible — queda para una próxima historia.
-    </p>
-    <span footer>
-      <app-ds-button variant="secondary" (clicked)="cerrarRegistrarMovimiento()"
-        >Cerrar</app-ds-button
-      >
-    </span>
-  </app-ds-modal>
+    [productoPreseleccionado]="productoParaMovimiento()"
+    (closed)="cerrarFormMovimiento()"
+    (saved)="movimientoGuardado()"
+  />
 
   <app-producto-detalle-modal
     [producto]="productoEnDetalle()"
@@ -192,7 +175,7 @@
       label="Registrar movimiento"
       variant="secondary"
       size="md"
-      (clicked)="abrirRegistrarMovimiento()"
+      (clicked)="abrirRegistrarMovimiento(fila.producto)"
     >
       <app-ds-icon [img]="LucideArrowLeftRight" [size]="16" />
     </app-ds-icon-button>

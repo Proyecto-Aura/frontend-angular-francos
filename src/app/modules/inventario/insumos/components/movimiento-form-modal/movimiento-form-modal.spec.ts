@@ -211,6 +211,60 @@ describe('MovimientoFormModal', () => {
     ]);
   });
 
+  it('on entrada, includes lotes por_vencer in the select options (sigue siendo stock utilizable, bug reportado por el backend)', () => {
+    const fixture = openModal();
+    const component = fixture.componentInstance;
+
+    seleccionarInsumoYResolverLotes(fixture, 1, '9', [
+      makeLoteDto({ id: 1, codigo_lote: 'FR-LT-001', estado: 'por_vencer' }),
+    ]);
+
+    expect(component.loteOptionsDeFila(component.filas()[0])).toEqual([
+      { value: '1', label: 'FR-LT-001', secondary: '50 disp.' },
+    ]);
+  });
+
+  it('on entrada, excludes lotes agotados (sin stock) from the select options', () => {
+    const fixture = openModal();
+    const component = fixture.componentInstance;
+
+    seleccionarInsumoYResolverLotes(fixture, 1, '9', [
+      makeLoteDto({ id: 1, codigo_lote: 'FR-LT-001', estado: 'agotado', cantidad_actual: 0 }),
+      makeLoteDto({ id: 2, codigo_lote: 'FR-LT-002', estado: 'activo', cantidad_actual: 10 }),
+    ]);
+
+    expect(component.loteOptionsDeFila(component.filas()[0])).toEqual([
+      { value: '2', label: 'FR-LT-002', secondary: '10 disp.' },
+    ]);
+  });
+
+  it('on ajuste, includes lotes agotados in the select options (corregir el conteo real igual aplica)', () => {
+    const fixture = openModal();
+    const component = fixture.componentInstance;
+    component.seleccionarTipoMovimiento('ajuste');
+
+    seleccionarInsumoYResolverLotes(fixture, 1, '9', [
+      makeLoteDto({ id: 1, codigo_lote: 'FR-LT-001', estado: 'agotado', cantidad_actual: 0 }),
+    ]);
+
+    expect(component.loteOptionsDeFila(component.filas()[0])).toEqual([
+      { value: '1', label: 'FR-LT-001', secondary: '0 disp.' },
+    ]);
+  });
+
+  it('does not send "estado" en el pedido de lotes (ese filtro es estricto y excluiria por_vencer — se filtra del lado del front)', () => {
+    const fixture = openModal();
+
+    fixture.componentInstance.seleccionarInsumoDeFila(1, '9');
+
+    const req = httpMock.expectOne(
+      (request) => request.url === LOTES_BASE && request.params.get('insumo_id') === '9',
+    );
+    expect(req.request.params.has('estado')).toBe(false);
+    expect(req.request.params.get('activo')).toBe('true');
+    req.flush({ data: [], meta: { total: 0, page: 1, limit: 100, total_pages: 0 } });
+  });
+
   it('on ajuste, includes lotes vencidos in the select options (corregir el conteo real igual aplica)', () => {
     const fixture = openModal();
     const component = fixture.componentInstance;

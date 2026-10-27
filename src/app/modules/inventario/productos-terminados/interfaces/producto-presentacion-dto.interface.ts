@@ -22,6 +22,12 @@ export interface PresentacionDto {
 }
 
 export interface ProductoTerminadoDto {
+  // Id propio del recurso producto_terminado — distinto del
+  // producto_presentacion_id (son dos PKs distintas, confirmado por el
+  // backend al agregar este campo para OFT0-259). Es el id que hay que usar
+  // en /movimientos-producto-terminado y /lotes-producto-terminado, no el
+  // id de ProductoPresentacion.
+  id: number;
   stock_actual: number;
   stock_minimo: number;
   // Sin tope definido — confirmado por el backend que puede venir null (asi

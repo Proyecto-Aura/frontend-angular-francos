@@ -13,6 +13,7 @@ const PRODUCTO_PRESENTACIONES_BASE = `${environment.apiUrl}/producto-presentacio
 const INDICADORES_URL = `${environment.apiUrl}/productos-terminados/indicadores`;
 const CATEGORIAS_BASE = `${environment.apiUrl}/categorias`;
 const PRESENTACIONES_BASE = `${environment.apiUrl}/presentaciones`;
+const LOTES_BASE = `${environment.apiUrl}/lotes-producto-terminado`;
 
 const INDICADORES_VACIOS = { total: 0, normal: 0, alto: 0, bajo: 0, agotado: 0 };
 
@@ -32,7 +33,7 @@ function makeProductoPresentacionDto(
       categoria: { id: 2, nombre: 'Panadería' },
     },
     presentacion: { id: 2, cantidad: 500, unidad_medida: 'gr' },
-    producto_terminado: { stock_actual: 45, stock_minimo: 10, stock_maximo: 300 },
+    producto_terminado: { id: 25, stock_actual: 45, stock_minimo: 10, stock_maximo: 300 },
     ...overrides,
   };
 }
@@ -49,9 +50,25 @@ describe('StockProductos', () => {
 
   afterEach(() => httpMock.verify());
 
+  function expectLotesTotalRequest(): TestRequest {
+    return httpMock.expectOne(
+      (request) =>
+        request.url === LOTES_BASE &&
+        request.params.get('page') === '1' &&
+        request.params.get('limit') === '1',
+    );
+  }
+
+  // Todos los tests pasan por aca: se consume la peticion del contador de
+  // la pestaña "Lotes" (lotesTotal) apenas se crea el fixture, para que no
+  // quede pendiente y rompa httpMock.verify() en tests que no la necesitan.
   function create(): ComponentFixture<StockProductos> {
     const fixture = TestBed.createComponent(StockProductos);
     fixture.detectChanges();
+    expectLotesTotalRequest().flush({
+      data: [],
+      meta: { total: 0, page: 1, limit: 1, total_pages: 0 },
+    });
     return fixture;
   }
 
@@ -131,6 +148,7 @@ describe('StockProductos', () => {
       {
         producto: {
           id: 7,
+          productoTerminadoId: 25,
           sku: 'FR-P3-PR2',
           productoNombre: 'Pan de molde',
           productoDescripcion: 'Pan de molde integral, bolsa sellada.',
@@ -161,7 +179,7 @@ describe('StockProductos', () => {
     const fixture = create();
     flushPage(expectPageRequest(1, 10), [
       makeProductoPresentacionDto({
-        producto_terminado: { stock_actual: 500, stock_minimo: 10, stock_maximo: null },
+        producto_terminado: { id: 25, stock_actual: 500, stock_minimo: 10, stock_maximo: null },
       }),
     ]);
     flushIndicadores();
@@ -280,7 +298,7 @@ describe('StockProductos', () => {
     ]);
   });
 
-  it('starts on the stock tab and switches to historial', () => {
+  it('starts on the stock tab and switches to historial and lotes', () => {
     const fixture = create();
     flushPage(expectPageRequest(1, 10));
     flushIndicadores();
@@ -292,11 +310,14 @@ describe('StockProductos', () => {
     fixture.componentInstance.cambiarTab('historial');
     expect(fixture.componentInstance.activeTab()).toBe('historial');
 
+    fixture.componentInstance.cambiarTab('lotes');
+    expect(fixture.componentInstance.activeTab()).toBe('lotes');
+
     fixture.componentInstance.cambiarTab('stock');
     expect(fixture.componentInstance.activeTab()).toBe('stock');
   });
 
-  it('opens and closes the movimiento placeholder modal from "Registrar movimiento"', () => {
+  it('opens and closes the movimiento modal from "Registrar movimiento", sin preseleccionar producto', () => {
     const fixture = create();
     flushPage(expectPageRequest(1, 10));
     flushIndicadores();
@@ -307,9 +328,70 @@ describe('StockProductos', () => {
 
     fixture.componentInstance.abrirRegistrarMovimiento();
     expect(fixture.componentInstance.modalMovimientoAbierto()).toBe(true);
+    expect(fixture.componentInstance.productoParaMovimiento()).toBeNull();
 
-    fixture.componentInstance.cerrarRegistrarMovimiento();
+    fixture.componentInstance.cerrarFormMovimiento();
     expect(fixture.componentInstance.modalMovimientoAbierto()).toBe(false);
+  });
+
+  it('opens the movimiento modal preseleccionando el producto de la fila cuando se abre desde su icono', () => {
+    const fixture = create();
+    flushPage(expectPageRequest(1, 10), [makeProductoPresentacionDto()]);
+    flushIndicadores();
+    flushCategorias();
+    flushPresentaciones();
+
+    const [fila] = fixture.componentInstance.productos();
+    fixture.componentInstance.abrirRegistrarMovimiento(fila.producto);
+
+    expect(fixture.componentInstance.modalMovimientoAbierto()).toBe(true);
+    expect(fixture.componentInstance.productoParaMovimiento()).toBe(fila.producto);
+
+    fixture.componentInstance.cerrarFormMovimiento();
+    expect(fixture.componentInstance.productoParaMovimiento()).toBeNull();
+  });
+
+  it('closes the movimiento modal and reloads the list and the summary when a movimiento is saved', () => {
+    const fixture = create();
+    flushPage(expectPageRequest(1, 10));
+    flushIndicadores();
+    flushCategorias();
+    flushPresentaciones();
+
+    fixture.componentInstance.abrirRegistrarMovimiento();
+    fixture.componentInstance.movimientoGuardado();
+
+    expect(fixture.componentInstance.modalMovimientoAbierto()).toBe(false);
+    flushPage(expectPageRequest(1, 10));
+    flushIndicadores();
+  });
+
+  it('loads the lotes count for the "Lotes" tab badge on initialization', () => {
+    const fixture = TestBed.createComponent(StockProductos);
+    fixture.detectChanges();
+    flushPage(expectPageRequest(1, 10));
+    flushIndicadores();
+    flushCategorias();
+    flushPresentaciones();
+    expectLotesTotalRequest().flush({
+      data: [],
+      meta: { total: 5, page: 1, limit: 1, total_pages: 5 },
+    });
+
+    expect(fixture.componentInstance.lotesTotal()).toBe(5);
+    expect(fixture.componentInstance.tabs().find((t) => t.id === 'lotes')?.count).toBe(5);
+  });
+
+  it('resets the lotes count to zero when that request fails', () => {
+    const fixture = TestBed.createComponent(StockProductos);
+    fixture.detectChanges();
+    flushPage(expectPageRequest(1, 10));
+    flushIndicadores();
+    flushCategorias();
+    flushPresentaciones();
+    expectLotesTotalRequest().flush('error', { status: 500, statusText: 'Server Error' });
+
+    expect(fixture.componentInstance.lotesTotal()).toBe(0);
   });
 
   it('opens and closes the detalle modal from "Ver detalle"', () => {

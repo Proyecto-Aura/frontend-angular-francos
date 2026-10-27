@@ -3,6 +3,11 @@ export type NivelStockProducto = 'normal' | 'alto' | 'bajo' | 'agotado';
 
 export interface ProductoPresentacion {
   id: number;
+  // Id del recurso producto_terminado (distinto de este "id") — null en el
+  // caso rarisimo de que producto_terminado no se haya creado (ver
+  // ProductoTerminadoDto). Es el id que hay que mandar a
+  // /movimientos-producto-terminado y /lotes-producto-terminado.
+  productoTerminadoId: number | null;
   sku: string;
   productoNombre: string;
   productoDescripcion: string | null;

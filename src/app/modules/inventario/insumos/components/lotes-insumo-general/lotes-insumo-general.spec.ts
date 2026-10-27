@@ -139,6 +139,25 @@ describe('LotesInsumoGeneral', () => {
     });
   });
 
+  it('orders lotes by fecha_vencimiento ascendente (los mas proximos a vencer primero), sin fecha al final', () => {
+    const fixture = create();
+    flushLotes(expectLotesRequest(), [
+      makeLoteDto({ id: 1, codigo_lote: 'SIN-FECHA', fecha_vencimiento: null }),
+      makeLoteDto({ id: 2, codigo_lote: 'LEJOS', fecha_vencimiento: '2026-12-01' }),
+      makeLoteDto({ id: 3, codigo_lote: 'CERCA', fecha_vencimiento: '2026-10-15' }),
+    ]);
+    expectInsumosRequest().flush({
+      data: [makeInsumoDto()],
+      meta: { total: 1, page: 1, limit: 100, total_pages: 1 },
+    });
+
+    expect(fixture.componentInstance.lotes().map((l) => l.codigoLote)).toEqual([
+      'CERCA',
+      'LEJOS',
+      'SIN-FECHA',
+    ]);
+  });
+
   it('shows — para nombre/sku si el insumo del lote no esta en el catalogo cargado', () => {
     const fixture = create();
     flushLotes(expectLotesRequest(), [makeLoteDto({ insumo_id: 999 })]);

@@ -17,6 +17,7 @@ import {
   LucideCircleCheck,
   LucideClock,
   LucideEye,
+  LucideLayers,
   LucidePackage,
   LucidePencil,
   LucideRotateCcw,
@@ -35,11 +36,13 @@ import { Icon } from '../../../../../shared/ds/icon/icon';
 import { IconButton } from '../../../../../shared/ds/icon-button/icon-button';
 import { Input } from '../../../../../shared/ds/input/input';
 import { KpiCard } from '../../../../../shared/ds/kpi-card/kpi-card';
-import { Modal } from '../../../../../shared/ds/modal/modal';
 import { Pagination } from '../../../../../shared/ds/pagination/pagination';
 import { Select, SelectOption } from '../../../../../shared/ds/select/select';
 import { DsTab, Tabs } from '../../../../../shared/ds/tabs/tabs';
 import { EditarStockModal } from '../../components/editar-stock-modal/editar-stock-modal';
+import { HistorialMovimientosProductoTerminado } from '../../components/historial-movimientos-producto-terminado/historial-movimientos-producto-terminado';
+import { LotesProductoTerminadoGeneral } from '../../components/lotes-producto-terminado-general/lotes-producto-terminado-general';
+import { MovimientoProductoTerminadoFormModal } from '../../components/movimiento-producto-terminado-form-modal/movimiento-producto-terminado-form-modal';
 import { ProductoDetalleModal } from '../../components/producto-detalle-modal/producto-detalle-modal';
 import {
   NivelStockProducto,
@@ -48,6 +51,7 @@ import {
   calcularNivelStockProducto,
 } from '../../interfaces/producto-presentacion.interface';
 import { etiquetaPresentacion } from '../../mappers/producto-presentacion.mapper';
+import { LoteProductoTerminadoService } from '../../services/lote-producto-terminado.service';
 import { ProductoPresentacionService } from '../../services/producto-presentacion.service';
 
 const RESUMEN_VACIO: ResumenProductosTerminados = {
@@ -72,14 +76,14 @@ const NIVEL_TONE: Record<NivelStockProducto, BadgeTone> = {
   agotado: 'danger',
 };
 
-// "Stock de productos": KPIs + tabs Stock/Historial + filtros + tabla,
-// mismo patron que stock-insumos.ts. "Registrar movimiento" abre un modal
-// placeholder — el backend de movimientos de producto (entrada/salida/
-// ajuste, FEFO) todavia no existe (confirmado por el backend, es otra
-// historia) — y "Historial de movimientos" queda igual como placeholder,
-// igual que arranco insumos antes de que existiera /movimientos-insumo. A
-// diferencia de insumos, no hay "Registrar lote" (producto terminado no
-// maneja lotes, confirmado con el usuario).
+// "Stock de productos": KPIs + tabs Stock/Historial/Lotes + filtros + tabla,
+// mismo patron que stock-insumos.ts. "Registrar movimiento" abre
+// MovimientoProductoTerminadoFormModal, conectado a
+// POST /movimientos-producto-terminado/entrada|salida|ajuste (OFT0-259,
+// batch transaccional, todo o nada, mismo criterio que insumos). A
+// diferencia de insumos, no hay "Registrar lote" (los lotes de producto
+// terminado nacen por seed/produccion, no se registran a mano — confirmado
+// por el backend).
 @Component({
   imports: [
     Badge,
@@ -89,11 +93,13 @@ const NIVEL_TONE: Record<NivelStockProducto, BadgeTone> = {
     DataTable,
     EditarStockModal,
     FilterBar,
+    HistorialMovimientosProductoTerminado,
     Icon,
     IconButton,
     Input,
     KpiCard,
-    Modal,
+    LotesProductoTerminadoGeneral,
+    MovimientoProductoTerminadoFormModal,
     Pagination,
     ProductoDetalleModal,
     Select,
@@ -104,6 +110,7 @@ const NIVEL_TONE: Record<NivelStockProducto, BadgeTone> = {
 })
 export class StockProductos implements OnInit, AfterViewInit {
   private productoPresentacionService = inject(ProductoPresentacionService);
+  private loteService = inject(LoteProductoTerminadoService);
   private destroyRef = inject(DestroyRef);
 
   @ViewChild('productoCell', { static: true })
@@ -126,20 +133,31 @@ export class StockProductos implements OnInit, AfterViewInit {
   readonly LucideTrendingDown = LucideTrendingDown;
   readonly LucideCircleAlert = LucideCircleAlert;
   readonly LucideEye = LucideEye;
+  readonly LucideLayers = LucideLayers;
   readonly LucidePencil = LucidePencil;
   readonly LucideBan = LucideBan;
   readonly LucideRotateCcw = LucideRotateCcw;
 
   readonly tamanioPagina = 10;
 
-  activeTab = signal<'stock' | 'historial'>('stock');
+  activeTab = signal<'stock' | 'historial' | 'lotes'>('stock');
   modalMovimientoAbierto = signal(false);
+  // Producto de origen cuando se abre desde el icono "Registrar movimiento"
+  // de una fila (null = se abrio desde el boton general, sin preseleccion).
+  productoParaMovimiento = signal<ProductoPresentacion | null>(null);
   productoEnDetalle = signal<ProductoPresentacion | null>(null);
   productoEnEdicion = signal<ProductoPresentacion | null>(null);
+
+  // Solo para el contador de la pestaña "Lotes" — se pide aparte (limit=1,
+  // solo interesa meta.total) porque LotesProductoTerminadoGeneral es
+  // autonomo (carga sus propios datos) y no expone su total hacia este
+  // componente — mismo criterio que stock-insumos.ts.
+  lotesTotal = signal(0);
 
   tabs = computed<DsTab[]>(() => [
     { id: 'stock', label: 'Stock', icon: LucidePackage, count: this.resumen().total },
     { id: 'historial', label: 'Historial de movimientos', icon: LucideClock, count: 0 },
+    { id: 'lotes', label: 'Lotes', icon: LucideLayers, count: this.lotesTotal() },
   ]);
 
   readonly estadoOptions: SelectOption[] = [
@@ -180,6 +198,7 @@ export class StockProductos implements OnInit, AfterViewInit {
     this.cargarResumen();
     this.cargarCategorias();
     this.cargarPresentaciones();
+    this.cargarLotesTotal();
   }
 
   ngAfterViewInit(): void {
@@ -239,6 +258,16 @@ export class StockProductos implements OnInit, AfterViewInit {
       });
   }
 
+  cargarLotesTotal(): void {
+    this.loteService
+      .listar(1, 1)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (pagina) => this.lotesTotal.set(pagina.total),
+        error: () => this.lotesTotal.set(0),
+      });
+  }
+
   recargarTodo(): void {
     this.cargarProductos(this.pagina());
     this.cargarResumen();
@@ -276,15 +305,26 @@ export class StockProductos implements OnInit, AfterViewInit {
   }
 
   cambiarTab(id: string): void {
-    this.activeTab.set(id === 'historial' ? 'historial' : 'stock');
+    if (id === 'historial' || id === 'lotes') {
+      this.activeTab.set(id);
+      return;
+    }
+    this.activeTab.set('stock');
   }
 
-  abrirRegistrarMovimiento(): void {
+  abrirRegistrarMovimiento(producto: ProductoPresentacion | null = null): void {
+    this.productoParaMovimiento.set(producto);
     this.modalMovimientoAbierto.set(true);
   }
 
-  cerrarRegistrarMovimiento(): void {
+  cerrarFormMovimiento(): void {
     this.modalMovimientoAbierto.set(false);
+    this.productoParaMovimiento.set(null);
+  }
+
+  movimientoGuardado(): void {
+    this.cerrarFormMovimiento();
+    this.recargarTodo();
   }
 
   abrirEditar(producto: ProductoPresentacion): void {

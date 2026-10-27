@@ -10,6 +10,7 @@ const PRODUCTOS_TERMINADOS_BASE = `${environment.apiUrl}/productos-terminados`;
 function makeProducto(overrides: Partial<ProductoPresentacion> = {}): ProductoPresentacion {
   return {
     id: 7,
+    productoTerminadoId: 25,
     sku: 'FR-P3-PR2',
     productoNombre: 'Pan de molde',
     productoDescripcion: 'Pan de molde integral, bolsa sellada.',
