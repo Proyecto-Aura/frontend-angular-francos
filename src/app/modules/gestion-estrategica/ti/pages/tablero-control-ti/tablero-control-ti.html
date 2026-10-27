@@ -1,0 +1,309 @@
+<div class="flex min-h-full flex-col">
+  <div class="flex flex-col gap-4 p-(--page-padding)">
+    @if (planSeleccionado.cargando()) {
+      <div class="py-12 text-center text-muted-foreground">Cargando…</div>
+    } @else if (!planSeleccionado.plan()) {
+      <app-ds-card>
+        <div class="flex flex-col items-center gap-3 py-10 text-center">
+          <p class="text-muted-foreground">No hay planes estratégicos registrados.</p>
+          <a
+            routerLink="/gestion-estrategica/plan-estrategico"
+            class="font-medium text-primary hover:underline"
+            >Ir a Plan estratégico</a
+          >
+        </div>
+      </app-ds-card>
+    } @else {
+      @if (errorCarga()) {
+        <app-ds-card>
+          <div class="flex flex-col items-center gap-3 py-10 text-center">
+            <p class="text-muted-foreground">No se pudo cargar el tablero de control.</p>
+            <app-ds-button variant="secondary" (clicked)="cargarTablero()">
+              Reintentar
+            </app-ds-button>
+          </div>
+        </app-ds-card>
+      } @else if (cargando()) {
+        <app-ds-card [padded]="false">
+          <div class="p-12 text-center text-muted-foreground">Cargando…</div>
+        </app-ds-card>
+      } @else if (tablero(); as datos) {
+        <div class="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
+          <div>
+            <h1 class="text-ds-2xl font-medium text-foreground">Tablero de control de TI</h1>
+            <p class="mt-1 text-muted-foreground">
+              <span class="text-foreground">{{ datos.planNombre }}</span>
+              · semáforo frente a la meta de cada año
+            </p>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-x-4 gap-y-2 text-ds-sm text-muted-foreground">
+            <span class="text-foreground">Iniciativas:</span>
+            <span class="flex items-center gap-1.5">
+              <span class="h-2 w-2 rounded-full bg-muted-foreground"></span>Pendiente
+            </span>
+            <span class="flex items-center gap-1.5">
+              <span class="h-2 w-2 rounded-full bg-warning"></span>En proceso
+            </span>
+            <span class="flex items-center gap-1.5">
+              <span class="h-2 w-2 rounded-full bg-success"></span>Completada
+            </span>
+            <span class="flex items-center gap-1.5">
+              <span class="h-2 w-2 rounded-full bg-destructive"></span>Cancelada
+            </span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4">
+          <app-ds-kpi-card label="KPIs del plan" [value]="resumen().total" [hasIcon]="true">
+            <app-ds-icon icon [img]="LucideGauge" [size]="18" />
+          </app-ds-kpi-card>
+          <app-ds-kpi-card label="En verde" [value]="resumen().verde" [hasIcon]="true">
+            <app-ds-icon icon [img]="LucideCircleCheck" [size]="18" />
+          </app-ds-kpi-card>
+          <app-ds-kpi-card label="En amarillo" [value]="resumen().amarillo" [hasIcon]="true">
+            <app-ds-icon icon [img]="LucideCircleAlert" [size]="18" />
+          </app-ds-kpi-card>
+          <app-ds-kpi-card label="En rojo" [value]="resumen().rojo" [hasIcon]="true">
+            <app-ds-icon icon [img]="LucideCircleX" [size]="18" />
+          </app-ds-kpi-card>
+        </div>
+
+        @if (filas().length === 0) {
+          <app-ds-card [padded]="false">
+            <div class="px-5 py-11 text-center text-muted-foreground">
+              Este plan no registra KPIs.
+            </div>
+          </app-ds-card>
+        } @else {
+          <app-ds-card [padded]="false">
+            <div class="w-full overflow-x-auto">
+              <table
+                class="w-full border-collapse text-ds-base"
+                [style.min-width]="anchoMinimoTabla()"
+              >
+                <thead>
+                  <tr>
+                    <th
+                      class="h-[52px] w-60 border-b border-border bg-table-header px-5 text-left font-normal text-muted-foreground"
+                    >
+                      Objetivo estratégico de TI
+                    </th>
+                    <th
+                      class="h-[52px] w-56 border-b border-border bg-table-header px-5 text-left font-normal text-muted-foreground"
+                    >
+                      Objetivo de negocio
+                    </th>
+                    <th
+                      class="h-[52px] w-64 border-b border-border bg-table-header px-5 text-left font-normal text-muted-foreground"
+                    >
+                      Indicador
+                    </th>
+                    <th
+                      class="h-[52px] w-56 border-b border-border bg-table-header px-5 text-left font-normal text-muted-foreground"
+                    >
+                      Fórmula
+                    </th>
+                    <th
+                      class="h-[52px] whitespace-nowrap border-b border-border bg-table-header px-5 text-left font-normal text-muted-foreground"
+                    >
+                      Unidad
+                    </th>
+                    <th
+                      class="h-[52px] whitespace-nowrap border-b border-border bg-table-header px-5 text-left font-normal text-muted-foreground"
+                    >
+                      Frecuencia
+                    </th>
+                    <th
+                      class="h-[52px] whitespace-nowrap border-b border-border bg-table-header px-5 text-left font-normal text-muted-foreground"
+                    >
+                      Responsable
+                    </th>
+                    <th
+                      class="h-[52px] w-64 border-b border-border bg-table-header px-5 text-left font-normal text-muted-foreground"
+                    >
+                      Iniciativas
+                    </th>
+                    @for (anio of aniosPlan(); track anio) {
+                      <th
+                        class="h-[52px] w-45 whitespace-nowrap border-b border-l border-border bg-table-header px-5 text-left font-normal text-muted-foreground"
+                      >
+                        {{ anio }}
+                      </th>
+                    }
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (perspectiva of datos.perspectivas; track perspectiva.id) {
+                    <tr>
+                      <td
+                        [attr.colspan]="totalColumnas()"
+                        class="border-b border-border px-5 py-3"
+                        [class]="claseFondoPerspectiva(perspectiva.orden)"
+                      >
+                        <div class="flex items-center gap-2.5">
+                          <span
+                            class="h-2.5 w-2.5 shrink-0 rounded-full"
+                            [class]="clasePuntoPerspectiva(perspectiva.orden)"
+                          ></span>
+                          <span
+                            class="font-semibold"
+                            [class]="claseTextoPerspectiva(perspectiva.orden)"
+                            >{{ perspectiva.nombre }}</span
+                          >
+                          <span class="text-ds-sm text-muted-foreground">
+                            {{ perspectiva.kpis.length }}
+                            {{ perspectiva.kpis.length === 1 ? 'KPI' : 'KPIs' }}
+                          </span>
+                        </div>
+                      </td>
+                    </tr>
+
+                    @if (perspectiva.kpis.length === 0) {
+                      <tr>
+                        <td
+                          [attr.colspan]="totalColumnas()"
+                          class="border-b border-border px-5 py-6 text-muted-foreground"
+                        >
+                          Sin KPIs en esta perspectiva
+                        </td>
+                      </tr>
+                    } @else {
+                      @for (fila of perspectiva.kpis; track fila.kpiId) {
+                        <tr class="transition-colors hover:bg-table-row-hover">
+                          <td class="border-b border-border px-5 py-4 align-top">
+                            <div class="max-w-60 whitespace-normal leading-[1.35]">
+                              <span class="font-medium text-foreground">{{
+                                fila.objetivoNombre
+                              }}</span>
+                              <span class="mt-1 block text-ds-sm text-muted-foreground">
+                                {{ fila.objetivoCodigo }}
+                              </span>
+                            </div>
+                          </td>
+                          <td class="border-b border-border px-5 py-4 align-top">
+                            @if (fila.oeNegocio; as objetivoNegocio) {
+                              <div
+                                class="flex max-w-56 items-start gap-2 whitespace-normal leading-[1.35]"
+                              >
+                                <app-ds-icon
+                                  [img]="LucideLink2"
+                                  [size]="14"
+                                  class="shrink-0 text-muted-foreground"
+                                />
+                                <div>
+                                  <span class="font-medium text-foreground">{{
+                                    objetivoNegocio.nombre
+                                  }}</span>
+                                  <span class="mt-1 block text-ds-sm text-muted-foreground">
+                                    {{ objetivoNegocio.codigo }}
+                                  </span>
+                                </div>
+                              </div>
+                            } @else {
+                              <span class="text-muted-foreground">—</span>
+                            }
+                          </td>
+                          <td class="border-b border-border px-5 py-4 align-top">
+                            <div class="max-w-64 whitespace-normal leading-[1.35]">
+                              <span class="font-semibold text-foreground">{{ fila.nombre }}</span>
+                              <span class="mt-1 block text-ds-sm text-muted-foreground">
+                                {{ fila.codigo }}
+                              </span>
+                            </div>
+                          </td>
+                          <td
+                            class="max-w-56 whitespace-normal border-b border-border px-5 py-4 align-top text-ds-sm text-muted-foreground"
+                          >
+                            {{ fila.formula }}
+                          </td>
+                          <td class="whitespace-nowrap border-b border-border px-5 py-4 align-top">
+                            {{ fila.unidadSimbolo }}
+                          </td>
+                          <td class="whitespace-nowrap border-b border-border px-5 py-4 align-top">
+                            {{ fila.frecuenciaNombre }}
+                          </td>
+                          <td class="whitespace-nowrap border-b border-border px-5 py-4 align-top">
+                            {{ fila.responsable }}
+                          </td>
+                          <td class="border-b border-border px-5 py-4 align-top">
+                            @if (fila.iniciativas.length === 0) {
+                              <span class="text-ds-sm text-muted-foreground">Sin iniciativas</span>
+                            } @else {
+                              <div class="flex max-w-64 flex-col gap-2">
+                                @for (iniciativa of fila.iniciativas; track iniciativa.id) {
+                                  <div class="flex items-start gap-2 whitespace-normal text-ds-sm">
+                                    <span
+                                      class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full"
+                                      [class]="clasePuntoIniciativa(iniciativa.estadoCodigo)"
+                                    ></span>
+                                    <span>{{ iniciativa.nombre }}</span>
+                                  </div>
+                                }
+                              </div>
+                            }
+                          </td>
+                          @for (anio of aniosPlan(); track anio) {
+                            <td
+                              class="border-b border-l border-border px-5 py-4 align-top tabular-nums"
+                            >
+                              @if (valorDelAnio(fila, anio); as datoAnual) {
+                                @if (datoAnual.valor !== null) {
+                                  <span
+                                    class="block whitespace-nowrap font-semibold text-foreground"
+                                  >
+                                    {{ formatearValor(datoAnual.valor, fila.unidadSimbolo) }}
+                                  </span>
+                                  <span
+                                    class="mt-1 block whitespace-nowrap text-ds-sm text-muted-foreground"
+                                  >
+                                    @if (etiquetaPeriodo(datoAnual.periodo); as periodo) {
+                                      {{ periodo }} · meta
+                                      {{ textoMeta(datoAnual.meta, fila.unidadSimbolo) }}
+                                    } @else {
+                                      meta {{ textoMeta(datoAnual.meta, fila.unidadSimbolo) }}
+                                    }
+                                  </span>
+                                  <div class="mt-2">
+                                    @if (colorValido(datoAnual.color)) {
+                                      <app-ds-badge
+                                        [tone]="tonoSemaforo(datoAnual.color)"
+                                        [dot]="true"
+                                      >
+                                        {{ nombreSemaforo(datoAnual.color) }}
+                                      </app-ds-badge>
+                                    } @else {
+                                      <app-ds-badge tone="neutral" [dot]="true">
+                                        Sin rango
+                                      </app-ds-badge>
+                                    }
+                                  </div>
+                                } @else {
+                                  <span class="block text-muted-foreground">—</span>
+                                  <span
+                                    class="mt-1 block whitespace-nowrap text-ds-sm text-muted-foreground"
+                                  >
+                                    meta {{ textoMeta(datoAnual.meta, fila.unidadSimbolo) }}
+                                  </span>
+                                }
+                              } @else {
+                                <span class="block text-muted-foreground">—</span>
+                                <span class="mt-1 block text-ds-sm text-muted-foreground">
+                                  meta —
+                                </span>
+                              }
+                            </td>
+                          }
+                        </tr>
+                      }
+                    }
+                  }
+                </tbody>
+              </table>
+            </div>
+          </app-ds-card>
+        }
+      }
+    }
+  </div>
+</div>
