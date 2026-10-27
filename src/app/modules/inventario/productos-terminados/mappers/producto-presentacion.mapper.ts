@@ -19,6 +19,7 @@ export function toProductoPresentacion(dto: ProductoPresentacionDto): ProductoPr
   const productoTerminado = dto.producto_terminado;
   return {
     id: dto.id,
+    productoTerminadoId: productoTerminado?.id ?? null,
     sku: dto.sku,
     productoNombre: dto.producto.nombre,
     productoDescripcion: dto.producto.descripcion,

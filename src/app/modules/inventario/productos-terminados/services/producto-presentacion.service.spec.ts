@@ -30,7 +30,7 @@ function makeProductoPresentacionDto(
       categoria: { id: 2, nombre: 'Panadería' },
     },
     presentacion: { id: 2, cantidad: 500, unidad_medida: 'gr' },
-    producto_terminado: { stock_actual: 45, stock_minimo: 10, stock_maximo: 300 },
+    producto_terminado: { id: 25, stock_actual: 45, stock_minimo: 10, stock_maximo: 300 },
     ...overrides,
   };
 }
@@ -85,6 +85,7 @@ describe('ProductoPresentacionService', () => {
     expect(result!).toMatchObject({ total: 16, pagina: 2, totalPaginas: 2 });
     expect(result!.productos[0]).toEqual({
       id: 7,
+      productoTerminadoId: 25,
       sku: 'FR-P3-PR2',
       productoNombre: 'Pan de molde',
       productoDescripcion: 'Pan de molde integral, bolsa sellada.',

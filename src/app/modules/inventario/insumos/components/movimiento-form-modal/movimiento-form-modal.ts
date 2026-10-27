@@ -185,16 +185,16 @@ export class MovimientoFormModal {
     return this.lotesPorInsumo()[fila.insumoId] ?? [];
   }
 
-  // Lotes que de verdad se pueden mover: excluye los vencidos en
-  // 'entrada'/'salida' (no tiene sentido sumarle stock a algo vencido, ni
-  // despacharlo — el backend hace lo mismo del lado de salida, confirmado).
-  // En 'ajuste' NO se excluyen: ahi el objetivo es que el sistema refleje la
-  // realidad fisica del lote, este vencido o no (confirmado con el
-  // usuario).
+  // Lotes que de verdad se pueden mover: excluye los vencidos y los
+  // agotados (sin stock) en 'entrada'/'salida' (no tiene sentido sumarle
+  // stock a algo vencido, ni despacharlo — el backend hace lo mismo del
+  // lado de salida, confirmado). En 'ajuste' NO se excluyen: ahi el
+  // objetivo es que el sistema refleje la realidad fisica del lote, este
+  // vencido o agotado o no (confirmado con el usuario).
   lotesSeleccionablesDeFila(fila: FilaMovimientoInsumoForm): LoteInsumo[] {
     const lotes = this.lotesDeFila(fila);
     if (this.tipoMovimiento() === 'ajuste') return lotes;
-    return lotes.filter((lote) => lote.estado !== 'vencido');
+    return lotes.filter((lote) => lote.estado !== 'vencido' && lote.cantidadActual > 0);
   }
 
   // Opciones del combobox de lote en 'entrada'/'ajuste': uno por lote
@@ -425,8 +425,14 @@ export class MovimientoFormModal {
     if (this.lotesPorInsumo()[insumoId] || this.cargandoLotesDe().has(insumoId)) return;
 
     this.cargandoLotesDe.update((set) => new Set(set).add(insumoId));
+    // Sin "estado" en el filtro a proposito: ese param es "estricto" (solo
+    // "lejos de vencer"), pensado para pantallas de filtro tipo "mostrame
+    // solo los X" — excluiria los "por_vencer", que igual son stock
+    // utilizable para un movimiento (confirmado por el backend, bug
+    // reportado). Se filtran vencido/agotado del lado del front en
+    // lotesSeleccionablesDeFila().
     this.loteService
-      .listar(1, 100, { insumoId: Number(insumoId), estado: 'activo', activo: true })
+      .listar(1, 100, { insumoId: Number(insumoId), activo: true })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (pagina) => {

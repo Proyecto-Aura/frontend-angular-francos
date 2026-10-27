@@ -129,7 +129,21 @@ export class LotesInsumoGeneral implements OnInit, AfterViewInit {
 
   columnas = signal<DsColumn[]>([]);
   lotesPagina = signal<LoteInsumo[]>([]);
-  lotes = computed<FilaLoteGeneral[]>(() => this.lotesPagina().map((lote) => this.aFila(lote)));
+  // Orden por vencimiento ascendente dentro de la pagina (los que estan mas
+  // proximos a vencer primero), sin fecha al final — pedido explicito del
+  // usuario. El backend no garantiza este orden para el listado general sin
+  // filtrar por insumo (a diferencia de GET /lotes-insumo?insumo_id=X, que
+  // si viene ordenado asi, confirmado por el backend), asi que se ordena
+  // aca.
+  lotes = computed<FilaLoteGeneral[]>(() =>
+    [...this.lotesPagina()]
+      .sort((a, b) => {
+        if (a.fechaVencimiento === null) return 1;
+        if (b.fechaVencimiento === null) return -1;
+        return a.fechaVencimiento.localeCompare(b.fechaVencimiento);
+      })
+      .map((lote) => this.aFila(lote)),
+  );
   total = signal(0);
   pagina = signal(1);
   totalPaginas = signal(0);

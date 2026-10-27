@@ -56,8 +56,8 @@
 
         <app-ds-kpi-card
           label="Próximo vencimiento"
-          value="—"
-          caption="Sin lotes registrados"
+          [value]="proximoVencimiento()"
+          caption="Del lote vigente más próximo"
           [hasIcon]="true"
           size="sm"
         >
@@ -81,11 +81,43 @@
           }
         </div>
       } @else if (tabActiva() === 'lotes') {
-        <p class="p-6 text-center text-muted-foreground">Lotes de producto — próximamente.</p>
+        @if (cargandoLotes()) {
+          <div class="p-12 text-center text-muted-foreground">Cargando…</div>
+        } @else if (errorLotes()) {
+          <div class="flex flex-col items-center gap-3 p-12 text-center">
+            <p class="text-muted-foreground">No se pudieron cargar los lotes.</p>
+            <app-ds-button variant="secondary" (clicked)="cargarLotes(producto)">
+              Reintentar
+            </app-ds-button>
+          </div>
+        } @else {
+          <app-ds-card [padded]="false">
+            <app-ds-data-table
+              [columns]="columnasLotes()"
+              [rows]="lotes()"
+              empty="Sin lotes registrados"
+            />
+          </app-ds-card>
+        }
       } @else {
-        <p class="p-6 text-center text-muted-foreground">
-          Historial de movimientos — próximamente.
-        </p>
+        @if (cargandoMovimientos()) {
+          <div class="p-12 text-center text-muted-foreground">Cargando…</div>
+        } @else if (errorMovimientos()) {
+          <div class="flex flex-col items-center gap-3 p-12 text-center">
+            <p class="text-muted-foreground">No se pudieron cargar los movimientos.</p>
+            <app-ds-button variant="secondary" (clicked)="cargarMovimientos(producto)">
+              Reintentar
+            </app-ds-button>
+          </div>
+        } @else {
+          <app-ds-card [padded]="false">
+            <app-ds-data-table
+              [columns]="columnasMovimientos()"
+              [rows]="movimientos()"
+              empty="Sin movimientos registrados"
+            />
+          </app-ds-card>
+        }
       }
     </div>
   }
@@ -94,3 +126,44 @@
     <app-ds-button variant="secondary" (clicked)="cerrar()">Cerrar</app-ds-button>
   </span>
 </app-ds-modal>
+
+<ng-template #vencimientoCell let-fila>
+  <div class="flex flex-col gap-1.5 py-0.5">
+    <span>{{ fila.fechaVencimientoMostrada }}</span>
+    @if (fila.estado === 'por_vencer' && fila.diasParaVencer !== null) {
+      <app-ds-badge tone="warning">
+        Vence en {{ fila.diasParaVencer }} día{{ fila.diasParaVencer === 1 ? '' : 's' }}
+      </app-ds-badge>
+    }
+  </div>
+</ng-template>
+
+<ng-template #estadoLoteCell let-fila>
+  <app-ds-badge [tone]="estadoLoteTone(fila.estado)" [dot]="true">
+    {{ estadoLoteLabel(fila.estado) }}
+  </app-ds-badge>
+</ng-template>
+
+<ng-template #codigoMovimientoCell let-fila>
+  <app-ds-cell-stack [primary]="fila.codigo" [secondary]="fila.loteCodigo" />
+</ng-template>
+
+<ng-template #fechaMovimientoCell let-fila>
+  <div class="flex flex-col gap-0.5 py-0.5">
+    <span>{{ fila.fechaMostrada }}</span>
+    <span class="text-ds-sm text-muted-foreground">{{ fila.horaMostrada }}</span>
+  </div>
+</ng-template>
+
+<ng-template #tipoMovimientoCell let-fila>
+  <app-ds-badge [tone]="tipoMovimientoTone(fila.tipo)">
+    <app-ds-icon icon [img]="tipoMovimientoIcon(fila.tipo)" [size]="14" />
+    {{ tipoMovimientoLabel(fila.tipo) }}
+  </app-ds-badge>
+</ng-template>
+
+<ng-template #cantidadMovimientoCell let-fila>
+  <span class="font-medium" [style.color]="cantidadMovimientoColor(fila)">
+    {{ fila.cantidadMostrada }}
+  </span>
+</ng-template>
