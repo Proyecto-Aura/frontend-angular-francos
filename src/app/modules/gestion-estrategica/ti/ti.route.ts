@@ -47,6 +47,14 @@ export const TI_ROUTES: Routes = [
           ),
       },
       {
+        path: 'tablero-control-ti',
+        canActivate: [permisoGuard],
+        loadComponent: () =>
+          import('./pages/tablero-control-ti/tablero-control-ti').then(
+            (c) => c.TableroControlTiPage,
+          ),
+      },
+      {
         path: '',
         redirectTo: 'objetivos-estrategicos-ti',
         pathMatch: 'full',
