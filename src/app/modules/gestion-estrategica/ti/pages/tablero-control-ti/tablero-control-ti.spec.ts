@@ -6,18 +6,28 @@ import { Subject, of, throwError } from 'rxjs';
 import { Badge } from '../../../../../shared/ds/badge/badge';
 import { Button } from '../../../../../shared/ds/button/button';
 import { KpiCard } from '../../../../../shared/ds/kpi-card/kpi-card';
+import { CARGADOR_CHART_JS } from '../../../negocio/chart/chartjs.loader';
 import { Iniciativa } from '../../../negocio/interfaces/iniciativa.interface';
 import { TableroAnio } from '../../../negocio/interfaces/tablero-control.interface';
-import { SeguimientoKpisService } from '../../../negocio/services/seguimiento-kpis.service';
 import { PlanEstrategico } from '../../../plan-estrategico/interfaces/plan-estrategico.interface';
 import { PlanSeleccionadoService } from '../../../plan-estrategico/services/plan-seleccionado.service';
+import { TableroGraficosTi } from '../../components/tablero-graficos-ti/tablero-graficos-ti';
 import {
   TableroControlTi,
   TableroKpiFilaTi,
   TableroPerspectivaTi,
 } from '../../interfaces/tablero-control-ti.interface';
 import { TableroControlTiService } from '../../services/tablero-control-ti.service';
+import { SeguimientoKpisTiService } from '../../services/seguimiento-kpis-ti.service';
 import { TableroControlTiPage } from './tablero-control-ti';
+
+class FakeChart {
+  readonly destroy = vi.fn();
+}
+
+function cargadorFalso(): Promise<typeof FakeChart> {
+  return Promise.resolve(FakeChart);
+}
 
 function makePlan(overrides: Partial<PlanEstrategico> = {}): PlanEstrategico {
   return {
@@ -140,7 +150,7 @@ describe('TableroControlTiPage', () => {
       }),
     ),
   };
-  const seguimientoFactory = vi.fn(() => seguimientoService);
+  const seguimientoTiFactory = vi.fn(() => seguimientoService);
   const planService = {
     planId: selectedPlanId,
     plan: computed(() => selectedPlan()),
@@ -154,13 +164,14 @@ describe('TableroControlTiPage', () => {
     tableroService.obtener.mockReset();
     tableroService.obtener.mockReturnValue(of(makeTablero()));
     seguimientoService.obtener.mockClear();
-    seguimientoFactory.mockClear();
+    seguimientoTiFactory.mockClear();
     TestBed.configureTestingModule({
       providers: [
         provideRouter([]),
         { provide: PlanSeleccionadoService, useValue: planService },
         { provide: TableroControlTiService, useValue: tableroService },
-        { provide: SeguimientoKpisService, useFactory: seguimientoFactory },
+        { provide: SeguimientoKpisTiService, useFactory: seguimientoTiFactory },
+        { provide: CARGADOR_CHART_JS, useValue: cargadorFalso },
       ],
     });
   });
@@ -451,15 +462,18 @@ describe('TableroControlTiPage', () => {
     expect(cell.querySelector('app-ds-icon')).toBeNull();
   });
 
-  it('only renders the table without mode buttons and keeps the initiative legend visible', () => {
+  it('renders the table by default with the mode switch and the initiative legend', () => {
     const fixture = create();
     const buttons = Array.from(
       (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>('button'),
     );
-    expect(buttons.some((button) => button.textContent.trim() === 'Tabla')).toBe(false);
-    expect(buttons.some((button) => button.textContent.trim() === 'Gráficos')).toBe(false);
+    const tableButton = buttons.find((button) => button.textContent.trim() === 'Tabla')!;
+    const chartsButton = buttons.find((button) => button.textContent.trim() === 'Gráficos')!;
+    expect(fixture.componentInstance.modo()).toBe('tabla');
+    expect(tableButton.getAttribute('aria-pressed')).toBe('true');
+    expect(chartsButton.getAttribute('aria-pressed')).toBe('false');
     expect(fixture.nativeElement.querySelector('table')).not.toBeNull();
-    expect(fixture.nativeElement.querySelector('app-tablero-graficos')).toBeNull();
+    expect(fixture.debugElement.query(By.directive(TableroGraficosTi))).toBeNull();
     expect(normalizedText(fixture)).toContain('Iniciativas:');
 
     tableroService.obtener.mockReturnValue(
@@ -471,9 +485,9 @@ describe('TableroControlTiPage', () => {
     expect(normalizedText(fixture)).toContain('Iniciativas:');
   });
 
-  it('does not instantiate tracking services or request KPI tracking when loading or changing plans', () => {
+  it('does not instantiate the tracking service while the mode is table, even when changing plans', () => {
     const fixture = create();
-    expect(seguimientoFactory).not.toHaveBeenCalled();
+    expect(seguimientoTiFactory).not.toHaveBeenCalled();
     expect(seguimientoService.obtener).not.toHaveBeenCalled();
 
     selectedPlan.set(makePlan({ id: 6, nombre: 'Plan nuevo' }));
@@ -481,7 +495,103 @@ describe('TableroControlTiPage', () => {
     fixture.detectChanges();
 
     expect(tableroService.obtener).toHaveBeenCalledWith(6);
-    expect(seguimientoFactory).not.toHaveBeenCalled();
+    expect(fixture.componentInstance.modo()).toBe('tabla');
+    expect(seguimientoTiFactory).not.toHaveBeenCalled();
     expect(seguimientoService.obtener).not.toHaveBeenCalled();
+  });
+
+  it('switches to Charts while keeping summary cards and passing the dashboard plan id', () => {
+    const fixture = create();
+    const buttons = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>('button'),
+    );
+    const chartsButton = buttons.find((button) => button.textContent.includes('Gráficos'))!;
+    const tableButton = buttons.find((button) => button.textContent.includes('Tabla'))!;
+    chartsButton.click();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.modo()).toBe('graficos');
+    expect(fixture.nativeElement.querySelector('table')).toBeNull();
+    expect(normalizedText(fixture)).not.toContain('Iniciativas:');
+    const charts = fixture.debugElement.query(By.directive(TableroGraficosTi))
+      .componentInstance as TableroGraficosTi;
+    expect(charts.planId()).toBe(fixture.componentInstance.tablero()!.planId);
+    expect(fixture.debugElement.queryAll(By.directive(KpiCard))).toHaveLength(4);
+    expect(chartsButton.getAttribute('aria-pressed')).toBe('true');
+    expect(tableButton.getAttribute('aria-pressed')).toBe('false');
+    expect(seguimientoTiFactory).toHaveBeenCalledTimes(1);
+    expect(seguimientoService.obtener).toHaveBeenCalledExactlyOnceWith(5);
+  });
+
+  it('returns to Table mode and only loads tracking while Charts is active', () => {
+    const fixture = create();
+    const modeButton = (label: string) =>
+      Array.from(
+        (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>('button'),
+      ).find((button) => button.textContent.includes(label))!;
+    expect(seguimientoService.obtener).not.toHaveBeenCalled();
+    modeButton('Gráficos').click();
+    fixture.detectChanges();
+    expect(seguimientoService.obtener).toHaveBeenCalledTimes(1);
+    modeButton('Tabla').click();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.modo()).toBe('tabla');
+    expect(fixture.nativeElement.querySelector('table')).not.toBeNull();
+    expect(normalizedText(fixture)).toContain('Iniciativas:');
+    expect(fixture.debugElement.query(By.directive(TableroGraficosTi))).toBeNull();
+    expect(modeButton('Tabla').getAttribute('aria-pressed')).toBe('true');
+    expect(modeButton('Gráficos').getAttribute('aria-pressed')).toBe('false');
+    expect(seguimientoService.obtener).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the selected mode and passes the new plan id when the active plan changes', () => {
+    tableroService.obtener.mockImplementation((id: number) =>
+      of(makeTablero({ planId: id, planNombre: `Plan ${id}` })),
+    );
+    const fixture = create();
+    const chartsButton = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>('button'),
+    ).find((button) => button.textContent.includes('Gráficos'))!;
+    chartsButton.click();
+    fixture.detectChanges();
+    expect(seguimientoService.obtener).toHaveBeenCalledWith(5);
+
+    selectedPlan.set(makePlan({ id: 6, nombre: 'Plan 6' }));
+    selectedPlanId.set(6);
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.modo()).toBe('graficos');
+    expect(tableroService.obtener).toHaveBeenCalledWith(6);
+    const charts = fixture.debugElement.query(By.directive(TableroGraficosTi))
+      .componentInstance as TableroGraficosTi;
+    expect(charts.planId()).toBe(6);
+    expect(seguimientoService.obtener).toHaveBeenLastCalledWith(6);
+    expect(fixture.nativeElement.querySelector('table')).toBeNull();
+  });
+
+  it('delegates the empty state to Charts for a plan without KPIs', () => {
+    tableroService.obtener.mockReturnValue(
+      of(makeTablero({ perspectivas: [makePerspectiva({ kpis: [] })] })),
+    );
+    const fixture = create();
+    const chartsButton = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>('button'),
+    ).find((button) => button.textContent.includes('Gráficos'))!;
+    chartsButton.click();
+    fixture.detectChanges();
+
+    const charts = fixture.debugElement.query(By.directive(TableroGraficosTi));
+    expect(charts).not.toBeNull();
+    expect(charts.nativeElement.textContent).toContain('Este plan no registra KPIs.');
+    const emptyCards = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll('app-ds-card'),
+    ).filter((card) => card.textContent.trim() === 'Este plan no registra KPIs.');
+    expect(emptyCards).toHaveLength(1);
+    expect(charts.nativeElement.contains(emptyCards[0])).toBe(true);
+    expect(fixture.nativeElement.querySelector('table')).toBeNull();
+    expect(normalizedText(fixture)).not.toContain('Iniciativas:');
+    expect(fixture.debugElement.queryAll(By.directive(KpiCard))).toHaveLength(4);
+    expect(seguimientoService.obtener).toHaveBeenCalledExactlyOnceWith(5);
   });
 });

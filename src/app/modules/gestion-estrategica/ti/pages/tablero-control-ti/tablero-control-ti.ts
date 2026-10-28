@@ -2,10 +2,12 @@ import { RouterLink } from '@angular/router';
 import { Component, DestroyRef, computed, effect, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
+  LucideChartColumn,
   LucideCircleAlert,
   LucideCircleCheck,
   LucideCircleX,
   LucideGauge,
+  LucideLayoutGrid,
   LucideLink2,
 } from '@lucide/angular';
 import { finalize } from 'rxjs';
@@ -29,11 +31,12 @@ import {
   tonoSemaforo,
 } from '../../../negocio/pages/tablero-control/tablero-control.reglas';
 import { PlanSeleccionadoService } from '../../../plan-estrategico/services/plan-seleccionado.service';
+import { TableroGraficosTi } from '../../components/tablero-graficos-ti/tablero-graficos-ti';
 import { TableroControlTi, TableroKpiFilaTi } from '../../interfaces/tablero-control-ti.interface';
 import { TableroControlTiService } from '../../services/tablero-control-ti.service';
 
 @Component({
-  imports: [Badge, Button, Card, Icon, KpiCard, RouterLink],
+  imports: [Badge, Button, Card, Icon, KpiCard, RouterLink, TableroGraficosTi],
   selector: 'app-tablero-control-ti-page',
   templateUrl: './tablero-control-ti.html',
 })
@@ -43,10 +46,12 @@ export class TableroControlTiPage {
   private solicitudActual = 0;
 
   readonly planSeleccionado = inject(PlanSeleccionadoService);
+  readonly LucideChartColumn = LucideChartColumn;
   readonly LucideCircleAlert = LucideCircleAlert;
   readonly LucideCircleCheck = LucideCircleCheck;
   readonly LucideCircleX = LucideCircleX;
   readonly LucideGauge = LucideGauge;
+  readonly LucideLayoutGrid = LucideLayoutGrid;
   readonly LucideLink2 = LucideLink2;
   readonly clasePuntoPerspectiva = clasePuntoPerspectiva;
   readonly claseTextoPerspectiva = claseTextoPerspectiva;
@@ -56,6 +61,7 @@ export class TableroControlTiPage {
   readonly tonoSemaforo = tonoSemaforo;
 
   readonly tablero = signal<TableroControlTi | null>(null);
+  readonly modo = signal<'tabla' | 'graficos'>('tabla');
   readonly cargando = signal(false);
   readonly errorCarga = signal(false);
 
