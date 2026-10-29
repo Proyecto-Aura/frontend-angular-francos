@@ -9,6 +9,18 @@ import { LoteFormModal } from './lote-form-modal';
 const INSUMOS_BASE = `${environment.apiUrl}/insumos`;
 const LOTES_BASE = `${environment.apiUrl}/lotes-insumo`;
 
+// YYYY-MM-DD en hora local — el secuencial se reinicia por dia (ver
+// siguienteSecuencialLote en el mapper), asi que los fixtures de lotes
+// "existentes" tienen que llevar la fecha_ingreso de HOY de verdad para
+// seguir contando en el calculo del proximo secuencial.
+function hoyIsoLocal(): string {
+  const hoy = new Date();
+  const anio = hoy.getFullYear();
+  const mes = String(hoy.getMonth() + 1).padStart(2, '0');
+  const dia = String(hoy.getDate()).padStart(2, '0');
+  return `${anio}-${mes}-${dia}`;
+}
+
 function makeInsumoDto(overrides: Partial<InsumoDto> = {}): InsumoDto {
   return {
     id: 9,
@@ -85,7 +97,9 @@ describe('LoteFormModal', () => {
     httpMock
       .expectOne((request) => request.url === LOTES_BASE && request.params.get('insumo_id') === '9')
       .flush({
-        data: codigosExistentes.map((codigo_lote) => makeLoteDto({ codigo_lote })),
+        data: codigosExistentes.map((codigo_lote) =>
+          makeLoteDto({ codigo_lote, fecha_ingreso: hoyIsoLocal() }),
+        ),
         meta: {
           total: codigosExistentes.length,
           page: 1,

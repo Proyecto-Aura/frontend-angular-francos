@@ -45,15 +45,24 @@ export class LoteInsumoService {
   }
 
   // Proximo secuencial para el codigo_lote de un insumo: se calcula a partir
-  // del MAXIMO numero ya usado en los codigo_lote existentes (ver
-  // siguienteSecuencialLote), no de un conteo de filas — un conteo se
-  // desincroniza si se borra un lote fuera de la app. Limite 100 (mismo
+  // del MAXIMO numero ya usado en los codigo_lote de HOY (se reinicia por
+  // dia, ver siguienteSecuencialLote), no de un conteo de filas — un conteo
+  // se desincroniza si se borra un lote fuera de la app. Limite 100 (mismo
   // tope que ya usa insumo.service.ts) para traer el historial del insumo
   // en una sola pagina sin pasarse del maximo que acepta el backend.
   siguienteSecuencial(insumoId: number): Observable<number> {
     return this.http
       .get<LotesInsumoPageDto>(LOTES_BASE, { params: { insumo_id: insumoId, page: 1, limit: 100 } })
-      .pipe(map((pageDto) => siguienteSecuencialLote(pageDto.data.map((dto) => dto.codigo_lote))));
+      .pipe(
+        map((pageDto) =>
+          siguienteSecuencialLote(
+            pageDto.data.map((dto) => ({
+              codigoLote: dto.codigo_lote,
+              fechaIngreso: dto.fecha_ingreso,
+            })),
+          ),
+        ),
+      );
   }
 
   registrar(form: LoteInsumoForm): Observable<LoteInsumo> {

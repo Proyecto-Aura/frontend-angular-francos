@@ -40,10 +40,7 @@ export function toCrearLoteInsumoRequest(form: LoteInsumoForm): CrearLoteInsumoR
   };
 }
 
-// Codigo de lote FR-LT-[000]-[YYMMDD]-INS{insumoId}: el secuencial no se
-// reinicia por dia (decision confirmada con el usuario, ya que el backend
-// no permite filtrar GET /lotes-insumo por fecha y combinado con la fecha
-// en el propio codigo alcanza para que practicamente no se repita).
+// Codigo de lote FR-LT-[000]-[YYMMDD]-INS{insumoId}.
 export function construirCodigoLote(
   secuencial: number,
   insumoId: number,
@@ -56,18 +53,42 @@ export function construirCodigoLote(
   return `FR-LT-${secuencialTexto}-${anio}${mes}${dia}-INS${insumoId}`;
 }
 
+// YYYY-MM-DD en hora local, no UTC — mismo criterio que lote-form-modal.ts
+// (coincide con lo que vera la persona en pantalla).
+function fechaIsoLocal(fecha: Date): string {
+  const anio = fecha.getFullYear();
+  const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+  const dia = String(fecha.getDate()).padStart(2, '0');
+  return `${anio}-${mes}-${dia}`;
+}
+
 const PATRON_SECUENCIAL_CODIGO_LOTE = /^FR-LT-(\d+)-\d{6}-INS\d+$/;
 
-// El proximo secuencial sale del MAXIMO ya usado en los codigo_lote
-// existentes de ese insumo, no de "cuantas filas hay". Un simple conteo de
-// filas se desincroniza apenas se borra un lote fuera de la app (baja
-// fisica directo en la base): el conteo baja, pero el numero mas alto ya
-// usado sigue siendo el mismo, y recalcular desde el conteo termina
-// regenerando un codigo que ya existe (409 de codigo_lote duplicado).
-// Codigos que no siguen nuestro patron (datos legados/semilla, ej.
-// "LOTE-2026-001") se ignoran — no interfieren con esta numeracion.
-export function siguienteSecuencialLote(codigosLote: string[]): number {
-  const maximo = codigosLote.reduce((max, codigo) => {
+export interface LoteExistente {
+  codigoLote: string;
+  fechaIngreso: string;
+}
+
+// El proximo secuencial sale del MAXIMO ya usado en los codigo_lote de HOY
+// (se reinicia por dia) — bug reportado por el backend: antes se calculaba
+// sobre TODO el historico del insumo, que con el tiempo podia superar 999 y
+// desbordar el formato de 3 digitos. No hace falta filtrar por fecha contra
+// el backend: ya se trae toda la lista en memoria (GET /lotes-insumo?
+// insumo_id=X), asi que se filtra aca por fecha_ingreso antes de buscar el
+// maximo. Un simple conteo de filas (de ese dia) tampoco alcanza: se
+// desincroniza apenas se borra un lote fuera de la app (baja fisica directo
+// en la base) — el conteo baja, pero el numero mas alto ya usado sigue
+// siendo el mismo, y recalcular desde el conteo termina regenerando un
+// codigo que ya existe (409 de codigo_lote duplicado). Codigos que no
+// siguen nuestro patron (datos legados/semilla, ej. "LOTE-2026-001") se
+// ignoran — no interfieren con esta numeracion.
+export function siguienteSecuencialLote(lotes: LoteExistente[], hoy = new Date()): number {
+  const hoyIso = fechaIsoLocal(hoy);
+  const codigosDeHoy = lotes
+    .filter((lote) => lote.fechaIngreso.slice(0, 10) === hoyIso)
+    .map((lote) => lote.codigoLote);
+
+  const maximo = codigosDeHoy.reduce((max, codigo) => {
     const match = codigo.match(PATRON_SECUENCIAL_CODIGO_LOTE);
     const secuencial = match ? Number(match[1]) : 0;
     return Math.max(max, secuencial);
