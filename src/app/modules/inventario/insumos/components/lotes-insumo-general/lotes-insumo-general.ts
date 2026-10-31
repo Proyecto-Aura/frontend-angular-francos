@@ -157,7 +157,7 @@ export class LotesInsumoGeneral implements OnInit, AfterViewInit {
 
   ngAfterViewInit(): void {
     this.columnas.set([
-      { key: 'codigoLote', header: 'Código de lote' },
+      { key: 'codigoLote', header: 'Código de lote', strong: true },
       { key: 'insumoNombre', header: 'Insumo', cellTemplate: this.insumoCellTpl },
       { key: 'fechaIngresoMostrada', header: 'Fecha de ingreso', muted: true },
       {

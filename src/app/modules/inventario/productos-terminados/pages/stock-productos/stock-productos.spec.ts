@@ -48,7 +48,18 @@ describe('StockProductos', () => {
     httpMock = TestBed.inject(HttpTestingController);
   });
 
-  afterEach(() => httpMock.verify());
+  afterEach(() => {
+    httpMock
+      .match(
+        (r) =>
+          r.url === `${environment.apiUrl}/movimientos-producto-terminado` &&
+          r.params.get('limit') === '1',
+      )
+      .forEach((req) =>
+        req.flush({ data: [], meta: { total: 0, page: 1, limit: 1, total_pages: 0 } }),
+      );
+    httpMock.verify();
+  });
 
   function expectLotesTotalRequest(): TestRequest {
     return httpMock.expectOne(
@@ -108,6 +119,29 @@ describe('StockProductos', () => {
       .flush({ data: [], meta: { total: 0, page: 1, limit: 100, total_pages: 0 } });
   }
 
+  it('loads the real movement count instead of a fixed zero', () => {
+    const fixture = create();
+    const req = httpMock.expectOne(
+      (r) =>
+        r.url === `${environment.apiUrl}/movimientos-producto-terminado` &&
+        r.params.get('limit') === '1',
+    );
+    req.flush({ data: [], meta: { total: 17, page: 1, limit: 1, total_pages: 17 } });
+    expect(fixture.componentInstance.tabs().find((t) => t.id === 'historial')?.count).toBe(17);
+    httpMock
+      .match(() => true)
+      .forEach((r) =>
+        r.flush({
+          data: [],
+          meta: { total: 0, page: 1, limit: 100, total_pages: 0 },
+          total: 0,
+          normal: 0,
+          alto: 0,
+          bajo: 0,
+          agotado: 0,
+        }),
+      );
+  });
   it('requests page 1, indicadores, categorias y presentaciones on init', () => {
     const fixture = create();
 
@@ -168,7 +202,9 @@ describe('StockProductos', () => {
         presentacionMostrada: '500 gr',
         stockActual: 45,
         stockMinimo: 10,
-        stockMaximoMostrado: 300,
+        stockActualMostrado: '45 unid.',
+        stockMinimoMostrado: '10 unid.',
+        stockMaximoMostrado: '300 unid.',
         nivel: 'normal',
         estado: true,
       },

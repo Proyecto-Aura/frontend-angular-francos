@@ -151,8 +151,8 @@ describe('ProductoDetalleModal', () => {
       { label: 'Categoría', value: 'Panadería' },
       { label: 'Presentación', value: '500 gr' },
       { label: 'Unidad de medida', value: 'gr' },
-      { label: 'Stock actual', value: '250' },
-      { label: 'Stock mínimo', value: '50' },
+      { label: 'Stock actual', value: '250 unid.' },
+      { label: 'Stock mínimo', value: '50 unid.' },
       { label: 'Stock máximo', value: '—' },
       { label: 'Nivel de stock', value: 'Normal' },
       { label: 'Estado', value: 'Activo' },
@@ -256,8 +256,8 @@ describe('ProductoDetalleModal', () => {
         codigoLote: 'FR-LTP-001-261001-PT256',
         fechaProduccionMostrada: expect.stringContaining('2026'),
         fechaVencimientoMostrada: expect.stringContaining('2026'),
-        cantidadInicialMostrada: '100',
-        cantidadActualMostrada: '60',
+        cantidadInicialMostrada: '100 unid.',
+        cantidadActualMostrada: '60 unid.',
         estado: 'activo',
         activo: true,
         // "activo" (no "por_vencer") significa que al backend todavia le
@@ -398,11 +398,11 @@ describe('ProductoDetalleModal', () => {
     const [entrada, salida, ajuste] = component.movimientos();
     expect(entrada).toMatchObject({
       cantidad: 100,
-      cantidadMostrada: '+100',
+      cantidadMostrada: '+100 unid.',
       loteCodigo: 'FR-LTP-001-261001-PT256',
     });
-    expect(salida).toMatchObject({ cantidad: -20, cantidadMostrada: '-20' });
-    expect(ajuste).toMatchObject({ cantidad: -15, cantidadMostrada: '-15' });
+    expect(salida).toMatchObject({ cantidad: -20, cantidadMostrada: '-20 unid.' });
+    expect(ajuste).toMatchObject({ cantidad: -15, cantidadMostrada: '-15 unid.' });
   });
 
   it('does not re-request movimientos when re-entering the historial tab for the same producto', () => {

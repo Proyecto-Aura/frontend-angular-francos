@@ -155,7 +155,7 @@ export class LotesProductoTerminadoGeneral implements OnInit, AfterViewInit {
 
   ngAfterViewInit(): void {
     this.columnas.set([
-      { key: 'codigoLote', header: 'Código de lote' },
+      { key: 'codigoLote', header: 'Código de lote', strong: true },
       { key: 'productoNombre', header: 'Producto', cellTemplate: this.productoCellTpl },
       { key: 'fechaProduccionMostrada', header: 'Fecha de producción', muted: true },
       {
@@ -286,8 +286,8 @@ export class LotesProductoTerminadoGeneral implements OnInit, AfterViewInit {
         lote.estado === 'por_vencer' && lote.fechaVencimiento
           ? this.diasHasta(lote.fechaVencimiento)
           : null,
-      cantidadInicialMostrada: String(lote.cantidadInicial),
-      cantidadActualMostrada: String(lote.cantidadActual),
+      cantidadInicialMostrada: String(lote.cantidadInicial) + ' unid.',
+      cantidadActualMostrada: String(lote.cantidadActual) + ' unid.',
       estado: lote.estado,
     };
   }

@@ -26,7 +26,7 @@
       <div class="grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-4">
         <app-ds-kpi-card
           label="Stock actual"
-          [value]="producto.stockActual"
+          [value]="producto.stockActual + ' unid.'"
           caption="Suma de lotes disponibles"
           [hasIcon]="true"
           size="sm"
@@ -36,7 +36,7 @@
 
         <app-ds-kpi-card
           label="Stock mínimo"
-          [value]="producto.stockMinimo"
+          [value]="producto.stockMinimo + ' unid.'"
           caption="Umbral de reposición"
           [hasIcon]="true"
           size="sm"
@@ -46,7 +46,7 @@
 
         <app-ds-kpi-card
           label="Stock máximo"
-          [value]="producto.stockMaximo ?? '—'"
+          [value]="producto.stockMaximo !== null ? producto.stockMaximo + ' unid.' : '—'"
           caption="Capacidad objetivo"
           [hasIcon]="true"
           size="sm"
@@ -145,7 +145,11 @@
 </ng-template>
 
 <ng-template #codigoMovimientoCell let-fila>
-  <app-ds-cell-stack [primary]="fila.codigo" [secondary]="fila.loteCodigo" />
+  <app-ds-cell-stack
+    [primary]="fila.codigo"
+    [secondary]="fila.loteCodigo"
+    [secondaryStrong]="true"
+  />
 </ng-template>
 
 <ng-template #fechaMovimientoCell let-fila>

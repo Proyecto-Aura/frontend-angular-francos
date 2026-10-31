@@ -87,6 +87,55 @@
   </div>
 </ng-template>
 
+<ng-template #accionesCell let-fila>
+  <div class="flex justify-end">
+    <app-ds-icon-button
+      label="Ver detalle"
+      variant="secondary"
+      size="md"
+      (clicked)="verDetalle(fila)"
+    >
+      <app-ds-icon [img]="LucideEye" [size]="16" />
+    </app-ds-icon-button>
+  </div>
+</ng-template>
+
+<app-ds-modal
+  [open]="movimientoDetalle() !== null"
+  [title]="'Movimiento ' + (movimientoDetalle()?.codigo ?? '')"
+  [hasIcon]="true"
+  [hasFooter]="true"
+  [width]="820"
+  (closed)="cerrarDetalle()"
+>
+  <span icon><app-ds-icon [img]="LucideEye" [size]="18" /></span>
+  @if (movimientoDetalle(); as movimiento) {
+    <div class="flex flex-col gap-5">
+      <div>
+        <app-ds-badge [tone]="tipoTone(movimiento.tipo)">{{
+          tipoLabel(movimiento.tipo)
+        }}</app-ds-badge>
+      </div>
+      <div
+        class="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-5 rounded-lg border border-border p-5"
+      >
+        @for (campo of camposDetalle(); track campo.label) {
+          <div class="min-w-0">
+            <div class="text-ds-sm text-muted-foreground">{{ campo.label }}</div>
+            <div class="mt-1 break-words font-medium text-foreground">{{ campo.value }}</div>
+          </div>
+        }
+      </div>
+      <app-ds-card [padded]="false">
+        <app-ds-data-table [columns]="columnasLote" [rows]="[movimiento]" />
+      </app-ds-card>
+    </div>
+  }
+  <span footer
+    ><app-ds-button variant="secondary" (clicked)="cerrarDetalle()">Cerrar</app-ds-button></span
+  >
+</app-ds-modal>
+
 <ng-template #insumoCell let-fila>
   <app-ds-cell-stack [primary]="fila.insumoNombre" [secondary]="fila.insumoSku" />
 </ng-template>

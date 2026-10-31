@@ -7,6 +7,10 @@ export interface DsColumn {
   align?: 'left' | 'right' | 'center';
   width?: string;
   muted?: boolean;
+  // Destaca el valor de la columna en negrita — ej. un codigo que funciona
+  // como identificador principal de la fila (codigo de lote, codigo de
+  // movimiento).
+  strong?: boolean;
   numeric?: boolean;
   wrap?: boolean;
   cellTemplate?: TemplateRef<{ $implicit: unknown; index: number }>;

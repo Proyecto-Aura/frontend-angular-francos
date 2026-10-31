@@ -40,4 +40,17 @@ describe('KpiCard', () => {
     expect(fixture.componentInstance.valueClass()).toBe('text-ds-lg');
     expect(fixture.componentInstance.iconBoxClass()).toBe('h-7 w-7');
   });
+
+  it('iconColors is null by default (el chip del icono queda como bg-accent, sin cambios)', () => {
+    const fixture = create();
+    fixture.detectChanges();
+    expect(fixture.componentInstance.iconColors()).toBeNull();
+  });
+
+  it('iconColors resuelve el color cuando se pasa un iconTone (mismos valores que BadgeTone)', () => {
+    const fixture = create();
+    fixture.componentRef.setInput('iconTone', 'warning');
+    fixture.detectChanges();
+    expect(fixture.componentInstance.iconColors()).toEqual({ bg: '#FDEFD8', fg: '#B35D00' });
+  });
 });

@@ -1,1 +1,175 @@
-<p>solicitudes-produccion works!</p>
+<div class="flex flex-col gap-6 p-(--page-padding)">
+  <div>
+    <h1 class="text-ds-2xl font-medium text-foreground">Solicitudes a producción</h1>
+  </div>
+
+  <div class="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-4">
+    <app-ds-kpi-card
+      label="Pendientes"
+      [value]="resumen().pendientes"
+      [hasIcon]="true"
+      iconTone="warning"
+    >
+      <span icon><app-ds-icon [img]="LucideClock" [size]="16" /></span>
+    </app-ds-kpi-card>
+
+    <app-ds-kpi-card
+      label="En proceso"
+      [value]="resumen().enProceso"
+      [hasIcon]="true"
+      iconTone="info"
+    >
+      <span icon><app-ds-icon [img]="LucidePackage" [size]="16" /></span>
+    </app-ds-kpi-card>
+
+    <app-ds-kpi-card
+      label="Entregadas"
+      [value]="resumen().completadas"
+      [hasIcon]="true"
+      iconTone="success"
+    >
+      <span icon><app-ds-icon [img]="LucideCircleCheck" [size]="16" /></span>
+    </app-ds-kpi-card>
+
+    <app-ds-kpi-card
+      label="Rechazadas"
+      [value]="resumen().canceladas"
+      [hasIcon]="true"
+      iconTone="danger"
+    >
+      <span icon><app-ds-icon [img]="LucideBan" [size]="16" /></span>
+    </app-ds-kpi-card>
+  </div>
+
+  <app-ds-filter-bar [hasSearch]="true" [hasActions]="true">
+    <label search class="sr-only" for="solicitudes-busqueda">Buscar por código de solicitud</label>
+    <app-ds-input
+      id="solicitudes-busqueda"
+      search
+      [value]="search()"
+      (valueChange)="setSearch($event)"
+      placeholder="Código de solicitud…"
+      [hasIcon]="true"
+    >
+      <span icon><app-ds-icon [img]="LucideSearch" [size]="16" /></span>
+    </app-ds-input>
+
+    <div filters class="w-[188px]">
+      <label class="sr-only" for="solicitudes-estado">Filtrar por estado</label>
+      <app-ds-select
+        id="solicitudes-estado"
+        [value]="estadoFiltro()"
+        (valueChange)="setEstado($event)"
+        [options]="estadoOptions"
+        placeholder="Todos los estados"
+      />
+    </div>
+
+    <div filters class="flex items-center gap-2 text-ds-sm text-muted-foreground">
+      <label for="solicitudes-fecha">Fecha</label>
+      <span class="w-[160px]">
+        <app-ds-input
+          id="solicitudes-fecha"
+          type="date"
+          [value]="fecha()"
+          (valueChange)="setFecha($event)"
+        />
+      </span>
+    </div>
+
+    <span actions>
+      <app-ds-button (clicked)="abrirNuevaSolicitud()">
+        <span icon><app-ds-icon [img]="LucidePlus" [size]="16" /></span>
+        Nueva solicitud
+      </app-ds-button>
+    </span>
+  </app-ds-filter-bar>
+
+  @if (errorCancelacion()) {
+    <p role="alert" class="text-ds-sm text-destructive">{{ errorCancelacion() }}</p>
+  }
+  <app-ds-card [padded]="false" [hasFooter]="totalPaginas() > 1">
+    @if (cargando()) {
+      <div role="status" class="p-12 text-center text-muted-foreground">Cargando…</div>
+    } @else if (errorCarga()) {
+      <div class="flex flex-col items-center gap-3 p-12 text-center">
+        <p role="alert" class="text-muted-foreground">No se pudieron cargar las solicitudes.</p>
+        <app-ds-button variant="secondary" (clicked)="cargarSolicitudes()"
+          >Reintentar</app-ds-button
+        >
+      </div>
+    } @else {
+      <app-ds-data-table
+        [columns]="columnas()"
+        [rows]="solicitudes()"
+        empty="Sin solicitudes registradas"
+      />
+    }
+
+    @if (totalPaginas() > 1) {
+      <div footer>
+        <app-ds-pagination
+          [page]="pagina()"
+          [pageCount]="totalPaginas()"
+          [total]="total()"
+          [pageSize]="tamanioPagina"
+          (changed)="cambiarPagina($event)"
+        />
+      </div>
+    }
+  </app-ds-card>
+
+  <app-solicitud-produccion-form-modal
+    [open]="modalAbierto()"
+    (closed)="cerrarForm()"
+    (saved)="solicitudCreada()"
+  />
+
+  <app-solicitud-detalle-modal [solicitudId]="solicitudDetalleId()" (closed)="cerrarDetalle()" />
+
+  <app-solicitud-editar-modal
+    [solicitudId]="solicitudEditarId()"
+    (closed)="cerrarEditar()"
+    (saved)="solicitudEditada()"
+  />
+</div>
+
+<ng-template #estadoCell let-fila>
+  <app-ds-badge [tone]="estadoTone(fila.estado)" [dot]="true">
+    {{ estadoLabel(fila.estado) }}
+  </app-ds-badge>
+</ng-template>
+
+<ng-template #accionesCell let-fila>
+  <div class="flex justify-end gap-2">
+    <app-ds-icon-button
+      label="Ver detalle"
+      variant="secondary"
+      size="md"
+      (clicked)="verDetalle(fila.solicitud)"
+    >
+      <app-ds-icon [img]="LucideEye" [size]="16" />
+    </app-ds-icon-button>
+
+    @if (puedeEditar(fila.solicitud)) {
+      <app-ds-icon-button
+        label="Editar"
+        variant="secondary"
+        size="md"
+        [disabled]="cancelandoId() === fila.solicitud.id"
+        (clicked)="editarSolicitud(fila.solicitud)"
+      >
+        <app-ds-icon [img]="LucidePencil" [size]="16" />
+      </app-ds-icon-button>
+      <app-ds-icon-button
+        label="Cancelar solicitud"
+        variant="secondary"
+        size="md"
+        [disabled]="cancelandoId() !== null"
+        (clicked)="cancelarSolicitud(fila.solicitud)"
+      >
+        <app-ds-icon [img]="LucideBan" [size]="16" />
+      </app-ds-icon-button>
+    }
+  </div>
+</ng-template>

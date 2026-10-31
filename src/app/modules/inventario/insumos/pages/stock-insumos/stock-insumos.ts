@@ -1,3 +1,4 @@
+import { MovimientoInsumoService } from '../../services/movimiento-insumo.service';
 import {
   AfterViewInit,
   Component,
@@ -199,6 +200,8 @@ export class StockInsumos implements OnInit, AfterViewInit {
   // sus propios datos, igual que HistorialMovimientosInsumo) y no expone su
   // total hacia este componente.
   lotesTotal = signal(0);
+  movimientosTotal = signal<number | undefined>(undefined);
+  private movimientoHistorialService = inject(MovimientoInsumoService);
 
   modalFormAbierto = signal(false);
   insumoEnEdicion = signal<Insumo | null>(null);
@@ -211,7 +214,12 @@ export class StockInsumos implements OnInit, AfterViewInit {
 
   tabs = computed<DsTab[]>(() => [
     { id: 'stock', label: 'Stock', icon: LucidePackage, count: this.resumen().total },
-    { id: 'historial', label: 'Historial de movimientos', icon: LucideClock, count: 0 },
+    {
+      id: 'historial',
+      label: 'Historial de movimientos',
+      icon: LucideClock,
+      count: this.movimientosTotal(),
+    },
     { id: 'lotes', label: 'Lotes', icon: LucideLayers, count: this.lotesTotal() },
   ]);
 
@@ -219,6 +227,7 @@ export class StockInsumos implements OnInit, AfterViewInit {
     this.cargarInsumos();
     this.cargarResumen();
     this.cargarLotesTotal();
+    this.cargarMovimientosTotal();
   }
 
   ngAfterViewInit(): void {
@@ -274,6 +283,16 @@ export class StockInsumos implements OnInit, AfterViewInit {
       .subscribe({
         next: (resumen) => this.resumen.set(resumen),
         error: () => this.resumen.set(RESUMEN_VACIO),
+      });
+  }
+
+  cargarMovimientosTotal(): void {
+    this.movimientoHistorialService
+      .listar(1, 1)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (resultado) => this.movimientosTotal.set(resultado.total),
+        error: () => this.movimientosTotal.set(undefined),
       });
   }
 
@@ -370,6 +389,7 @@ export class StockInsumos implements OnInit, AfterViewInit {
   }
 
   movimientoGuardado(): void {
+    this.cargarMovimientosTotal();
     this.cerrarFormMovimiento();
     this.recargarTodo();
   }
