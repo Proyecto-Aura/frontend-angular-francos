@@ -6,6 +6,10 @@
     >{{ primary() }}</span
   >
   @if (secondary()) {
-    <span class="mt-[3px] block text-ds-sm text-muted-foreground">{{ secondary() }}</span>
+    <span
+      class="mt-[3px] block text-ds-sm text-muted-foreground"
+      [class.font-semibold]="secondaryStrong()"
+      >{{ secondary() }}</span
+    >
   }
 </span>

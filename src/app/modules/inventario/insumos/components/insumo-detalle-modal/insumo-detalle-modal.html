@@ -138,7 +138,11 @@
 </ng-template>
 
 <ng-template #codigoMovimientoCell let-fila>
-  <app-ds-cell-stack [primary]="fila.codigo" [secondary]="fila.loteCodigo" />
+  <app-ds-cell-stack
+    [primary]="fila.codigo"
+    [secondary]="fila.loteCodigo"
+    [secondaryStrong]="true"
+  />
 </ng-template>
 
 <ng-template #fechaMovimientoCell let-fila>

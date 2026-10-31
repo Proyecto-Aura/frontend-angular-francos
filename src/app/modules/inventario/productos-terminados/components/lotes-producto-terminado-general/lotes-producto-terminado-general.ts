@@ -155,7 +155,7 @@ export class LotesProductoTerminadoGeneral implements OnInit, AfterViewInit {
 
   ngAfterViewInit(): void {
     this.columnas.set([
-      { key: 'codigoLote', header: 'Código de lote' },
+      { key: 'codigoLote', header: 'Código de lote', strong: true },
       { key: 'productoNombre', header: 'Producto', cellTemplate: this.productoCellTpl },
       { key: 'fechaProduccionMostrada', header: 'Fecha de producción', muted: true },
       {

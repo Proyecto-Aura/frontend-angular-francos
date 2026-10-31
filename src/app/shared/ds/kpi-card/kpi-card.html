@@ -5,8 +5,12 @@
     <span class="text-ds-sm text-muted-foreground">{{ label() }}</span>
     @if (hasIcon()) {
       <span
-        class="flex shrink-0 items-center justify-center rounded-md bg-accent text-accent-foreground"
+        class="flex shrink-0 items-center justify-center rounded-md"
         [class]="iconBoxClass()"
+        [class.bg-accent]="!iconTone()"
+        [class.text-accent-foreground]="!iconTone()"
+        [style.background]="iconColors()?.bg ?? null"
+        [style.color]="iconColors()?.fg ?? null"
       >
         <ng-content select="[icon]" />
       </span>
