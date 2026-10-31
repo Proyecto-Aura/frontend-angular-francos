@@ -1,0 +1,68 @@
+<app-ds-modal
+  [open]="solicitudId() !== null"
+  [title]="titulo()"
+  [hasIcon]="true"
+  [hasFooter]="true"
+  [width]="1120"
+  (closed)="cerrar()"
+>
+  <span
+    icon
+    class="flex h-9 w-9 items-center justify-center rounded-md bg-[rgba(255,255,255,0.18)]"
+  >
+    <app-ds-icon [img]="LucideEye" [size]="18" />
+  </span>
+
+  @if (cargando()) {
+    <div role="status" class="p-12 text-center text-muted-foreground">Cargando…</div>
+  } @else if (error()) {
+    <div class="flex flex-col items-center gap-3 p-12 text-center">
+      <p role="alert" class="text-muted-foreground">
+        No se pudo cargar el detalle de la solicitud.
+      </p>
+      <app-ds-button variant="secondary" (clicked)="reintentar()">Reintentar</app-ds-button>
+    </div>
+  } @else if (solicitud(); as s) {
+    <div class="flex flex-col gap-5">
+      <app-ds-badge [tone]="estadoTone(s.estado)" [dot]="true">
+        {{ estadoLabel(s.estado) }}
+      </app-ds-badge>
+
+      <div
+        class="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-x-5 gap-y-4 rounded-lg border border-border bg-muted/30 p-4"
+      >
+        @for (c of campos(); track c.label) {
+          <div class="min-w-0">
+            <div class="text-ds-sm text-muted-foreground">{{ c.label }}</div>
+            <div class="mt-1 font-medium text-foreground">{{ c.value }}</div>
+          </div>
+        }
+      </div>
+
+      <app-ds-card [padded]="false">
+        <app-ds-data-table
+          [columns]="columnas()"
+          [rows]="filas()"
+          empty="Sin productos en esta solicitud"
+        />
+      </app-ds-card>
+    </div>
+  }
+
+  <span footer>
+    <app-ds-button variant="secondary" (clicked)="cerrar()">Cerrar</app-ds-button>
+  </span>
+</app-ds-modal>
+
+<ng-template #productoCell let-fila>
+  <app-ds-cell-stack [primary]="fila.productoNombre" [secondary]="fila.sku" />
+</ng-template>
+
+<ng-template #stockCell let-fila>
+  <span
+    [class.text-destructive]="fila.stockInsuficiente"
+    [class.font-medium]="fila.stockInsuficiente"
+  >
+    {{ fila.stockActualMostrado }}
+  </span>
+</ng-template>

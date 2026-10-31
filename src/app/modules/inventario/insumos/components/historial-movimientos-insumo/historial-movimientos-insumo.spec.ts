@@ -70,6 +70,26 @@ describe('HistorialMovimientosInsumo', () => {
     req.flush({ data, meta: { total, page, limit, total_pages: totalPages } });
   }
 
+  it('opens movement details with motive and lot, without a responsible field', () => {
+    const fixture = create();
+    flushPage(expectPageRequest(1, 10), [makeMovimientoDto({ tipo: 'salida', cantidad: 20 })]);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+    expect(component.columnas().some((c) => c.key === 'razon')).toBe(false);
+    const element: HTMLElement = fixture.nativeElement;
+    element
+      .querySelector<HTMLButtonElement>('app-ds-icon-button[label="Ver detalle"] button')!
+      .click();
+    fixture.detectChanges();
+    expect(component.movimientoDetalle()?.codigoLote).toBe('FR-LT-001');
+    expect(component.camposDetalle()).toContainEqual({ label: 'Motivo', value: 'Ingreso de lote' });
+    expect(component.camposDetalle()).toContainEqual({ label: 'Cantidad', value: '-20 kg' });
+    expect(component.camposDetalle().some((c) => c.label === 'Responsable')).toBe(false);
+    expect(element.textContent).toContain('FR-LT-001');
+    component.cerrarDetalle();
+    expect(component.movimientoDetalle()).toBeNull();
+  });
+
   it('requests the first page on init, with no filters', () => {
     const fixture = create();
     const req = expectPageRequest(1, 10);

@@ -251,7 +251,7 @@ export class InsumoDetalleModal implements AfterViewInit {
 
   ngAfterViewInit(): void {
     this.columnasLotes.set([
-      { key: 'codigoLote', header: 'Lote' },
+      { key: 'codigoLote', header: 'Lote', strong: true },
       { key: 'fechaIngresoMostrada', header: 'Fecha de ingreso', muted: true },
       {
         key: 'fechaVencimientoMostrada',

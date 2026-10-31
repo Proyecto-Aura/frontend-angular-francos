@@ -187,6 +187,10 @@ export class MovimientoProductoTerminadoFormModal {
     return producto ? String(producto.stockActual) : '—';
   }
 
+  mostrarUnidades(valor: string): string {
+    return valor === '—' ? valor : `${valor} unid.`;
+  }
+
   // En 'entrada' lo que importa vigilar es no pasarse del maximo
   // (sobre-stock); en 'salida'/'ajuste', no bajar del minimo (quiebre) — por
   // eso el limite que se muestra cambia segun tipoMovimiento.

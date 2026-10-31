@@ -138,8 +138,8 @@ describe('LotesProductoTerminadoGeneral', () => {
       codigoLote: 'FR-LTP-005-260910-PT256',
       productoNombre: 'Pan de molde',
       sku: 'DEMO-MOV-PT-001',
-      cantidadInicialMostrada: '100',
-      cantidadActualMostrada: '60',
+      cantidadInicialMostrada: '100 unid.',
+      cantidadActualMostrada: '60 unid.',
       estado: 'activo',
       diasParaVencer: null,
     });

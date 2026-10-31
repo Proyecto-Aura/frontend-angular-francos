@@ -77,6 +77,29 @@ describe('HistorialMovimientosProductoTerminado', () => {
     req.flush({ data, meta: { total, page, limit, total_pages: totalPages } });
   }
 
+  it('opens movement details with motive and lot, without a responsible field', () => {
+    const fixture = create();
+    flushPage(expectPageRequest(1, 10), [makeMovimientoDto({ tipo: 'salida', cantidad: 20 })]);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+    expect(component.columnas().some((c) => c.key === 'razon')).toBe(false);
+    const element: HTMLElement = fixture.nativeElement;
+    element
+      .querySelector<HTMLButtonElement>('app-ds-icon-button[label="Ver detalle"] button')!
+      .click();
+    fixture.detectChanges();
+    expect(component.movimientoDetalle()?.codigoLote).toBe('FR-LTP-001');
+    expect(component.camposDetalle()).toContainEqual({
+      label: 'Motivo',
+      value: 'Producción del día',
+    });
+    expect(component.camposDetalle()).toContainEqual({ label: 'Cantidad', value: '-20 unid.' });
+    expect(component.camposDetalle().some((c) => c.label === 'Responsable')).toBe(false);
+    expect(element.textContent).toContain('FR-LTP-001');
+    component.cerrarDetalle();
+    expect(component.movimientoDetalle()).toBeNull();
+  });
+
   it('requests the first page on init, with no filters', () => {
     const fixture = create();
     const req = expectPageRequest(1, 10);
@@ -101,9 +124,9 @@ describe('HistorialMovimientosProductoTerminado', () => {
       sku: 'DEMO-MOV-PT-001',
       tipo: 'entrada',
       cantidad: 100,
-      cantidadMostrada: '+100',
-      stockAnteriorMostrado: '170',
-      stockResultanteMostrado: '270',
+      cantidadMostrada: '+100 unid.',
+      stockAnteriorMostrado: '170 unid.',
+      stockResultanteMostrado: '270 unid.',
       razon: '—',
     });
     expect(fila.fechaMostrada).toContain('2026');
@@ -119,9 +142,9 @@ describe('HistorialMovimientosProductoTerminado', () => {
     ]);
 
     const [entrada, salida, ajuste] = fixture.componentInstance.movimientos();
-    expect(entrada.cantidadMostrada).toBe('+100');
-    expect(salida.cantidadMostrada).toBe('-40');
-    expect(ajuste.cantidadMostrada).toBe('-15');
+    expect(entrada.cantidadMostrada).toBe('+100 unid.');
+    expect(salida.cantidadMostrada).toBe('-40 unid.');
+    expect(ajuste.cantidadMostrada).toBe('-15 unid.');
   });
 
   it('resets to page 1 and sends the right query params on each filter change', () => {

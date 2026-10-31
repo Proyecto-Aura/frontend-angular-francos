@@ -1,0 +1,218 @@
+<app-ds-modal
+  [open]="open()"
+  title="Nueva solicitud a producción"
+  [hasIcon]="true"
+  [hasFooter]="true"
+  [width]="860"
+  (closed)="cerrar()"
+>
+  <span
+    icon
+    class="flex h-9 w-9 items-center justify-center rounded-md bg-[rgba(255,255,255,0.18)]"
+  >
+    <app-ds-icon [img]="LucidePlus" [size]="18" />
+  </span>
+
+  <div class="rounded-lg border border-border bg-muted/30 p-4">
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <app-ds-field
+        label="Código de solicitud"
+        hint="Generado automáticamente, no editable."
+        htmlFor="solicitud-codigo"
+      >
+        <app-ds-input
+          id="solicitud-codigo"
+          [value]="generandoCodigo() ? 'Generando…' : codigoPreview()"
+          placeholder="Se generará al abrir el formulario"
+          [disabled]="true"
+        />
+      </app-ds-field>
+
+      <app-ds-field
+        label="Fecha de solicitud"
+        hint="Se registra automáticamente."
+        htmlFor="solicitud-fecha-solicitud"
+      >
+        <app-ds-input
+          id="solicitud-fecha-solicitud"
+          [value]="fechaSolicitudMostrada()"
+          [disabled]="true"
+        />
+      </app-ds-field>
+
+      <app-ds-field
+        label="Fecha límite"
+        htmlFor="solicitud-fecha-limite"
+        [required]="true"
+        [error]="errores().fechaLimite ?? null"
+      >
+        <app-ds-input
+          id="solicitud-fecha-limite"
+          type="date"
+          [(value)]="fechaLimite"
+          [invalid]="!!errores().fechaLimite"
+        />
+      </app-ds-field>
+    </div>
+  </div>
+
+  <div class="mt-5 flex items-center justify-between">
+    <h3 class="text-ds-base font-medium text-foreground">Productos a fabricar</h3>
+    <span class="text-ds-sm text-muted-foreground">
+      {{ filas().length }} producto{{ filas().length === 1 ? '' : 's' }}
+    </span>
+  </div>
+
+  @if (errores().filas) {
+    <div
+      role="alert"
+      class="mt-3 rounded-lg bg-destructive/10 px-3.5 py-3 text-ds-sm text-destructive"
+    >
+      {{ errores().filas }}
+    </div>
+  }
+
+  <div class="mt-3 w-full overflow-x-auto rounded-lg border border-border">
+    <table class="w-full min-w-[760px] border-collapse text-ds-base">
+      <caption class="sr-only">
+        Productos a fabricar en la solicitud
+      </caption>
+      <thead>
+        <tr>
+          <th
+            scope="col"
+            class="h-[52px] min-w-[220px] whitespace-nowrap bg-table-header px-5 text-left font-normal text-muted-foreground"
+          >
+            Producto
+          </th>
+          <th
+            scope="col"
+            class="h-[52px] whitespace-nowrap bg-table-header px-5 text-left font-normal text-muted-foreground"
+          >
+            Presentación
+          </th>
+          <th
+            scope="col"
+            class="h-[52px] whitespace-nowrap bg-table-header px-5 text-left font-normal text-muted-foreground"
+          >
+            Stock actual
+          </th>
+          <th
+            scope="col"
+            class="h-[52px] whitespace-nowrap bg-table-header px-5 text-left font-normal text-muted-foreground"
+          >
+            Stock mínimo
+          </th>
+          <th
+            scope="col"
+            class="h-[52px] w-[140px] whitespace-nowrap bg-table-header px-5 text-left font-normal text-muted-foreground"
+          >
+            Cantidad solicitada (unid.)
+          </th>
+          <th scope="col" class="h-[52px] w-[52px] bg-table-header">
+            <span class="sr-only">Acciones</span>
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (fila of filas(); track fila.id; let isLast = $last) {
+          <tr>
+            <td class="px-5 py-3" [class.border-b]="!isLast" [class.border-border]="!isLast">
+              <label class="sr-only" [attr.for]="'solicitud-producto-' + fila.id"
+                >Producto de la fila {{ $index + 1 }}</label
+              >
+              <app-ds-combobox
+                [id]="'solicitud-producto-' + fila.id"
+                [value]="fila.productoTerminadoId"
+                (valueChange)="seleccionarProductoDeFila(fila.id, $event)"
+                [options]="productosOptions()"
+                placeholder="Buscar producto…"
+                emptyMessage="Sin productos que coincidan."
+                [invalid]="!!errorDeFila(fila.id, 'productoTerminadoId')"
+                size="sm"
+              />
+            </td>
+            <td
+              class="whitespace-nowrap px-5 py-3 text-muted-foreground"
+              [class.border-b]="!isLast"
+              [class.border-border]="!isLast"
+            >
+              {{ presentacionDeFila(fila) }}
+            </td>
+            <td
+              class="whitespace-nowrap px-5 py-3 text-muted-foreground"
+              [class.border-b]="!isLast"
+              [class.border-border]="!isLast"
+            >
+              {{ stockActualDeFila(fila) }}{{ stockActualDeFila(fila) === '—' ? '' : ' unid.' }}
+            </td>
+            <td
+              class="whitespace-nowrap px-5 py-3 text-muted-foreground"
+              [class.border-b]="!isLast"
+              [class.border-border]="!isLast"
+            >
+              {{ stockMinimoDeFila(fila) }}{{ stockMinimoDeFila(fila) === '—' ? '' : ' unid.' }}
+            </td>
+            <td class="px-5 py-3" [class.border-b]="!isLast" [class.border-border]="!isLast">
+              <label class="sr-only" [attr.for]="'solicitud-cantidad-' + fila.id"
+                >Cantidad solicitada en unidades, fila {{ $index + 1 }}</label
+              >
+              <app-ds-input
+                [id]="'solicitud-cantidad-' + fila.id"
+                [value]="fila.cantidadSolicitada"
+                (valueChange)="actualizarCantidadDeFila(fila.id, $event)"
+                placeholder="0"
+                size="sm"
+                [invalid]="!!errorDeFila(fila.id, 'cantidadSolicitada')"
+              />
+            </td>
+            <td
+              class="px-5 py-3 text-right"
+              [class.border-b]="!isLast"
+              [class.border-border]="!isLast"
+            >
+              @if (filas().length > 1) {
+                <app-ds-icon-button
+                  label="Quitar producto"
+                  variant="ghost"
+                  size="sm"
+                  (clicked)="quitarFila(fila.id)"
+                >
+                  <app-ds-icon [img]="LucideTrash2" [size]="16" />
+                </app-ds-icon-button>
+              }
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <div class="mt-3">
+    <app-ds-button variant="secondary" size="sm" (clicked)="agregarFila()">
+      <span icon><app-ds-icon [img]="LucidePlus" [size]="16" /></span>
+      Agregar producto
+    </app-ds-button>
+  </div>
+
+  @if (errorGeneral()) {
+    <div
+      role="alert"
+      class="mt-4 rounded-lg bg-destructive/10 px-3.5 py-3 text-ds-sm text-destructive"
+    >
+      {{ errorGeneral() }}
+    </div>
+  }
+
+  <span footer class="flex gap-2">
+    <app-ds-button variant="secondary" (clicked)="cerrar()">Cancelar</app-ds-button>
+    <app-ds-button
+      variant="primary"
+      [disabled]="guardando() || generandoCodigo() || !codigoPreview()"
+      (clicked)="guardar()"
+    >
+      <span icon><app-ds-icon [img]="LucideCheck" [size]="16" /></span>
+      {{ guardando() ? 'Creando…' : 'Crear solicitud' }}
+    </app-ds-button>
+  </span>
+</app-ds-modal>

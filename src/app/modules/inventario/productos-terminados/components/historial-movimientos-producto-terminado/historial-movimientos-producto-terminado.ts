@@ -16,6 +16,7 @@ import {
   LucideArrowLeftRight,
   LucideArrowUpRight,
   LucideSearch,
+  LucideEye,
 } from '@lucide/angular';
 import { finalize } from 'rxjs';
 import { Badge, BadgeTone } from '../../../../../shared/ds/badge/badge';
@@ -25,6 +26,8 @@ import { CellStack } from '../../../../../shared/ds/cell-stack/cell-stack';
 import { DataTable, DsColumn } from '../../../../../shared/ds/data-table/data-table';
 import { FilterBar } from '../../../../../shared/ds/filter-bar/filter-bar';
 import { Icon } from '../../../../../shared/ds/icon/icon';
+import { IconButton } from '../../../../../shared/ds/icon-button/icon-button';
+import { Modal } from '../../../../../shared/ds/modal/modal';
 import { Input } from '../../../../../shared/ds/input/input';
 import { Pagination } from '../../../../../shared/ds/pagination/pagination';
 import { Select, SelectOption } from '../../../../../shared/ds/select/select';
@@ -66,6 +69,8 @@ const TONE_FG: Record<BadgeTone, string> = {
 };
 
 interface FilaMovimientoGeneral {
+  codigoLote: string;
+  cantidadLoteMostrada: string;
   codigo: string;
   fechaMostrada: string;
   horaMostrada: string;
@@ -84,7 +89,20 @@ interface FilaMovimientoGeneral {
 // HistorialMovimientosInsumo. A diferencia de esa, no hay sufijo de unidad
 // en las cifras (producto terminado se cuenta en unidades simples).
 @Component({
-  imports: [Badge, Button, Card, CellStack, DataTable, FilterBar, Icon, Input, Pagination, Select],
+  imports: [
+    Badge,
+    Button,
+    Card,
+    CellStack,
+    DataTable,
+    FilterBar,
+    Icon,
+    Input,
+    Pagination,
+    Select,
+    IconButton,
+    Modal,
+  ],
   selector: 'app-historial-movimientos-producto-terminado',
   templateUrl: './historial-movimientos-producto-terminado.html',
 })
@@ -105,6 +123,41 @@ export class HistorialMovimientosProductoTerminado implements OnInit, AfterViewI
   cantidadCellTpl!: TemplateRef<{ $implicit: FilaMovimientoGeneral; index: number }>;
 
   readonly LucideSearch = LucideSearch;
+
+  readonly LucideEye = LucideEye;
+
+  @ViewChild('accionesCell', { static: true })
+  accionesCellTpl!: TemplateRef<{ $implicit: FilaMovimientoGeneral; index: number }>;
+
+  movimientoDetalle = signal<FilaMovimientoGeneral | null>(null);
+  camposDetalle = computed(() => {
+    const m = this.movimientoDetalle();
+    return m
+      ? [
+          { label: 'Código', value: m.codigo },
+          { label: 'Fecha y hora', value: `${m.fechaMostrada} · ${m.horaMostrada}` },
+          { label: 'Producto', value: m.productoNombre },
+          { label: 'SKU', value: m.sku },
+          { label: 'Tipo de movimiento', value: this.tipoLabel(m.tipo) },
+          { label: 'Cantidad', value: m.cantidadMostrada },
+          { label: 'Stock anterior', value: m.stockAnteriorMostrado },
+          { label: 'Stock resultante', value: m.stockResultanteMostrado },
+          { label: 'Motivo', value: m.razon },
+        ]
+      : [];
+  });
+  readonly columnasLote: DsColumn[] = [
+    { key: 'codigoLote', header: 'Lote afectado', strong: true },
+    { key: 'cantidadLoteMostrada', header: 'Cantidad del movimiento', numeric: true },
+  ];
+
+  verDetalle(fila: FilaMovimientoGeneral): void {
+    this.movimientoDetalle.set(fila);
+  }
+
+  cerrarDetalle(): void {
+    this.movimientoDetalle.set(null);
+  }
 
   readonly tamanioPagina = 10;
 
@@ -142,7 +195,7 @@ export class HistorialMovimientosProductoTerminado implements OnInit, AfterViewI
 
   ngAfterViewInit(): void {
     this.columnas.set([
-      { key: 'codigo', header: 'Código' },
+      { key: 'codigo', header: 'Código', strong: true },
       { key: 'fechaMostrada', header: 'Fecha y hora', cellTemplate: this.fechaCellTpl },
       { key: 'productoNombre', header: 'Producto', cellTemplate: this.productoCellTpl },
       { key: 'tipo', header: 'Tipo', cellTemplate: this.tipoCellTpl },
@@ -154,7 +207,7 @@ export class HistorialMovimientosProductoTerminado implements OnInit, AfterViewI
       },
       { key: 'stockAnteriorMostrado', header: 'Stock anterior', numeric: true, muted: true },
       { key: 'stockResultanteMostrado', header: 'Stock resultante', numeric: true },
-      { key: 'razon', header: 'Motivo' },
+      { key: 'acciones', header: 'Acciones', align: 'right', cellTemplate: this.accionesCellTpl },
     ]);
   }
 
@@ -240,6 +293,8 @@ export class HistorialMovimientosProductoTerminado implements OnInit, AfterViewI
       m.tipo === 'ajuste' ? m.cantidad : m.tipo === 'salida' ? -m.cantidad : m.cantidad;
     const { fecha, hora } = this.formatearFechaHora(m.fecha);
     return {
+      codigoLote: m.codigoLote || SIN_DATO,
+      cantidadLoteMostrada: `${Math.abs(m.cantidad)} unid.`,
       codigo: m.codigo,
       fechaMostrada: fecha,
       horaMostrada: hora,
@@ -247,9 +302,9 @@ export class HistorialMovimientosProductoTerminado implements OnInit, AfterViewI
       sku: m.sku,
       tipo: m.tipo,
       cantidad,
-      cantidadMostrada: `${cantidad > 0 ? '+' : ''}${cantidad}`,
-      stockAnteriorMostrado: String(m.stockAnterior),
-      stockResultanteMostrado: String(m.stockResultante),
+      cantidadMostrada: `${cantidad > 0 ? '+' : ''}${cantidad} unid.`,
+      stockAnteriorMostrado: `${m.stockAnterior} unid.`,
+      stockResultanteMostrado: `${m.stockResultante} unid.`,
       razon: m.razon || SIN_DATO,
     };
   }

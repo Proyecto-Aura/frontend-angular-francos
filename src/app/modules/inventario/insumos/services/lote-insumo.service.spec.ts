@@ -8,6 +8,18 @@ import { LoteInsumoService } from './lote-insumo.service';
 
 const LOTES_BASE = `${environment.apiUrl}/lotes-insumo`;
 
+// YYYY-MM-DD en hora local — mismo formato que fechaIsoLocal() del mapper
+// (siguienteSecuencialLote usa new Date() de verdad, asi que estos tests
+// tienen que calcular "hoy" igual, no un string pelado, para no quedar
+// desactualizados).
+function hoyIsoLocal(): string {
+  const hoy = new Date();
+  const anio = hoy.getFullYear();
+  const mes = String(hoy.getMonth() + 1).padStart(2, '0');
+  const dia = String(hoy.getDate()).padStart(2, '0');
+  return `${anio}-${mes}-${dia}`;
+}
+
 function makeLoteDto(overrides: Partial<LoteInsumoDto> = {}): LoteInsumoDto {
   return {
     id: 1,
@@ -104,7 +116,7 @@ describe('LoteInsumoService', () => {
     req.flush({ data: [], meta: { total: 0, page: 1, limit: 10, total_pages: 0 } });
   });
 
-  it('computes the next codigo_lote sequence from the highest existing codigo_lote, not a row count', () => {
+  it('computes the next codigo_lote sequence from the highest codigo_lote de HOY, not a row count', () => {
     let siguiente: number | undefined;
     service.siguienteSecuencial(9).subscribe((value) => (siguiente = value));
 
@@ -115,15 +127,40 @@ describe('LoteInsumoService', () => {
         request.params.get('page') === '1' &&
         request.params.get('limit') === '100',
     );
-    // Caso real que causaba el bug: una sola fila restante (el 001 se borro
-    // fuera de la app), pero con codigo_lote "002" — el proximo tiene que
-    // ser 3, no "1 fila + 1 = 2" (que chocaria con el codigo existente).
+    // Caso real que causaba el bug: una sola fila restante de hoy (el 001
+    // se borro fuera de la app), pero con codigo_lote "002" — el proximo
+    // tiene que ser 3, no "1 fila + 1 = 2" (que chocaria con el codigo que
+    // ya existe).
     req.flush({
-      data: [makeLoteDto({ codigo_lote: 'FR-LT-002-261017-INS9' })],
+      data: [makeLoteDto({ codigo_lote: 'FR-LT-002-261017-INS9', fecha_ingreso: hoyIsoLocal() })],
       meta: { total: 1, page: 1, limit: 100, total_pages: 1 },
     });
 
     expect(siguiente).toBe(3);
+  });
+
+  it('resets the sequence by day (bug reportado por el backend): ignora lotes de otros dias al calcular el maximo', () => {
+    let siguiente: number | undefined;
+    service.siguienteSecuencial(9).subscribe((value) => (siguiente = value));
+
+    const req = httpMock.expectOne(
+      (request) =>
+        request.url === LOTES_BASE &&
+        request.params.get('insumo_id') === '9' &&
+        request.params.get('page') === '1' &&
+        request.params.get('limit') === '100',
+    );
+    // El lote 040 es de un dia anterior — no deberia contar para el maximo
+    // de hoy, aunque su numero sea mas alto que el unico lote de hoy (001).
+    req.flush({
+      data: [
+        makeLoteDto({ id: 1, codigo_lote: 'FR-LT-040-260101-INS9', fecha_ingreso: '2026-01-01' }),
+        makeLoteDto({ id: 2, codigo_lote: 'FR-LT-001-261017-INS9', fecha_ingreso: hoyIsoLocal() }),
+      ],
+      meta: { total: 2, page: 1, limit: 100, total_pages: 1 },
+    });
+
+    expect(siguiente).toBe(2);
   });
 
   it('registers a lote with the mapped create request', () => {

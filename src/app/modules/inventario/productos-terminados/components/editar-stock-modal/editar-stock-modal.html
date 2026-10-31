@@ -54,7 +54,7 @@
       </app-ds-field>
 
       <app-ds-field
-        label="Stock mínimo"
+        label="Stock mínimo (unid.)"
         htmlFor="editar-stock-minimo"
         [required]="true"
         [error]="errores().stockMinimo ?? null"
@@ -68,7 +68,7 @@
       </app-ds-field>
 
       <app-ds-field
-        label="Stock máximo"
+        label="Stock máximo (unid.)"
         htmlFor="editar-stock-maximo"
         [required]="true"
         [error]="errores().stockMaximo ?? null"
@@ -88,7 +88,7 @@
       >
         <app-ds-input
           id="editar-stock-actual"
-          [value]="producto.stockActual + ' ' + producto.presentacionUnidadMedida"
+          [value]="producto.stockActual + ' unid.'"
           [disabled]="true"
         />
       </app-ds-field>

@@ -1,3 +1,4 @@
+import { MovimientoProductoTerminadoService } from '../../services/movimiento-producto-terminado.service';
 import {
   AfterViewInit,
   Component,
@@ -153,10 +154,17 @@ export class StockProductos implements OnInit, AfterViewInit {
   // autonomo (carga sus propios datos) y no expone su total hacia este
   // componente — mismo criterio que stock-insumos.ts.
   lotesTotal = signal(0);
+  movimientosTotal = signal<number | undefined>(undefined);
+  private movimientoHistorialService = inject(MovimientoProductoTerminadoService);
 
   tabs = computed<DsTab[]>(() => [
     { id: 'stock', label: 'Stock', icon: LucidePackage, count: this.resumen().total },
-    { id: 'historial', label: 'Historial de movimientos', icon: LucideClock, count: 0 },
+    {
+      id: 'historial',
+      label: 'Historial de movimientos',
+      icon: LucideClock,
+      count: this.movimientosTotal(),
+    },
     { id: 'lotes', label: 'Lotes', icon: LucideLayers, count: this.lotesTotal() },
   ]);
 
@@ -199,6 +207,7 @@ export class StockProductos implements OnInit, AfterViewInit {
     this.cargarCategorias();
     this.cargarPresentaciones();
     this.cargarLotesTotal();
+    this.cargarMovimientosTotal();
   }
 
   ngAfterViewInit(): void {
@@ -206,8 +215,8 @@ export class StockProductos implements OnInit, AfterViewInit {
       { key: 'productoNombre', header: 'Producto', cellTemplate: this.productoCellTpl },
       { key: 'categoriaNombre', header: 'Categoría', muted: true },
       { key: 'presentacionMostrada', header: 'Presentación', muted: true },
-      { key: 'stockActual', header: 'Stock actual', numeric: true },
-      { key: 'stockMinimo', header: 'Stock mín.', numeric: true, muted: true },
+      { key: 'stockActualMostrado', header: 'Stock actual', numeric: true },
+      { key: 'stockMinimoMostrado', header: 'Stock mín.', numeric: true, muted: true },
       { key: 'stockMaximoMostrado', header: 'Stock máx.', numeric: true, muted: true },
       { key: 'nivel', header: 'Nivel', cellTemplate: this.nivelCellTpl },
       { key: 'estado', header: 'Estado', cellTemplate: this.estadoCellTpl },
@@ -255,6 +264,16 @@ export class StockProductos implements OnInit, AfterViewInit {
       .subscribe({
         next: (resumen) => this.resumen.set(resumen),
         error: () => this.resumen.set(RESUMEN_VACIO),
+      });
+  }
+
+  cargarMovimientosTotal(): void {
+    this.movimientoHistorialService
+      .listar(1, 1)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (resultado) => this.movimientosTotal.set(resultado.total),
+        error: () => this.movimientosTotal.set(undefined),
       });
   }
 
@@ -323,6 +342,7 @@ export class StockProductos implements OnInit, AfterViewInit {
   }
 
   movimientoGuardado(): void {
+    this.cargarMovimientosTotal();
     this.cerrarFormMovimiento();
     this.recargarTodo();
   }
@@ -405,7 +425,9 @@ export class StockProductos implements OnInit, AfterViewInit {
       ),
       stockActual: p.stockActual,
       stockMinimo: p.stockMinimo,
-      stockMaximoMostrado: p.stockMaximo ?? '—',
+      stockActualMostrado: `${p.stockActual} unid.`,
+      stockMinimoMostrado: `${p.stockMinimo} unid.`,
+      stockMaximoMostrado: p.stockMaximo !== null ? `${p.stockMaximo} unid.` : '—',
       nivel: calcularNivelStockProducto(p),
       estado: p.estado,
     };
@@ -421,6 +443,8 @@ interface FilaProducto {
   presentacionMostrada: string;
   stockActual: number;
   stockMinimo: number;
+  stockActualMostrado: string;
+  stockMinimoMostrado: string;
   stockMaximoMostrado: number | string;
   nivel: NivelStockProducto;
   estado: boolean;
