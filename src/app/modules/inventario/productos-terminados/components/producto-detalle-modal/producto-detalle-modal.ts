@@ -301,8 +301,8 @@ export class ProductoDetalleModal implements AfterViewInit {
               fechaVencimientoMostrada: lote.fechaVencimiento
                 ? this.formatearFecha(lote.fechaVencimiento)
                 : SIN_DATO,
-              cantidadInicialMostrada: String(lote.cantidadInicial),
-              cantidadActualMostrada: String(lote.cantidadActual),
+              cantidadInicialMostrada: String(lote.cantidadInicial) + ' unid.',
+              cantidadActualMostrada: String(lote.cantidadActual) + ' unid.',
               estado: lote.estado,
               activo: lote.activo,
               // "por_vencer" ya lo calcula el backend (activo y a 15 dias o
@@ -365,9 +365,9 @@ export class ProductoDetalleModal implements AfterViewInit {
       horaMostrada: hora,
       tipo: m.tipo,
       cantidad,
-      cantidadMostrada: `${cantidad > 0 ? '+' : ''}${cantidad}`,
-      stockAnteriorMostrado: String(m.stockAnterior),
-      stockResultanteMostrado: String(m.stockResultante),
+      cantidadMostrada: `${cantidad > 0 ? '+' : ''}${cantidad} unid.`,
+      stockAnteriorMostrado: String(m.stockAnterior) + ' unid.',
+      stockResultanteMostrado: String(m.stockResultante) + ' unid.',
       loteCodigo: m.codigoLote,
     };
   }
@@ -480,11 +480,11 @@ export class ProductoDetalleModal implements AfterViewInit {
         ),
       },
       { label: 'Unidad de medida', value: producto.presentacionUnidadMedida },
-      { label: 'Stock actual', value: String(producto.stockActual) },
-      { label: 'Stock mínimo', value: String(producto.stockMinimo) },
+      { label: 'Stock actual', value: String(producto.stockActual) + ' unid.' },
+      { label: 'Stock mínimo', value: String(producto.stockMinimo) + ' unid.' },
       {
         label: 'Stock máximo',
-        value: producto.stockMaximo !== null ? String(producto.stockMaximo) : SIN_DATO,
+        value: producto.stockMaximo !== null ? String(producto.stockMaximo) + ' unid.' : SIN_DATO,
       },
       { label: 'Nivel de stock', value: this.nivelLabel() },
       { label: 'Estado', value: producto.estado ? 'Activo' : 'Inactivo' },

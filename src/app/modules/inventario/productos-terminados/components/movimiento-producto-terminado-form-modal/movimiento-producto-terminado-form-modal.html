@@ -75,7 +75,7 @@
           <th
             class="h-[52px] w-[120px] whitespace-nowrap bg-table-header px-5 text-left font-normal text-muted-foreground"
           >
-            Cantidad
+            Cantidad (unid.)
           </th>
           <th
             class="h-[52px] whitespace-nowrap bg-table-header px-5 text-left font-normal text-muted-foreground"
@@ -110,14 +110,14 @@
               [class.border-b]="!isLast"
               [class.border-border]="!isLast"
             >
-              {{ stockActualDeFila(fila) }}
+              {{ mostrarUnidades(stockActualDeFila(fila)) }}
             </td>
             <td
               class="whitespace-nowrap px-5 py-3 text-muted-foreground"
               [class.border-b]="!isLast"
               [class.border-border]="!isLast"
             >
-              {{ stockLimiteDeFila(fila) }}
+              {{ mostrarUnidades(stockLimiteDeFila(fila)) }}
             </td>
             <td class="px-5 py-3" [class.border-b]="!isLast" [class.border-border]="!isLast">
               @if (tipoMovimiento() !== 'salida') {
@@ -147,7 +147,7 @@
                 } @else {
                   <div class="flex flex-col gap-0.5 text-ds-sm">
                     @for (linea of desglose.lineas; track linea.texto) {
-                      <span class="text-foreground">{{ linea.texto }}</span>
+                      <span class="text-foreground">{{ linea.texto }} unid.</span>
                     }
                     @if (desglose.insuficiente) {
                       <span class="font-medium text-destructive">Stock insuficiente</span>
@@ -167,7 +167,7 @@
               />
               @if (tipoMovimiento() === 'ajuste' && fila.loteId) {
                 <div class="mt-1 text-ds-sm text-muted-foreground">
-                  Actual: {{ cantidadActualLoteDeFila(fila) }}
+                  Actual: {{ mostrarUnidades(cantidadActualLoteDeFila(fila)) }}
                 </div>
               }
             </td>
@@ -177,7 +177,7 @@
               [class.border-border]="!isLast"
             >
               @if (tipoMovimiento() !== 'salida') {
-                {{ stockLoteDeFila(fila) }}
+                {{ mostrarUnidades(stockLoteDeFila(fila)) }}
               } @else {
                 @let desglose = desgloseFefoDeFila(fila);
                 @if (desglose.lineas.length === 0) {
@@ -185,7 +185,7 @@
                 } @else {
                   <div class="flex flex-col gap-0.5 text-ds-sm">
                     @for (linea of desglose.lineas; track linea.texto) {
-                      <span>{{ linea.resultado }}</span>
+                      <span>{{ mostrarUnidades(linea.resultado) }}</span>
                     }
                   </div>
                 }
@@ -196,7 +196,7 @@
               [class.border-b]="!isLast"
               [class.border-border]="!isLast"
             >
-              {{ stockResultanteDeFila(fila) }}
+              {{ mostrarUnidades(stockResultanteDeFila(fila)) }}
             </td>
             <td
               class="px-5 py-3 text-right"

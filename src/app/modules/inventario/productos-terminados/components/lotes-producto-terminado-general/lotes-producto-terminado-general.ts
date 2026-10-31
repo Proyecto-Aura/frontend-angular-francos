@@ -286,8 +286,8 @@ export class LotesProductoTerminadoGeneral implements OnInit, AfterViewInit {
         lote.estado === 'por_vencer' && lote.fechaVencimiento
           ? this.diasHasta(lote.fechaVencimiento)
           : null,
-      cantidadInicialMostrada: String(lote.cantidadInicial),
-      cantidadActualMostrada: String(lote.cantidadActual),
+      cantidadInicialMostrada: String(lote.cantidadInicial) + ' unid.',
+      cantidadActualMostrada: String(lote.cantidadActual) + ' unid.',
       estado: lote.estado,
     };
   }
