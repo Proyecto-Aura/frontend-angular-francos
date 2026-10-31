@@ -42,7 +42,9 @@
   </div>
 
   <app-ds-filter-bar [hasSearch]="true" [hasActions]="true">
+    <label search class="sr-only" for="solicitudes-busqueda">Buscar por código de solicitud</label>
     <app-ds-input
+      id="solicitudes-busqueda"
       search
       [value]="search()"
       (valueChange)="setSearch($event)"
@@ -53,7 +55,9 @@
     </app-ds-input>
 
     <div filters class="w-[188px]">
+      <label class="sr-only" for="solicitudes-estado">Filtrar por estado</label>
       <app-ds-select
+        id="solicitudes-estado"
         [value]="estadoFiltro()"
         (valueChange)="setEstado($event)"
         [options]="estadoOptions"
@@ -86,10 +90,10 @@
   }
   <app-ds-card [padded]="false" [hasFooter]="totalPaginas() > 1">
     @if (cargando()) {
-      <div class="p-12 text-center text-muted-foreground">Cargando…</div>
+      <div role="status" class="p-12 text-center text-muted-foreground">Cargando…</div>
     } @else if (errorCarga()) {
       <div class="flex flex-col items-center gap-3 p-12 text-center">
-        <p class="text-muted-foreground">No se pudieron cargar las solicitudes.</p>
+        <p role="alert" class="text-muted-foreground">No se pudieron cargar las solicitudes.</p>
         <app-ds-button variant="secondary" (clicked)="cargarSolicitudes()"
           >Reintentar</app-ds-button
         >
