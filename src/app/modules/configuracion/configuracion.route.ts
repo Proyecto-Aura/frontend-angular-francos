@@ -26,6 +26,14 @@ export const CONFIGURACION_ROUTES: Routes = [
           ),
       },
       {
+        path: 'comprobantes',
+        canActivate: [permisoGuard],
+        loadComponent: () =>
+          import('./comprobantes/pages/gestionar-series/gestionar-series').then(
+            (c) => c.GestionarSeries,
+          ),
+      },
+      {
         // Pantalla del propio usuario: no es un permiso de menú, basta con estar logueado.
         path: 'perfil',
         loadComponent: () =>

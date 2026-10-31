@@ -1,0 +1,33 @@
+<app-ds-modal
+  [open]="open()"
+  title="Desactivar serie"
+  [hasFooter]="true"
+  [width]="440"
+  (closed)="cerrar()"
+>
+  @if (serie(); as serieActual) {
+    <div class="flex flex-col gap-4">
+      <p class="text-ds-base text-foreground">
+        La serie {{ serieActual.codigo }} dejará de estar disponible para emitir. El correlativo se
+        conserva (último emitido: {{ ultimoEmitido() }}) y puede activarse nuevamente.
+      </p>
+      @if (errorGeneral()) {
+        <div
+          role="alert"
+          class="rounded-lg bg-destructive/10 px-3.5 py-3 text-ds-sm text-destructive"
+        >
+          {{ errorGeneral() }}
+        </div>
+      }
+    </div>
+  }
+
+  <span footer class="flex gap-2">
+    <app-ds-button variant="secondary" [disabled]="desactivando()" (clicked)="cerrar()">
+      Cancelar
+    </app-ds-button>
+    <app-ds-button variant="destructive" [disabled]="desactivando()" (clicked)="desactivar()">
+      {{ desactivando() ? 'Desactivando…' : 'Desactivar' }}
+    </app-ds-button>
+  </span>
+</app-ds-modal>

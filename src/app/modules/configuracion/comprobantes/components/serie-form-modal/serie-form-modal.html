@@ -1,0 +1,117 @@
+<app-ds-modal
+  [open]="open()"
+  [title]="titulo()"
+  [description]="descripcion()"
+  [hasFooter]="true"
+  hint="El correlativo se asigna automáticamente en cada emisión"
+  [width]="600"
+  (closed)="cerrar()"
+>
+  <div class="flex flex-col gap-4">
+    @if (errorGeneral()) {
+      <div
+        role="alert"
+        class="rounded-lg bg-destructive/10 px-3.5 py-3 text-ds-sm text-destructive"
+      >
+        {{ errorGeneral() }}
+      </div>
+    }
+
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <app-ds-field
+        label="Tipo de comprobante"
+        [required]="true"
+        htmlFor="s-tipo"
+        [hint]="pistaBloqueo()"
+      >
+        <app-ds-select
+          id="s-tipo"
+          size="lg"
+          [value]="form().tipo"
+          (valueChange)="cambiarTipo($event)"
+          [options]="tipos"
+          [disabled]="bloqueada()"
+        />
+      </app-ds-field>
+      <app-ds-field
+        label="Serie"
+        [required]="true"
+        htmlFor="s-serie"
+        [hint]="pistaSerie()"
+        [error]="errores().serie ?? null"
+      >
+        <app-ds-input
+          id="s-serie"
+          size="lg"
+          [placeholder]="ejemploSerie()"
+          [value]="form().serie"
+          (valueChange)="cambiarSerie($event)"
+          [invalid]="!!errores().serie"
+          [disabled]="bloqueada()"
+        />
+      </app-ds-field>
+      <app-ds-field
+        label="Correlativo inicial"
+        [required]="true"
+        htmlFor="s-inicio"
+        [hint]="pistaBloqueo()"
+        [error]="errores().inicio ?? null"
+      >
+        <app-ds-input
+          id="s-inicio"
+          placeholder="1"
+          size="lg"
+          [value]="form().inicio"
+          (valueChange)="cambiar('inicio', $event)"
+          [invalid]="!!errores().inicio"
+          [disabled]="bloqueada()"
+        />
+      </app-ds-field>
+      <app-ds-field
+        label="Correlativo final"
+        [required]="true"
+        htmlFor="s-fin"
+        [hint]="'Máximo ' + maximo"
+        [error]="errores().fin ?? null"
+      >
+        <app-ds-input
+          id="s-fin"
+          placeholder="99999999"
+          size="lg"
+          [value]="form().fin"
+          (valueChange)="cambiar('fin', $event)"
+          [invalid]="!!errores().fin"
+        />
+      </app-ds-field>
+      @if (modo() === 'editar') {
+        <app-ds-field
+          label="Próximo correlativo"
+          htmlFor="s-proximo"
+          hint="Asignado por el sistema · no editable"
+        >
+          <app-ds-input id="s-proximo" size="lg" [value]="proximo()" [disabled]="true" />
+        </app-ds-field>
+      } @else {
+        <app-ds-field
+          label="Estado"
+          [hint]="form().activa ? 'Disponible para emitir' : 'No se podrá emitir hasta activarla'"
+        >
+          <app-ds-switch
+            [label]="form().activa ? 'Activa' : 'Inactiva'"
+            [checked]="form().activa"
+            (checkedChange)="cambiar('activa', $event)"
+          />
+        </app-ds-field>
+      }
+    </div>
+  </div>
+
+  <span footer class="flex gap-2">
+    <app-ds-button variant="secondary" [disabled]="guardando()" (clicked)="cerrar()">
+      Cancelar
+    </app-ds-button>
+    <app-ds-button [disabled]="guardando()" (clicked)="guardar()">
+      {{ guardando() ? 'Guardando…' : modo() === 'nueva' ? 'Crear serie' : 'Guardar cambios' }}
+    </app-ds-button>
+  </span>
+</app-ds-modal>
