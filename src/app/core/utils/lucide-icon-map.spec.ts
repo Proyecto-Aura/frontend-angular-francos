@@ -11,6 +11,10 @@ describe('resolveLucideIcon', () => {
     expect(resolveLucideIcon('building-2')).toBe(LucideBuilding2);
   });
 
+  it('resolves the receipt icon used by Series de comprobantes', () => {
+    expect(resolveLucideIcon('receipt')).toBeDefined();
+  });
+
   it('returns undefined for an unknown name instead of throwing', () => {
     expect(resolveLucideIcon('not-a-real-icon')).toBeUndefined();
   });

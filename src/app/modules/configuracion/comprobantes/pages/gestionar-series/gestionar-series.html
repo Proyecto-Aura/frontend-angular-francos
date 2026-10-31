@@ -1,0 +1,152 @@
+<div class="flex flex-col gap-5 p-(--page-padding)">
+  <app-ds-breadcrumb [items]="migas" />
+
+  <div class="flex items-start justify-between gap-4">
+    <div>
+      <h1 class="text-ds-2xl font-semibold text-foreground">Gestionar series de comprobantes</h1>
+      <p class="mt-1 text-ds-base text-muted-foreground">
+        Series autorizadas, rangos y correlativo automático por serie
+      </p>
+    </div>
+    <app-ds-button (clicked)="nueva()">
+      <span icon><app-ds-icon [img]="LucidePlus" [size]="16" /></span>
+      Nueva serie
+    </app-ds-button>
+  </div>
+
+  <app-aviso-banner [texto]="aviso().mensaje" [tono]="aviso().tono" (closed)="cerrarAviso()" />
+
+  @if (cantidadAlertas() > 0) {
+    <div
+      role="alert"
+      class="flex items-start gap-3 rounded-lg border border-border bg-card px-4 py-3.5"
+    >
+      <app-ds-badge tone="warning" [dot]="true" size="md">
+        {{ cantidadAlertas() }} {{ cantidadAlertas() === 1 ? 'serie' : 'series' }}
+      </app-ds-badge>
+      <div class="flex min-w-0 flex-1 flex-col gap-0.5">
+        <span class="text-ds-base font-medium text-foreground">{{ tituloAlerta() }}</span>
+        <span class="text-ds-sm text-muted-foreground">{{ detalleAlertas() }}</span>
+      </div>
+    </div>
+  }
+
+  <app-ds-filter-bar [hasActions]="true">
+    <div filters class="w-[220px]">
+      <app-ds-select
+        [value]="filtros().tipo"
+        (valueChange)="cambiarTipo($event)"
+        [options]="opcionesTipo"
+      />
+    </div>
+    <div filters class="w-[188px]">
+      <app-ds-select
+        [value]="filtros().estado"
+        (valueChange)="cambiarEstado($event)"
+        [options]="opcionesEstado"
+      />
+    </div>
+
+    <span actions class="flex items-center gap-2">
+      <label for="sr-umbral" class="whitespace-nowrap text-ds-sm text-muted-foreground">
+        Alertar al
+      </label>
+      <div class="w-24">
+        <app-ds-select
+          id="sr-umbral"
+          [value]="'' + umbral()"
+          (valueChange)="cambiarUmbral($event)"
+          [options]="opcionesUmbral"
+        />
+      </div>
+      <span class="whitespace-nowrap text-ds-sm text-muted-foreground">del rango</span>
+    </span>
+  </app-ds-filter-bar>
+
+  @if (cargando()) {
+    <p
+      class="rounded-lg border border-border bg-card p-8 text-center text-ds-base text-muted-foreground"
+    >
+      Cargando series…
+    </p>
+  } @else if (errorCarga()) {
+    <div
+      class="flex flex-col items-center gap-3 rounded-lg border border-border bg-card p-8 text-center"
+    >
+      <p class="text-ds-base text-muted-foreground">{{ errorCarga() }}</p>
+      <app-ds-button variant="secondary" (clicked)="cargar()">Reintentar</app-ds-button>
+    </div>
+  } @else {
+    <app-ds-data-table
+      [columns]="columns()"
+      [rows]="filasFiltradas()"
+      empty="Sin series registradas"
+    />
+  }
+
+  <app-serie-vista-previa [series]="series()" />
+</div>
+
+<app-serie-form-modal
+  [open]="formAbierto()"
+  [serie]="serieEnEdicion()"
+  (closed)="cerrarForm()"
+  (saved)="alGuardar($event)"
+/>
+
+<app-serie-desactivar-modal
+  [open]="!!serieADesactivar()"
+  [serie]="serieADesactivar()"
+  (closed)="serieADesactivar.set(null)"
+  (deactivated)="alDesactivar($event)"
+/>
+
+<ng-template #serieCell let-s>
+  <app-ds-cell-stack [primary]="s.codigo" [secondary]="etiquetaTipo(s.tipo)" />
+</ng-template>
+
+<ng-template #rangoCell let-s>
+  <span class="tabular-nums">{{ rango(s) }}</span>
+</ng-template>
+
+<ng-template #proximoCell let-s>
+  <span class="font-medium tabular-nums" [class.text-muted-foreground]="s.estado === 'agotada'">
+    {{ proximo(s) }}
+  </span>
+</ng-template>
+
+<ng-template #usoCell let-s>
+  <div class="flex min-w-[180px] flex-col gap-1.5">
+    <div
+      class="h-1.5 w-full overflow-hidden rounded-full bg-muted"
+      role="progressbar"
+      [attr.aria-label]="'Uso del rango de la serie ' + s.codigo"
+      aria-valuemin="0"
+      aria-valuemax="100"
+      [attr.aria-valuenow]="ancho(s)"
+    >
+      <div
+        class="h-full rounded-full"
+        [class]="colorBarra(s.estado)"
+        [style.width.%]="ancho(s)"
+      ></div>
+    </div>
+    <span class="text-ds-xs text-muted-foreground tabular-nums">{{ usoTexto(s) }}</span>
+  </div>
+</ng-template>
+
+<ng-template #estadoCell let-s>
+  <app-ds-badge [tone]="tonoEstado(s.estado)" [dot]="true">
+    {{ etiquetaEstado(s.estado) }}
+  </app-ds-badge>
+</ng-template>
+
+<ng-template #accionesCell let-s>
+  <app-ds-dropdown-menu [items]="accionesPorSerie().get(s.id) ?? []">
+    <span trigger>
+      <app-ds-icon-button [label]="'Acciones de la serie ' + s.codigo">
+        <app-ds-icon [img]="LucideEllipsis" [size]="16" />
+      </app-ds-icon-button>
+    </span>
+  </app-ds-dropdown-menu>
+</ng-template>
