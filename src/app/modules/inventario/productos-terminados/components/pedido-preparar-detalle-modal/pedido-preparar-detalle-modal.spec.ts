@@ -287,14 +287,12 @@ describe('PedidoPrepararDetalleModal', () => {
     fixture.componentRef.setInput('pedidoId', 1042);
     fixture.detectChanges();
     const base = makeDetalleDto();
-    httpMock
-      .expectOne(`${PEDIDOS_PREPARAR_BASE}/1042`)
-      .flush(
-        makeDetalleDto({
-          disponibilidad: 'insuficiente',
-          items: [{ ...base.items[0], stock_disponible: 0 }],
-        }),
-      );
+    httpMock.expectOne(`${PEDIDOS_PREPARAR_BASE}/1042`).flush(
+      makeDetalleDto({
+        disponibilidad: 'insuficiente',
+        items: [{ ...base.items[0], stock_disponible: 0 }],
+      }),
+    );
     fixture.detectChanges();
     fixture.componentInstance.reintentar();
     fixture.componentInstance.avanzarEstado();

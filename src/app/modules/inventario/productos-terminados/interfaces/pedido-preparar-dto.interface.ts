@@ -4,7 +4,8 @@
 // por eso el shape es casi identico, pero expuesto via un controller aparte
 // (InventarioPedidosController, roles admin/inventario) que solo deja ver
 // los 3 estados que le importan a este operario.
-export type EstadoPedidoPrepararDto = 'en_espera_inventario' | 'en_preparacion' | 'pendiente_entrega';
+export type EstadoPedidoPrepararDto =
+  'en_espera_inventario' | 'en_preparacion' | 'pendiente_entrega';
 
 export type DisponibilidadPedidoPrepararDto = 'completo' | 'insuficiente';
 
