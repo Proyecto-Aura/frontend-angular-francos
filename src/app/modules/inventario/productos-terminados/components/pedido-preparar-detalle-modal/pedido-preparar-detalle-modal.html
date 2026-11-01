@@ -1,0 +1,113 @@
+<app-ds-modal
+  [open]="pedidoId() !== null"
+  [title]="titulo()"
+  [hasIcon]="true"
+  [hasFooter]="true"
+  [width]="1024"
+  (closed)="cerrar()"
+>
+  <span
+    icon
+    class="flex h-9 w-9 items-center justify-center rounded-md bg-[rgba(255,255,255,0.18)]"
+  >
+    <app-ds-icon [img]="LucideEye" [size]="18" />
+  </span>
+
+  @if (cargando()) {
+    <div role="status" class="p-12 text-center text-muted-foreground">Cargando…</div>
+  } @else if (error()) {
+    <div class="flex flex-col items-center gap-3 p-12 text-center">
+      <p role="alert" class="text-muted-foreground">No se pudo cargar el detalle del pedido.</p>
+      <app-ds-button variant="secondary" (clicked)="reintentar()">Reintentar</app-ds-button>
+    </div>
+  } @else if (pedido(); as p) {
+    <div class="flex flex-col gap-5">
+      <app-ds-badge [tone]="estadoTone(p.estado)" [dot]="true">
+        {{ estadoLabel(p.estado) }}
+      </app-ds-badge>
+
+      <div
+        class="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-x-5 gap-y-4 rounded-lg border border-border bg-muted/30 p-4"
+      >
+        @for (c of campos(); track c.label) {
+          <div class="min-w-0">
+            <div class="text-ds-sm text-muted-foreground">{{ c.label }}</div>
+            <div class="mt-1 font-medium text-foreground">{{ c.value }}</div>
+          </div>
+        }
+      </div>
+
+      <app-ds-card [padded]="false">
+        <app-ds-data-table
+          [columns]="columnas()"
+          [rows]="filas()"
+          empty="Sin productos en este pedido"
+        />
+      </app-ds-card>
+
+      @if (inicioBloqueado()) {
+        <div role="status" class="rounded-lg border border-border bg-muted/30 p-4 text-ds-sm">
+          <p class="font-medium">
+            No se puede iniciar la preparación: se necesita stock suficiente para todos los
+            productos.
+          </p>
+          @if (faltantesStock().length > 0) {
+            <ul class="mt-2 list-disc pl-5">
+              @for (fila of faltantesStock(); track fila.id) {
+                <li>
+                  {{ fila.producto }} ({{ fila.sku }}): solicitado {{ fila.solicitado }} unid.,
+                  disponible {{ fila.stockDisponible }} unid.; faltan {{ fila.faltante }} unid.
+                </li>
+              }
+            </ul>
+          }
+          <p class="mt-2">El pedido seguirá en espera de inventario hasta completar el stock.</p>
+          <app-ds-button variant="secondary" (clicked)="reintentar()" [disabled]="cargando()"
+            >Actualizar disponibilidad</app-ds-button
+          >
+        </div>
+      }
+
+      @if (textoAyuda(); as ayuda) {
+        <p class="text-ds-sm text-muted-foreground">{{ ayuda }}</p>
+      }
+
+      @if (errorAvance()) {
+        <p role="alert" class="text-ds-sm text-destructive">{{ errorAvance() }}</p>
+      }
+    </div>
+  }
+
+  <span footer>
+    <app-ds-button variant="secondary" (clicked)="cerrar()">Cerrar</app-ds-button>
+    @if (accionSiguiente(); as etiqueta) {
+      <app-ds-button
+        [disabled]="avanzando() || cargando() || error() || inicioBloqueado()"
+        (clicked)="avanzarEstado()"
+      >
+        {{ etiqueta }}
+      </app-ds-button>
+    }
+  </span>
+</app-ds-modal>
+
+<ng-template #productoCell let-fila>
+  <app-ds-cell-stack [primary]="fila.producto" [secondary]="fila.sku" />
+</ng-template>
+
+<ng-template #cantidadPreparadaCell let-fila>
+  <div class="flex justify-end">
+    <span class="w-[90px]">
+      <label class="sr-only" [attr.for]="'cantidad-preparada-' + fila.id">
+        Cantidad preparada de {{ fila.producto }}
+      </label>
+      <app-ds-input
+        [id]="'cantidad-preparada-' + fila.id"
+        type="number"
+        size="sm"
+        [value]="fila.cantidadPreparada.toString()"
+        (valueChange)="actualizarCantidadPreparada(fila.id, $event)"
+      />
+    </span>
+  </div>
+</ng-template>
