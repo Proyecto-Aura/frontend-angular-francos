@@ -1,1 +1,153 @@
-<p>pedidos-por-preparar works!</p>
+<div class="flex flex-col gap-6 p-(--page-padding)">
+  <div>
+    <h1 class="text-ds-2xl font-medium text-foreground">Pedidos por preparar</h1>
+  </div>
+
+  <div class="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-4">
+    <app-ds-kpi-card
+      label="En espera de inventario"
+      [value]="resumen().enEsperaInventario"
+      [hasIcon]="true"
+      iconTone="warning"
+    >
+      <span icon><app-ds-icon [img]="LucideClock" [size]="16" /></span>
+    </app-ds-kpi-card>
+
+    <app-ds-kpi-card
+      label="En preparación"
+      [value]="resumen().enPreparacion"
+      [hasIcon]="true"
+      iconTone="info"
+    >
+      <span icon><app-ds-icon [img]="LucideFolderOpen" [size]="16" /></span>
+    </app-ds-kpi-card>
+
+    <app-ds-kpi-card
+      label="Pendientes a entrega hoy"
+      [value]="resumen().pendienteEntrega"
+      [hasIcon]="true"
+      iconTone="success"
+    >
+      <span icon><app-ds-icon [img]="LucidePackage" [size]="16" /></span>
+    </app-ds-kpi-card>
+  </div>
+
+  <app-ds-filter-bar [hasSearch]="true">
+    <label search class="sr-only" for="pedidos-preparar-busqueda">
+      Buscar por código de pedido o cliente
+    </label>
+    <app-ds-input
+      id="pedidos-preparar-busqueda"
+      search
+      [value]="search()"
+      (valueChange)="setSearch($event)"
+      placeholder="Pedido o cliente…"
+      [hasIcon]="true"
+    >
+      <span icon><app-ds-icon [img]="LucideSearch" [size]="16" /></span>
+    </app-ds-input>
+
+    <div filters class="w-[188px]">
+      <label class="sr-only" for="pedidos-preparar-estado">Filtrar por estado de preparación</label>
+      <app-ds-select
+        id="pedidos-preparar-estado"
+        [value]="estadoFiltro()"
+        (valueChange)="setEstado($event)"
+        [options]="estadoOptions"
+        placeholder="Todos los estados"
+      />
+    </div>
+
+    <div filters class="flex items-center gap-2 text-ds-sm text-muted-foreground">
+      <label for="pedidos-preparar-fecha-desde">Fecha desde</label>
+      <span class="w-[160px]">
+        <app-ds-input
+          id="pedidos-preparar-fecha-desde"
+          type="date"
+          [value]="fechaDesde()"
+          (valueChange)="setFechaDesde($event)"
+          [invalid]="rangoInvalido()"
+        />
+      </span>
+    </div>
+    <div filters class="flex items-center gap-2 text-ds-sm text-muted-foreground">
+      <label for="pedidos-preparar-fecha-hasta">Fecha hasta</label>
+      <span class="w-[160px]">
+        <app-ds-input
+          id="pedidos-preparar-fecha-hasta"
+          type="date"
+          [value]="fechaHasta()"
+          (valueChange)="setFechaHasta($event)"
+          [invalid]="rangoInvalido()"
+        />
+      </span>
+    </div>
+  </app-ds-filter-bar>
+
+  @if (rangoInvalido()) {
+    <p role="alert" class="text-ds-sm text-destructive">
+      «Fecha desde» no puede ser posterior a «Fecha hasta».
+    </p>
+  }
+
+  <app-ds-card [padded]="false" [hasFooter]="totalPaginas() > 1">
+    @if (cargando()) {
+      <div role="status" class="p-12 text-center text-muted-foreground">Cargando…</div>
+    } @else if (errorCarga()) {
+      <div class="flex flex-col items-center gap-3 p-12 text-center">
+        <p role="alert" class="text-muted-foreground">No se pudieron cargar los pedidos.</p>
+        <app-ds-button variant="secondary" (clicked)="cargarPedidos()">Reintentar</app-ds-button>
+      </div>
+    } @else {
+      <app-ds-data-table
+        [columns]="columnas()"
+        [rows]="pedidos()"
+        empty="Sin pedidos por preparar"
+      />
+    }
+
+    @if (totalPaginas() > 1) {
+      <div footer>
+        <app-ds-pagination
+          [page]="pagina()"
+          [pageCount]="totalPaginas()"
+          [total]="total()"
+          [pageSize]="tamanioPagina"
+          (changed)="cambiarPagina($event)"
+        />
+      </div>
+    }
+  </app-ds-card>
+
+  <app-pedido-preparar-detalle-modal
+    [pedidoId]="pedidoDetalleId()"
+    (closed)="cerrarDetalle()"
+    (actualizado)="pedidoActualizado()"
+  />
+</div>
+
+<ng-template #pedidoCell let-fila>
+  <app-ds-cell-stack [primary]="fila.codigo" [secondary]="fila.horaMostrada" />
+</ng-template>
+
+<ng-template #clienteCell let-fila>
+  <span class="inline-flex min-w-0 items-center gap-2.5">
+    <app-ds-avatar [name]="fila.cliente" size="sm" />
+    {{ fila.cliente }}
+  </span>
+</ng-template>
+
+<ng-template #estadoCell let-fila>
+  <app-ds-badge [tone]="estadoTone(fila.estado)" [dot]="true">
+    {{ estadoLabel(fila.estado) }}
+  </app-ds-badge>
+</ng-template>
+
+<ng-template #accionesCell let-fila>
+  <div class="flex justify-end">
+    <app-ds-button variant="secondary" size="sm" (clicked)="verDetalle(fila.pedido)">
+      <span icon><app-ds-icon [img]="LucideEye" [size]="16" /></span>
+      Ver detalle
+    </app-ds-button>
+  </div>
+</ng-template>
