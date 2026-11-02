@@ -66,13 +66,26 @@
     </div>
 
     <div filters class="flex items-center gap-2 text-ds-sm text-muted-foreground">
-      <label for="solicitudes-fecha">Fecha</label>
+      <label for="solicitudes-fecha-desde">Fecha desde</label>
       <span class="w-[160px]">
         <app-ds-input
-          id="solicitudes-fecha"
+          id="solicitudes-fecha-desde"
           type="date"
-          [value]="fecha()"
-          (valueChange)="setFecha($event)"
+          [value]="fechaDesde()"
+          (valueChange)="setFechaDesde($event)"
+          [invalid]="rangoInvalido()"
+        />
+      </span>
+    </div>
+    <div filters class="flex items-center gap-2 text-ds-sm text-muted-foreground">
+      <label for="solicitudes-fecha-hasta">Fecha hasta</label>
+      <span class="w-[160px]">
+        <app-ds-input
+          id="solicitudes-fecha-hasta"
+          type="date"
+          [value]="fechaHasta()"
+          (valueChange)="setFechaHasta($event)"
+          [invalid]="rangoInvalido()"
         />
       </span>
     </div>
@@ -84,6 +97,12 @@
       </app-ds-button>
     </span>
   </app-ds-filter-bar>
+
+  @if (rangoInvalido()) {
+    <p role="alert" class="text-ds-sm text-destructive">
+      «Fecha desde» no puede ser posterior a «Fecha hasta».
+    </p>
+  }
 
   @if (errorCancelacion()) {
     <p role="alert" class="text-ds-sm text-destructive">{{ errorCancelacion() }}</p>

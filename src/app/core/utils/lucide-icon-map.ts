@@ -22,6 +22,7 @@ import {
   LucideLayoutDashboard,
   LucideFolderOpen,
   LucideReceipt,
+  LucideHandshake,
 } from '@lucide/angular';
 
 // El backend manda el icono como texto kebab-case (ver RutaNodo.icono) — van
@@ -50,6 +51,7 @@ const ICON_MAP: Record<string, Type<unknown>> = {
   'layout-dashboard': LucideLayoutDashboard,
   'folder-open': LucideFolderOpen,
   receipt: LucideReceipt,
+  handshake: LucideHandshake,
 };
 
 // undefined para un nombre desconocido en vez de tirar error — un icono que

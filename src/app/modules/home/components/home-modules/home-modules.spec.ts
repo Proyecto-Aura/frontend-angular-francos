@@ -108,6 +108,28 @@ describe('HomeModules', () => {
     });
   });
 
+  it('shows the Producción card when the API returns it (OFT0-263)', () => {
+    const fixture = create();
+    httpMock.expectOne(TREE_URL).flush([
+      nodo({ nombre: 'ventas', etiqueta: 'Ventas' }),
+      nodo({
+        nombre: 'produccion',
+        etiqueta: 'Producción',
+        descripcion: 'Control de producción',
+      }),
+    ]);
+    fixture.detectChanges();
+
+    const modules = fixture.componentInstance['modules']();
+    expect(modules.map((m: { title: string }) => m.title)).toEqual(['Ventas', 'Producción']);
+    expect(modules[1]).toEqual({
+      icon: '/icons/module_produccion.svg',
+      title: 'Producción',
+      description: 'Control de producción',
+      routerLink: '/produccion',
+    });
+  });
+
   it('filters out a module the API returns that has no known MODULE_CARD_INFO entry (no real page yet)', () => {
     const fixture = create();
     httpMock

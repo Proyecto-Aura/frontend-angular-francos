@@ -75,6 +75,7 @@ interface FilaMovimientoGeneral {
   fechaMostrada: string;
   horaMostrada: string;
   productoNombre: string;
+  productoConPresentacion: string;
   sku: string;
   tipo: TipoMovimientoProductoTerminadoHistorial;
   cantidad: number;
@@ -299,6 +300,7 @@ export class HistorialMovimientosProductoTerminado implements OnInit, AfterViewI
       fechaMostrada: fecha,
       horaMostrada: hora,
       productoNombre: m.productoNombre,
+      productoConPresentacion: `${m.productoNombre} · ${m.presentacionCantidad} ${m.presentacionUnidadMedida}`,
       sku: m.sku,
       tipo: m.tipo,
       cantidad,

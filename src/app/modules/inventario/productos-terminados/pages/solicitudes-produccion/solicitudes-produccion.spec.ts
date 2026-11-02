@@ -173,13 +173,32 @@ describe('SolicitudesProduccion', () => {
     fixture.componentInstance.setEstado('entregado');
     flushPage(expectPageRequest((r) => r.params.get('estado') === 'entregado'));
 
-    fixture.componentInstance.setFecha('2026-09-12');
+    fixture.componentInstance.setFechaDesde('2026-09-01');
+    flushPage(expectPageRequest((r) => r.params.get('fecha_desde') === '2026-09-01'));
+
+    fixture.componentInstance.setFechaHasta('2026-09-12');
     flushPage(
       expectPageRequest(
         (r) =>
-          r.params.get('fecha_desde') === '2026-09-12' &&
+          r.params.get('fecha_desde') === '2026-09-01' &&
           r.params.get('fecha_hasta') === '2026-09-12',
       ),
+    );
+  });
+
+  it('does not request anything when the date range is inverted', () => {
+    const fixture = create();
+    flushPage(expectPageRequest((r) => r.params.get('page') === '1'));
+    flushResumen();
+
+    fixture.componentInstance.setFechaDesde('2026-09-20');
+    flushPage(expectPageRequest((r) => r.params.get('fecha_desde') === '2026-09-20'));
+
+    fixture.componentInstance.setFechaHasta('2026-09-01');
+
+    expect(fixture.componentInstance.rangoInvalido()).toBe(true);
+    httpMock.expectNone(
+      (r) => r.url === SOLICITUDES_BASE && r.params.get('fecha_hasta') === '2026-09-01',
     );
   });
 

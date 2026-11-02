@@ -5,6 +5,7 @@ import {
   OnInit,
   TemplateRef,
   ViewChild,
+  computed,
   inject,
   signal,
 } from '@angular/core';
@@ -125,12 +126,15 @@ export class SolicitudesProduccion implements OnInit, AfterViewInit {
   ];
 
   // --- Filtros (van contra el backend: search/estado/fecha_desde/
-  // fecha_hasta son query params reales de GET /solicitudes-produccion).
-  // Un solo campo "Fecha" en la UI (como en el mockup) se manda como rango
-  // de un solo dia (fecha_desde = fecha_hasta).
+  // fecha_hasta son query params reales de GET /solicitudes-produccion,
+  // ambos independientes y opcionales — confirmado por el backend).
   search = signal('');
   estadoFiltro = signal('');
-  fecha = signal('');
+  fechaDesde = signal('');
+  fechaHasta = signal('');
+  rangoInvalido = computed(() =>
+    Boolean(this.fechaDesde() && this.fechaHasta() && this.fechaDesde() > this.fechaHasta()),
+  );
 
   columnas = signal<DsColumn[]>([]);
   solicitudes = signal<FilaSolicitud[]>([]);
@@ -172,6 +176,7 @@ export class SolicitudesProduccion implements OnInit, AfterViewInit {
   }
 
   cargarSolicitudes(pagina = this.pagina()): void {
+    if (this.rangoInvalido()) return;
     this.pagina.set(pagina);
     this.cargando.set(true);
     this.errorCarga.set(false);
@@ -180,8 +185,8 @@ export class SolicitudesProduccion implements OnInit, AfterViewInit {
       .listar(pagina, this.tamanioPagina, {
         search: this.search().trim() || undefined,
         estado: (this.estadoFiltro() as EstadoSolicitudProduccion) || undefined,
-        fechaDesde: this.fecha() || undefined,
-        fechaHasta: this.fecha() || undefined,
+        fechaDesde: this.fechaDesde() || undefined,
+        fechaHasta: this.fechaHasta() || undefined,
       })
       .pipe(
         finalize(() => this.cargando.set(false)),
@@ -228,8 +233,13 @@ export class SolicitudesProduccion implements OnInit, AfterViewInit {
     this.cargarSolicitudes(1);
   }
 
-  setFecha(valor: string): void {
-    this.fecha.set(valor);
+  setFechaDesde(valor: string): void {
+    this.fechaDesde.set(valor);
+    this.cargarSolicitudes(1);
+  }
+
+  setFechaHasta(valor: string): void {
+    this.fechaHasta.set(valor);
     this.cargarSolicitudes(1);
   }
 
