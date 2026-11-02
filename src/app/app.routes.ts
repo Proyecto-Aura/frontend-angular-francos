@@ -38,6 +38,12 @@ export const routes: Routes = [
       import('./modules/inventario/inventario.route').then((m) => m.INVENTARIO_ROUTES),
   },
   {
+    path: 'produccion',
+    canActivate: [authGuard],
+    loadChildren: () =>
+      import('./modules/produccion/produccion.route').then((m) => m.PRODUCCION_ROUTES),
+  },
+  {
     path: 'configuracion',
     canActivate: [authGuard],
     loadChildren: () =>

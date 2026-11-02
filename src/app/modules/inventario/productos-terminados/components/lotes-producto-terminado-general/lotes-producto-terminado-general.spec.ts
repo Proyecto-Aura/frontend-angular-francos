@@ -137,6 +137,7 @@ describe('LotesProductoTerminadoGeneral', () => {
     expect(fila).toMatchObject({
       codigoLote: 'FR-LTP-005-260910-PT256',
       productoNombre: 'Pan de molde',
+      productoConPresentacion: 'Pan de molde · 500 gr',
       sku: 'DEMO-MOV-PT-001',
       cantidadInicialMostrada: '100 unid.',
       cantidadActualMostrada: '60 unid.',

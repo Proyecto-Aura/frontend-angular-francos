@@ -48,6 +48,7 @@ const ESTADO_TONE: Record<EstadoLoteProductoTerminado, BadgeTone> = {
 interface FilaLoteProductoTerminadoGeneral {
   codigoLote: string;
   productoNombre: string;
+  productoConPresentacion: string;
   sku: string;
   fechaProduccionMostrada: string;
   fechaVencimientoMostrada: string;
@@ -277,6 +278,7 @@ export class LotesProductoTerminadoGeneral implements OnInit, AfterViewInit {
     return {
       codigoLote: lote.codigoLote,
       productoNombre: lote.productoNombre || SIN_DATO,
+      productoConPresentacion: `${lote.productoNombre || SIN_DATO} · ${lote.presentacionCantidad} ${lote.presentacionUnidadMedida}`,
       sku: lote.sku || SIN_DATO,
       fechaProduccionMostrada: this.formatearFecha(lote.fechaProduccion),
       fechaVencimientoMostrada: lote.fechaVencimiento

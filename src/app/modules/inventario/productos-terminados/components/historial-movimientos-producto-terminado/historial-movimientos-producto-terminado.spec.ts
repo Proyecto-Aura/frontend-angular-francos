@@ -121,6 +121,7 @@ describe('HistorialMovimientosProductoTerminado', () => {
     expect(fila).toMatchObject({
       codigo: 'FR-MVP-001-261022-PT256',
       productoNombre: 'Pan de molde',
+      productoConPresentacion: 'Pan de molde · 500 gr',
       sku: 'DEMO-MOV-PT-001',
       tipo: 'entrada',
       cantidad: 100,

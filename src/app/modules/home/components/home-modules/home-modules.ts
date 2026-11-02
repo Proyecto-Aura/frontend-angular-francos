@@ -24,6 +24,7 @@ const MODULE_CARD_INFO: Record<string, { icon: string; routerLink: string }> = {
     routerLink: '/gestion-estrategica',
   },
   configuracion: { icon: '/icons/module_configuracion.svg', routerLink: '/configuracion' },
+  produccion: { icon: '/icons/module_produccion.svg', routerLink: '/produccion' },
 };
 
 // Fallback mientras responde /rutas/mi-menu (o si falla) — solo los modulos
@@ -51,11 +52,11 @@ const FALLBACK_MODULES: ModuleCard[] = [
 ];
 
 // Orden pedido a mano: Ventas, Inventario, Gestion Estrategica, Produccion,
-// Despacho, Configuracion. ventas, inventario, estrategico y configuracion
-// son nombres reales de la BD; produccion/despacho todavia no existen, asi
-// que son nombres SUPUESTOS — si el backend los crea con otro nombre hay que
-// ajustar esta lista (mientras tanto no tienen efecto: MODULE_CARD_INFO ni
-// los conoce, asi que ni aparecen).
+// Despacho, Configuracion. ventas, inventario, estrategico, configuracion y
+// produccion son nombres reales de la BD (confirmado por el backend,
+// OFT0-263); despacho todavia no existe, es un nombre SUPUESTO — si el
+// backend lo crea con otro nombre hay que ajustar esta lista (mientras
+// tanto no tiene efecto: MODULE_CARD_INFO no lo conoce, asi que no aparece).
 const MODULE_ORDER = [
   'ventas',
   'inventario',

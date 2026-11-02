@@ -1,0 +1,121 @@
+<app-ds-modal
+  [open]="open()"
+  title="Agregar lote"
+  [hasIcon]="true"
+  [hasFooter]="true"
+  [width]="640"
+  (closed)="cerrar()"
+>
+  <span
+    icon
+    class="flex h-9 w-9 items-center justify-center rounded-md bg-[rgba(255,255,255,0.18)]"
+  >
+    <app-ds-icon [img]="LucideLayers" [size]="18" />
+  </span>
+
+  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+    <app-ds-field
+      label="Código de lote"
+      [hint]="
+        codigoLote()
+          ? 'Generado automáticamente, no editable.'
+          : 'Selecciona un producto para generarlo.'
+      "
+      htmlFor="lote-pt-codigo"
+    >
+      <app-ds-input
+        id="lote-pt-codigo"
+        [value]="generandoCodigo() ? 'Generando…' : codigoLote()"
+        placeholder="Se generará al elegir el producto"
+        [disabled]="true"
+      />
+    </app-ds-field>
+
+    <app-ds-field
+      label="Producto"
+      htmlFor="lote-pt-producto"
+      [required]="true"
+      [error]="errorDe('productoTerminadoId')"
+    >
+      <app-ds-combobox
+        id="lote-pt-producto"
+        [value]="productoTerminadoId()"
+        (valueChange)="seleccionarProducto($event)"
+        [options]="productosOptions()"
+        placeholder="Buscar producto…"
+        emptyMessage="Sin productos que coincidan."
+        [invalid]="!!errores().productoTerminadoId"
+      />
+    </app-ds-field>
+
+    <app-ds-field
+      label="Fecha de producción"
+      hint="Se registra automáticamente."
+      htmlFor="lote-pt-fecha-produccion"
+    >
+      <app-ds-input
+        id="lote-pt-fecha-produccion"
+        [value]="fechaProduccionMostrada()"
+        [disabled]="true"
+      />
+    </app-ds-field>
+
+    <app-ds-field
+      label="Fecha de vencimiento"
+      htmlFor="lote-pt-fecha-vencimiento"
+      hint="Opcional."
+      [error]="errorDe('fechaVencimiento')"
+    >
+      <app-ds-input
+        id="lote-pt-fecha-vencimiento"
+        type="date"
+        [(value)]="fechaVencimiento"
+        [invalid]="!!errores().fechaVencimiento"
+      />
+    </app-ds-field>
+
+    <app-ds-field
+      label="Cantidad"
+      htmlFor="lote-pt-cantidad"
+      [required]="true"
+      [error]="errorDe('cantidadInicial')"
+    >
+      <app-ds-input
+        id="lote-pt-cantidad"
+        [(value)]="cantidadInicial"
+        placeholder="0"
+        [invalid]="!!errores().cantidadInicial"
+      />
+    </app-ds-field>
+
+    <app-ds-field
+      label="Presentación"
+      hint="Se completa según el producto seleccionado."
+      htmlFor="lote-pt-presentacion"
+    >
+      <app-ds-input
+        id="lote-pt-presentacion"
+        [value]="presentacionProducto()"
+        placeholder="Selecciona un producto"
+        [disabled]="true"
+      />
+    </app-ds-field>
+  </div>
+
+  @if (errorGeneral()) {
+    <div class="mt-4 rounded-lg bg-destructive/10 px-3.5 py-3 text-ds-sm text-destructive">
+      {{ errorGeneral() }}
+    </div>
+  }
+
+  <span footer class="flex gap-2">
+    <app-ds-button variant="secondary" (clicked)="cerrar()">Cancelar</app-ds-button>
+    <app-ds-button
+      variant="primary"
+      [disabled]="guardando() || generandoCodigo() || !codigoLote()"
+      (clicked)="guardar()"
+    >
+      {{ guardando() ? 'Registrando…' : 'Registrar lote' }}
+    </app-ds-button>
+  </span>
+</app-ds-modal>
