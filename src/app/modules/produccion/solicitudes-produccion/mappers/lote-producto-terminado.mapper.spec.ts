@@ -36,6 +36,7 @@ function makeLoteForm(
     fechaProduccion: '2026-11-01',
     fechaVencimiento: '2026-12-01',
     cantidadInicial: '100',
+    solicitudProduccionId: '',
     ...overrides,
   };
 }
@@ -90,6 +91,20 @@ describe('lote-producto-terminado.mapper (Produccion)', () => {
       fecha_produccion: '2026-11-01',
       cantidad_inicial: 100,
     });
+  });
+
+  it('includes solicitud_produccion_id solo cuando el lote esta ligado a una solicitud', () => {
+    const request = toCrearLoteProductoTerminadoRequest(
+      makeLoteForm({ solicitudProduccionId: '10' }),
+    );
+
+    expect(request).toMatchObject({ solicitud_produccion_id: 10 });
+  });
+
+  it('omits solicitud_produccion_id en el flujo suelto (sin solicitud elegida)', () => {
+    const request = toCrearLoteProductoTerminadoRequest(makeLoteForm());
+
+    expect(request).not.toHaveProperty('solicitud_produccion_id');
   });
 
   it('builds the codigo_lote using el SKU (sin el prefijo "FR-" repetido), no el id interno', () => {

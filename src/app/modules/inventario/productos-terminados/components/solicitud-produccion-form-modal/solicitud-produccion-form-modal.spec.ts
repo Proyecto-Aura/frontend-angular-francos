@@ -93,7 +93,7 @@ describe('SolicitudProduccionFormModal', () => {
     const fixture = openModal();
 
     expect(fixture.componentInstance.productosOptions()).toEqual([
-      { value: '256', label: 'Camote frito', secondary: 'FR-P3-PR2' },
+      { value: '256', label: 'Camote frito · 500 gr', secondary: 'FR-P3-PR2' },
     ]);
   });
 
@@ -139,19 +139,17 @@ describe('SolicitudProduccionFormModal', () => {
     ]);
   });
 
-  it('shows presentacion/stock actual/stock minimo once a producto is selected on that fila', () => {
+  it('shows stock actual/stock minimo once a producto is selected on that fila', () => {
     const fixture = openModal();
     const component = fixture.componentInstance;
     const fila = component.filas()[0];
 
-    expect(component.presentacionDeFila(fila)).toBe('—');
     expect(component.stockActualDeFila(fila)).toBe('—');
     expect(component.stockMinimoDeFila(fila)).toBe('—');
 
     component.seleccionarProductoDeFila(1, '256');
     const filaConProducto = component.filas()[0];
 
-    expect(component.presentacionDeFila(filaConProducto)).toBe('500 gr');
     expect(component.stockActualDeFila(filaConProducto)).toBe('45');
     expect(component.stockMinimoDeFila(filaConProducto)).toBe('10');
   });

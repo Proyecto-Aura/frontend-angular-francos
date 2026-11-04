@@ -90,6 +90,10 @@
     </p>
   }
 
+  @if (errorIniciar()) {
+    <p role="alert" class="text-ds-sm text-destructive">{{ errorIniciar() }}</p>
+  }
+
   <app-ds-card [padded]="false" [hasFooter]="totalPaginas() > 1">
     @if (cargando()) {
       <div role="status" class="p-12 text-center text-muted-foreground">Cargando…</div>
@@ -121,6 +125,7 @@
 
   <app-pedido-preparar-detalle-modal
     [pedidoId]="pedidoDetalleId()"
+    [modo]="modoDetalle()"
     (closed)="cerrarDetalle()"
     (actualizado)="pedidoActualizado()"
   />
@@ -144,10 +149,37 @@
 </ng-template>
 
 <ng-template #accionesCell let-fila>
-  <div class="flex justify-end">
-    <app-ds-button variant="secondary" size="sm" (clicked)="verDetalle(fila.pedido)">
-      <span icon><app-ds-icon [img]="LucideEye" [size]="16" /></span>
-      Ver detalle
-    </app-ds-button>
+  <div class="flex justify-end gap-2">
+    <app-ds-icon-button
+      label="Ver detalle"
+      variant="secondary"
+      size="md"
+      (clicked)="verDetalle(fila.pedido)"
+    >
+      <app-ds-icon [img]="LucideEye" [size]="16" />
+    </app-ds-icon-button>
+
+    @if (fila.estado === 'en_espera_inventario') {
+      <app-ds-icon-button
+        [label]="tooltipIniciar(fila)"
+        variant="secondary"
+        size="md"
+        [disabled]="fila.disponibilidad !== 'completo' || iniciandoId() === fila.pedido.id"
+        (clicked)="iniciarPreparacion(fila)"
+      >
+        <app-ds-icon [img]="LucidePlay" [size]="16" />
+      </app-ds-icon-button>
+    }
+
+    @if (fila.estado === 'en_preparacion') {
+      <app-ds-icon-button
+        label="Marcar pendiente de entrega"
+        variant="secondary"
+        size="md"
+        (clicked)="abrirEntrega(fila.pedido)"
+      >
+        <app-ds-icon [img]="LucidePackageCheck" [size]="16" />
+      </app-ds-icon-button>
+    }
   </div>
 </ng-template>

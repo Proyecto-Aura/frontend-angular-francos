@@ -8,6 +8,7 @@ function makeForm(overrides: Partial<LoteProductoTerminadoForm> = {}): LoteProdu
     fechaProduccion: '2026-11-01',
     fechaVencimiento: '2026-12-01',
     cantidadInicial: '50',
+    solicitudProduccionId: '',
     ...overrides,
   };
 }

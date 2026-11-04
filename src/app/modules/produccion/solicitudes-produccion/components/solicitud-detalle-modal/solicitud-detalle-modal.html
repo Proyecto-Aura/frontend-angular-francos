@@ -10,7 +10,7 @@
     icon
     class="flex h-9 w-9 items-center justify-center rounded-md bg-[rgba(255,255,255,0.18)]"
   >
-    <app-ds-icon [img]="LucideEye" [size]="18" />
+    <app-ds-icon [img]="headerIcon()" [size]="18" />
   </span>
 
   @if (cargando()) {
@@ -46,14 +46,39 @@
           empty="Sin productos en esta solicitud"
         />
       </app-ds-card>
+
+      @if (modo() === 'entregar' && faltanLotes()) {
+        <p class="text-ds-sm text-muted-foreground">
+          Faltan lotes por registrar para completar esta solicitud.
+        </p>
+      }
+
+      @if (errorEntrega()) {
+        <p role="alert" class="text-ds-sm text-destructive">{{ errorEntrega() }}</p>
+      }
     </div>
   }
 
-  <span footer>
+  <span footer class="flex gap-2">
     <app-ds-button variant="secondary" (clicked)="cerrar()">Cerrar</app-ds-button>
+    @if (modo() === 'entregar') {
+      <app-ds-button
+        variant="destructive"
+        [disabled]="registrando() || cargando() || error() || faltanLotes()"
+        (clicked)="registrarEntrega()"
+      >
+        {{ registrando() ? 'Registrando…' : 'Registrar entrega' }}
+      </app-ds-button>
+    }
   </span>
 </app-ds-modal>
 
 <ng-template #productoCell let-fila>
   <app-ds-cell-stack [primary]="fila.productoNombre" [secondary]="fila.sku" />
+</ng-template>
+
+<ng-template #loteCell let-fila>
+  <app-ds-badge [tone]="fila.loteCreado ? 'success' : 'warning'" [dot]="true">
+    {{ fila.loteCreado ? 'Creado' : 'Pendiente' }}
+  </app-ds-badge>
 </ng-template>

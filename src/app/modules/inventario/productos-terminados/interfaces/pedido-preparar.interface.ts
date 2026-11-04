@@ -1,6 +1,8 @@
 export type EstadoPedidoPreparar = 'en_espera_inventario' | 'en_preparacion' | 'pendiente_entrega';
 
-export type DisponibilidadPedidoPreparar = 'completo' | 'insuficiente';
+// 3 estados (OFT0-262): completo = todos los items con stock suficiente,
+// sin_stock = ninguno alcanza, parcial = cualquier otro caso.
+export type DisponibilidadPedidoPreparar = 'completo' | 'parcial' | 'sin_stock';
 
 export interface PedidoPreparar {
   id: number;
@@ -12,6 +14,7 @@ export interface PedidoPreparar {
   // para la suma de cantidades, mismo criterio que el backend.
   cantidadProductos: number;
   cantidadUnidades: number;
+  disponibilidad: DisponibilidadPedidoPreparar;
 }
 
 export interface PedidosPorPrepararPagina {

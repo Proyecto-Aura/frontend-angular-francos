@@ -7,7 +7,11 @@
 export type EstadoPedidoPrepararDto =
   'en_espera_inventario' | 'en_preparacion' | 'pendiente_entrega';
 
-export type DisponibilidadPedidoPrepararDto = 'completo' | 'insuficiente';
+// 3 estados (antes binario 'completo'|'insuficiente', ampliado en OFT0-262
+// a pedido del usuario): completo = todos los items con stock suficiente,
+// sin_stock = NINGUN item alcanza, parcial = cualquier otro caso (confirmado
+// por el backend, mismo criterio centralizado para listado y detalle).
+export type DisponibilidadPedidoPrepararDto = 'completo' | 'parcial' | 'sin_stock';
 
 /** Fila de GET /inventario/pedidos. */
 export interface PedidoPrepararResumenDto {
@@ -26,6 +30,10 @@ export interface PedidoPrepararResumenDto {
   unidades: number;
   fecha_entrega: string | null;
   created_at: string;
+  // Mismo criterio que el detalle (completo/parcial/sin_stock, ver arriba)
+  // — agregado solo a este listado, confirmado por el backend que GET
+  // /pedidos y el listado de despacho NO lo traen.
+  disponibilidad: DisponibilidadPedidoPrepararDto;
 }
 
 export interface PedidosPorPrepararPageDto {

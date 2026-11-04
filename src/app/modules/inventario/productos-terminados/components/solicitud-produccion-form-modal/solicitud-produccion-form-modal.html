@@ -3,7 +3,7 @@
   title="Nueva solicitud a producción"
   [hasIcon]="true"
   [hasFooter]="true"
-  [width]="860"
+  [width]="1000"
   (closed)="cerrar()"
 >
   <span
@@ -89,12 +89,6 @@
             scope="col"
             class="h-[52px] whitespace-nowrap bg-table-header px-5 text-left font-normal text-muted-foreground"
           >
-            Presentación
-          </th>
-          <th
-            scope="col"
-            class="h-[52px] whitespace-nowrap bg-table-header px-5 text-left font-normal text-muted-foreground"
-          >
             Stock actual
           </th>
           <th
@@ -131,13 +125,6 @@
                 [invalid]="!!errorDeFila(fila.id, 'productoTerminadoId')"
                 size="sm"
               />
-            </td>
-            <td
-              class="whitespace-nowrap px-5 py-3 text-muted-foreground"
-              [class.border-b]="!isLast"
-              [class.border-border]="!isLast"
-            >
-              {{ presentacionDeFila(fila) }}
             </td>
             <td
               class="whitespace-nowrap px-5 py-3 text-muted-foreground"

@@ -24,6 +24,12 @@ export interface DetalleSolicitudProduccionDto {
   presentacion_unidad_medida: 'kg' | 'gr';
   cantidad_solicitada: number;
   created_at: string;
+  // Agregado por el backend para OFT0-262 ("Registrar entrega"): true si ya
+  // existe un lote de producto terminado ligado a esta linea (via
+  // lotes-producto-terminado.solicitud_produccion_id), false si todavia
+  // falta registrarlo. El backend tambien bloquea con 409 "Faltan lotes por
+  // registrar..." si se intenta marcar "entregado" con alguno en false.
+  lote_creado: boolean;
 }
 
 export interface SolicitudProduccionDto {

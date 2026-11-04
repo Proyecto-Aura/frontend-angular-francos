@@ -1,5 +1,4 @@
 import {
-  AfterViewInit,
   Component,
   DestroyRef,
   TemplateRef,
@@ -12,7 +11,7 @@ import {
   signal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { LucideEye } from '@lucide/angular';
+import { LucideEye, LucidePackageCheck } from '@lucide/angular';
 import { Subscription, finalize } from 'rxjs';
 import { Badge, BadgeTone } from '../../../../../shared/ds/badge/badge';
 import { Button } from '../../../../../shared/ds/button/button';
@@ -43,23 +42,37 @@ interface FilaDetalle {
   productoNombre: string;
   sku: string;
   presentacionMostrada: string;
+  loteCreado: boolean;
   cantidadSolicitadaMostrada: string;
 }
 
 // "Ver detalle" de una solicitud a produccion, dentro del modulo Produccion
 // (OFT0-263) — conectado a GET /solicitudes-produccion/:id (SI trae el
-// detalle embebido siempre, a diferencia del listado). Solo lectura: el
-// avance de estado (Iniciar produccion / Marcar entregado / Rechazar) vive
-// en la fila de la tabla, no aca, mismo criterio que el modal equivalente
-// de Inventario. A diferencia de ese modal, este NO cruza el stock actual
-// contra /producto-presentaciones (esa complejidad es propia de Inventario,
-// que gestiona el catalogo; Produccion solo necesita ver que se pidio).
+// detalle embebido siempre, a diferencia del listado). Solo lectura en
+// modo="ver": el avance pendiente -> en_proceso ("Iniciar producción") y el
+// rechazo viven en la fila de la tabla, no aca.
+//
+// modo="entregar" (OFT0-262, mismo patron que PedidoPrepararDetalleModal en
+// Inventario: un unico componente con dos modos en vez de dos modales) es
+// el unico caso en el que este modal SI avanza un estado — lo abre el
+// icono de la fila cuando la solicitud ya esta "en_proceso". El boton
+// "Registrar entrega" SOLO cambia el estado de la solicitud a "entregado"
+// (PATCH .../estado) — a diferencia de "Marcar pendiente de entrega" en
+// Pedidos, esto NO manda ningun movimiento de inventario (pedido explicito
+// del usuario: la cantidad aca es estatica y no editable, Produccion ya
+// fabrico, no se descuenta ni se agrega stock desde esta pantalla).
+//
+// A proposito NO se muestra "Stock actual" aca (se probo y se quito,
+// pedido explicito del usuario): como un lote ya suma al stock apenas se
+// crea (antes de "Registrar entrega"), mostrar el stock en vivo en este
+// modal confundia — parecia que la entrega ya se habia aplicado cuando en
+// realidad solo se estaba registrando la produccion.
 @Component({
   imports: [Badge, Button, Card, CellStack, DataTable, Icon, Modal],
   selector: 'app-solicitud-detalle-modal',
   templateUrl: './solicitud-detalle-modal.html',
 })
-export class SolicitudDetalleModal implements AfterViewInit {
+export class SolicitudDetalleModal {
   private solicitudService = inject(SolicitudProduccionService);
   private destroyRef = inject(DestroyRef);
   private cargaSub: Subscription | null = null;
@@ -67,16 +80,29 @@ export class SolicitudDetalleModal implements AfterViewInit {
   @ViewChild('productoCell', { static: true })
   productoCellTpl!: TemplateRef<{ $implicit: FilaDetalle; index: number }>;
 
+  @ViewChild('loteCell', { static: true })
+  loteCellTpl!: TemplateRef<{ $implicit: FilaDetalle; index: number }>;
+
   /** null = cerrado. */
   solicitudId = input<number | null>(null);
+  // 'ver' (default) = solo lectura. 'entregar' = agrega el boton "Registrar
+  // entrega" (solo lo usa el icono de la fila cuando la solicitud ya esta
+  // "en_proceso").
+  modo = input<'ver' | 'entregar'>('ver');
   closed = output<void>();
+  // Se emite cuando "Registrar entrega" se aplica (o rebota en 409 y hay
+  // que refrescar igual) — el listado vuelve a pedir pagina + indicadores.
+  entregaRegistrada = output<void>();
 
   readonly LucideEye = LucideEye;
 
-  columnas = signal<DsColumn[]>([]);
+  headerIcon = computed(() => (this.modo() === 'entregar' ? LucidePackageCheck : LucideEye));
+
   solicitud = signal<SolicitudProduccion | null>(null);
   cargando = signal(false);
   error = signal(false);
+  registrando = signal(false);
+  errorEntrega = signal('');
 
   constructor() {
     effect(() => {
@@ -87,23 +113,28 @@ export class SolicitudDetalleModal implements AfterViewInit {
     });
   }
 
-  ngAfterViewInit(): void {
-    this.columnas.set([
-      { key: 'productoNombre', header: 'Producto', cellTemplate: this.productoCellTpl },
-      { key: 'presentacionMostrada', header: 'Presentación', muted: true },
-      {
-        key: 'cantidadSolicitadaMostrada',
-        header: 'Cantidad solicitada',
-        numeric: true,
-        strong: true,
-      },
-    ]);
-  }
+  columnas = computed<DsColumn[]>(() => [
+    { key: 'productoNombre', header: 'Producto', cellTemplate: this.productoCellTpl },
+    { key: 'presentacionMostrada', header: 'Presentación', muted: true },
+    {
+      key: 'cantidadSolicitadaMostrada',
+      header: 'Cantidad solicitada',
+      numeric: true,
+      strong: true,
+    },
+    { key: 'loteCreado', header: 'Lote', cellTemplate: this.loteCellTpl },
+  ]);
+
+  // Bloquea "Registrar entrega" mientras falte algun lote por registrar —
+  // el backend tambien lo valida con 409 "Faltan lotes por registrar...",
+  // esto solo evita dejar que se intente el click (OFT0-262).
+  faltanLotes = computed(() => this.solicitud()?.detalle.some((d) => !d.loteCreado) ?? false);
 
   cargar(id: number): void {
     this.cargaSub?.unsubscribe();
     this.cargando.set(true);
     this.error.set(false);
+    this.errorEntrega.set('');
 
     this.cargaSub = this.solicitudService
       .obtener(id)
@@ -152,6 +183,7 @@ export class SolicitudDetalleModal implements AfterViewInit {
       productoNombre: d.productoNombre,
       sku: d.sku,
       presentacionMostrada: `${d.presentacionCantidad} ${d.presentacionUnidadMedida}`,
+      loteCreado: d.loteCreado,
       cantidadSolicitadaMostrada: `${d.cantidadSolicitada} unid.`,
     }));
   });
@@ -164,10 +196,55 @@ export class SolicitudDetalleModal implements AfterViewInit {
     return tonoEstadoSolicitud(estado);
   }
 
+  // Unico flujo que hace PATCH desde este modal: "entregar" siempre
+  // representa la solicitud en "en_proceso" (lo garantiza la fila que abre
+  // este modo), asi que esto siempre es el PATCH .../estado hacia
+  // "entregado" — "Iniciar producción" (pendiente -> en_proceso) sigue
+  // siendo un PATCH directo desde la fila, sin este modal.
+  registrarEntrega(): void {
+    const s = this.solicitud();
+    if (
+      !s ||
+      this.modo() !== 'entregar' ||
+      this.registrando() ||
+      this.cargando() ||
+      this.error() ||
+      this.faltanLotes()
+    ) {
+      return;
+    }
+
+    this.registrando.set(true);
+    this.errorEntrega.set('');
+
+    this.solicitudService
+      .cambiarEstado(s.id, 'entregado')
+      .pipe(
+        finalize(() => this.registrando.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: () => {
+          this.entregaRegistrada.emit();
+          this.cerrar();
+        },
+        error: (error: unknown) => {
+          const status = (error as { status?: number }).status;
+          if (status === 409) {
+            this.entregaRegistrada.emit();
+            this.cerrar();
+            return;
+          }
+          this.errorEntrega.set('No se pudo registrar la entrega. Intenta nuevamente.');
+        },
+      });
+  }
+
   cerrar(): void {
     this.cargaSub?.unsubscribe();
     this.solicitud.set(null);
     this.error.set(false);
+    this.errorEntrega.set('');
     this.closed.emit();
   }
 

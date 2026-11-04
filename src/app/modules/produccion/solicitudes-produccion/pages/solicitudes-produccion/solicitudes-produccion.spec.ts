@@ -37,6 +37,7 @@ function makeSolicitudDto(overrides: Partial<SolicitudProduccionDto> = {}): Soli
         presentacion_unidad_medida: 'gr',
         cantidad_solicitada: 20,
         created_at: '2026-09-12T00:00:00.000Z',
+        lote_creado: false,
       },
     ],
     ...overrides,
@@ -237,7 +238,7 @@ describe('SolicitudesProduccion (Produccion)', () => {
     });
   });
 
-  it('opens the detalle modal with the id of the fila clickeada and closes it on cerrarDetalle()', () => {
+  it('opens the detalle modal in modo "ver" with the id of the fila clickeada and closes it on cerrarDetalle()', () => {
     const fixture = create();
     flushPage(
       expectPageRequest((r) => r.params.get('page') === '1'),
@@ -250,9 +251,25 @@ describe('SolicitudesProduccion (Produccion)', () => {
     const [fila] = fixture.componentInstance.solicitudes();
     fixture.componentInstance.verDetalle(fila.solicitud);
     expect(fixture.componentInstance.solicitudDetalleId()).toBe(10);
+    expect(fixture.componentInstance.modalModo()).toBe('ver');
 
     fixture.componentInstance.cerrarDetalle();
     expect(fixture.componentInstance.solicitudDetalleId()).toBeNull();
+  });
+
+  it('abrirEntrega opens the same modal pero en modo "entregar"', () => {
+    const fixture = create();
+    flushPage(
+      expectPageRequest((r) => r.params.get('page') === '1'),
+      [makeSolicitudDto({ estado: 'en_proceso' })],
+    );
+    flushResumen();
+
+    const [fila] = fixture.componentInstance.solicitudes();
+    fixture.componentInstance.abrirEntrega(fila.solicitud);
+
+    expect(fixture.componentInstance.solicitudDetalleId()).toBe(10);
+    expect(fixture.componentInstance.modalModo()).toBe('entregar');
   });
 
   it('accionSiguiente/puedeRechazar reflejan la maquina de estados por rol produccion', () => {

@@ -47,10 +47,6 @@ interface FilaDetalle {
   sku: string;
   presentacionMostrada: string;
   stockActualMostrado: string;
-  // true cuando el stock disponible no alcanza lo solicitado — mismo
-  // criterio visual que el mockup (stock en rojo).
-  stockInsuficiente: boolean;
-  cantidadSolicitada: number;
   cantidadSolicitadaMostrada: string;
 }
 
@@ -64,7 +60,11 @@ interface FilaDetalle {
 // El stock actual por linea no viene en DetalleSolicitudProduccionDto (solo
 // datos resueltos de producto/presentacion) — se resuelve uniendo contra el
 // catalogo de /producto-presentaciones por productoTerminadoId, mismo
-// patron que SolicitudProduccionFormModal.productoDeFila().
+// patron que SolicitudProduccionFormModal.productoDeFila(). Se muestra
+// siempre en texto plano (sin resaltar en rojo si es menor a lo
+// solicitado) — pedido explicito del usuario: una solicitud A PRODUCCION
+// es justamente pedir que se fabrique mas, asi que el stock actual sea
+// menor a lo solicitado es lo esperado, no un problema a sealar.
 @Component({
   imports: [Badge, Button, Card, CellStack, DataTable, Icon, Modal],
   selector: 'app-solicitud-detalle-modal',
@@ -78,9 +78,6 @@ export class SolicitudDetalleModal implements AfterViewInit {
 
   @ViewChild('productoCell', { static: true })
   productoCellTpl!: TemplateRef<{ $implicit: FilaDetalle; index: number }>;
-
-  @ViewChild('stockCell', { static: true })
-  stockCellTpl!: TemplateRef<{ $implicit: FilaDetalle; index: number }>;
 
   /** null = cerrado. */
   solicitudId = input<number | null>(null);
@@ -107,7 +104,7 @@ export class SolicitudDetalleModal implements AfterViewInit {
     this.columnas.set([
       { key: 'productoNombre', header: 'Producto', cellTemplate: this.productoCellTpl },
       { key: 'presentacionMostrada', header: 'Presentación', muted: true },
-      { key: 'stockActualMostrado', header: 'Stock actual', cellTemplate: this.stockCellTpl },
+      { key: 'stockActualMostrado', header: 'Stock actual', muted: true },
       {
         key: 'cantidadSolicitadaMostrada',
         header: 'Cantidad solicitada',
@@ -185,8 +182,6 @@ export class SolicitudDetalleModal implements AfterViewInit {
           d.presentacionUnidadMedida,
         ),
         stockActualMostrado: stockActual !== null ? `${stockActual} unid.` : SIN_DATO,
-        stockInsuficiente: stockActual !== null && stockActual < d.cantidadSolicitada,
-        cantidadSolicitada: d.cantidadSolicitada,
         cantidadSolicitadaMostrada: `${d.cantidadSolicitada} unid.`,
       };
     });

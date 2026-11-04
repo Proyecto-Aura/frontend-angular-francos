@@ -11,7 +11,7 @@ import {
   signal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { LucideEye } from '@lucide/angular';
+import { LucideEye, LucidePackageCheck } from '@lucide/angular';
 import { Subscription, finalize } from 'rxjs';
 import { Badge, BadgeTone } from '../../../../../shared/ds/badge/badge';
 import { Button } from '../../../../../shared/ds/button/button';
@@ -26,10 +26,9 @@ import {
   PedidoPrepararDetalle,
 } from '../../interfaces/pedido-preparar.interface';
 import {
-  etiquetaAccionSiguienteEstado,
   etiquetaDisponibilidadPedidoPreparar,
   etiquetaEstadoPedidoPreparar,
-  siguienteEstadoPedidoPreparar,
+  tonoDisponibilidadPedidoPreparar,
   tonoEstadoPedidoPreparar,
 } from '../../mappers/pedido-preparar.mapper';
 import { PedidoPrepararService } from '../../services/pedido-preparar.service';
@@ -46,29 +45,32 @@ interface FilaItem {
   sku: string;
   presentacion: string;
   solicitado: number;
+  solicitadoMostrado: string;
   stockDisponible: number;
+  stockDisponibleMostrado: string;
   cantidadPreparada: number;
 }
 
-// "Ver detalle" de un pedido por preparar (OFT0-260), conectado a
-// GET /inventario/pedidos/:id. Ademas del detalle de solo lectura, expone
-// la unica accion que tiene sentido desde esta pantalla: avanzar el pedido
-// al siguiente estado de inventario (PATCH .../en-preparacion o PATCH
-// .../pendiente-entrega segun el estado actual, ver
-// siguienteEstadoPedidoPreparar en el mapper) — "pendiente_entrega" ya no
-// tiene siguiente paso aca, queda a la espera de que despacho lo recoja
-// (modulo aparte, fuera de alcance).
+// Modal de pedido por preparar (OFT0-260, dividido en dos modos en
+// OFT0-262 a pedido explicito del usuario): "Ver detalle" ya NO cambia de
+// comportamiento segun el estado del pedido — siempre muestra la tabla de
+// solo lectura (columna "Stock disponible" con badge por fila) y no ofrece
+// ninguna accion, solo "Cerrar". Las transiciones de estado ahora viven
+// exclusivamente en los iconos de la fila de la pagina: "Iniciar
+// preparación" hace el PATCH directo sin abrir este modal, y "Marcar
+// pendiente de entrega" abre este MISMO componente pero con modo="preparar"
+// (unico caso en el que se usa, siempre con estado "en_preparacion" porque
+// asi lo garantiza la fila que lo abre).
 //
-// Mientras el pedido esta "en_preparacion", la tabla de items se vuelve
-// editable: cada linea tiene un campo "cantidad preparada" (por defecto la
-// cantidad solicitada, el operario la ajusta si preparo de mas/menos). Al
-// confirmar "pendiente_entrega" esas cantidades se mandan todas juntas — el
-// backend genera un movimiento de salida de inventario por producto
-// terminado a partir de ahi (confirmado por el backend, incluye reparto
-// FEFO entre lotes), asi que el front no arma el movimiento, solo manda la
-// cantidad preparada por item.
+// En modo="preparar" la tabla de items se vuelve editable: cada linea tiene
+// un campo "cantidad preparada" (por defecto la cantidad solicitada, el
+// operario la ajusta si preparo de mas/menos). Al confirmar esas cantidades
+// se mandan todas juntas — el backend genera un movimiento de salida de
+// inventario por producto terminado a partir de ahi (confirmado por el
+// backend, incluye reparto FEFO entre lotes), asi que el front no arma el
+// movimiento, solo manda la cantidad preparada por item.
 //
-// Los PATCH de transicion devuelven el pedido completo actualizado con el
+// El PATCH de transicion devuelve el pedido completo actualizado con el
 // mismo shape que obtener() (confirmado por el backend) — se usa esa
 // respuesta directamente en vez de volver a pedir el detalle.
 @Component({
@@ -87,14 +89,23 @@ export class PedidoPrepararDetalleModal {
   @ViewChild('cantidadPreparadaCell', { static: true })
   cantidadPreparadaCellTpl!: TemplateRef<{ $implicit: FilaItem; index: number }>;
 
+  @ViewChild('disponibilidadCell', { static: true })
+  disponibilidadCellTpl!: TemplateRef<{ $implicit: FilaItem; index: number }>;
+
   /** null = cerrado. */
   pedidoId = input<number | null>(null);
+  // 'ver' (default) = solo lectura, nunca muestra acciones. 'preparar' =
+  // tabla editable + boton "Marcar pendiente de entrega" (solo lo usa el
+  // icono de la fila cuando el pedido ya esta "en_preparacion").
+  modo = input<'ver' | 'preparar'>('ver');
   closed = output<void>();
   // Se emite cuando una transicion de estado se aplica (o rebota en 409 y
   // hay que refrescar igual) — el listado vuelve a pedir pagina + indicadores.
   actualizado = output<void>();
 
   readonly LucideEye = LucideEye;
+
+  headerIcon = computed(() => (this.modo() === 'preparar' ? LucidePackageCheck : LucideEye));
 
   pedido = signal<PedidoPrepararDetalle | null>(null);
   cargando = signal(false);
@@ -107,27 +118,41 @@ export class PedidoPrepararDetalleModal {
   // nuevo (ver sincronizarCantidadesPreparadas).
   private cantidadesPreparadas = signal<Map<number, number>>(new Map());
 
+  pedidoEntregado = computed(() => this.pedido()?.estado === 'pendiente_entrega');
+
   columnas = computed<DsColumn[]>(() => {
     const columnas: DsColumn[] = [
       { key: 'producto', header: 'Producto', cellTemplate: this.productoCellTpl },
       { key: 'presentacion', header: 'Presentación', muted: true },
-      { key: 'solicitado', header: 'Solicitado', numeric: true, strong: true },
+      { key: 'solicitadoMostrado', header: 'Solicitado', numeric: true, strong: true },
     ];
-    if (this.pedido()?.estado === 'en_preparacion') {
-      columnas.push({
-        key: 'cantidadPreparada',
-        header: 'Cantidad preparada',
-        numeric: true,
-        cellTemplate: this.cantidadPreparadaCellTpl,
-      });
-    } else {
+    if (this.modo() === 'preparar') {
+      // En modo "preparar" tambien se ve el stock disponible (sin badge,
+      // solo el numero) junto a la cantidad editable — el operario lo
+      // necesita para decidir hasta cuanto ajustar "Cantidad preparada"
+      // cuando falta stock.
+      columnas.push(
+        { key: 'stockDisponibleMostrado', header: 'Stock disponible', muted: true },
+        {
+          key: 'cantidadPreparada',
+          header: 'Cantidad preparada',
+          numeric: true,
+          cellTemplate: this.cantidadPreparadaCellTpl,
+        },
+      );
+    } else if (!this.pedidoEntregado()) {
       columnas.push({
         key: 'stockDisponible',
         header: 'Stock disponible',
-        numeric: true,
-        muted: true,
+        cellTemplate: this.disponibilidadCellTpl,
       });
     }
+    // Una vez "pendiente_entrega" ya se aplico el descuento de stock: la
+    // tabla se queda solo con Producto/Presentacion/Solicitado, sin ninguna
+    // columna de stock. Se intento agregar "Stock actual"/"Stock anterior"
+    // (ver git blame), pero el backend lo revirtio — el calculo usaba stock
+    // EN VIVO, asi que "stock anterior" no quedaba congelado y el numero se
+    // movia solo cada vez que se preparaba otro pedido del mismo producto.
     return columnas;
   });
 
@@ -178,6 +203,9 @@ export class PedidoPrepararDetalleModal {
     return p ? `Pedido ${p.codigo}` : 'Pedido';
   });
 
+  // "Disponibilidad" vive aparte de campos() (no es texto plano, es un
+  // badge de 3 tonos — completo/parcial/sin_stock, igual patron que el
+  // estado de "Stock de productos").
   campos = computed<Campo[]>(() => {
     const p = this.pedido();
     if (!p) return [];
@@ -186,9 +214,25 @@ export class PedidoPrepararDetalleModal {
       { label: 'Fecha del pedido', value: this.formatearFechaHora(p.fechaCreacion) },
       { label: 'Productos', value: `${p.cantidadProductos} productos` },
       { label: 'Unidades', value: `${p.cantidadUnidades}` },
-      { label: 'Disponibilidad', value: etiquetaDisponibilidadPedidoPreparar(p.disponibilidad) },
     ];
   });
+
+  disponibilidadLabel = computed(() => {
+    const p = this.pedido();
+    return p ? etiquetaDisponibilidadPedidoPreparar(p.disponibilidad) : '';
+  });
+
+  disponibilidadTono = computed<BadgeTone>(() => {
+    const p = this.pedido();
+    return p ? tonoDisponibilidadPedidoPreparar(p.disponibilidad) : 'neutral';
+  });
+
+  // Mismo criterio que el boton "Iniciar preparación" de la fila: bloqueado
+  // salvo disponibilidad === 'completo' — pedido explicito del usuario, para
+  // que el flujo sea consistente en los dos pasos (iniciar y entregar), aun
+  // si eso significa que a veces haya que esperar a que se libere stock en
+  // vez de ajustar la cantidad preparada a lo que si hay.
+  entregaBloqueada = computed(() => this.pedido()?.disponibilidad !== 'completo');
 
   filas = computed<FilaItem[]>(() => {
     const p = this.pedido();
@@ -201,37 +245,19 @@ export class PedidoPrepararDetalleModal {
       sku: i.sku,
       presentacion: i.presentacion,
       solicitado: i.cantidad,
+      solicitadoMostrado: `${i.cantidad} unid.`,
       stockDisponible: i.stockDisponible,
+      stockDisponibleMostrado: `${i.stockDisponible} unid.`,
       cantidadPreparada: cantidades.get(i.id) ?? i.cantidad,
     }));
   });
 
   textoAyuda = computed(() => {
-    const estado = this.pedido()?.estado;
-    if (estado === 'en_espera_inventario') {
-      if (this.inicioBloqueado()) return null;
-      return 'Inicia la preparación para registrar las cantidades preparadas.';
+    if (this.modo() !== 'preparar') return null;
+    if (this.entregaBloqueada()) {
+      return 'No se puede confirmar la entrega: falta stock para completar el pedido.';
     }
-    if (estado === 'en_preparacion') {
-      return 'Ajusta la cantidad preparada si es distinta a la solicitada. Al confirmar se registrará la salida de inventario.';
-    }
-    return null;
-  });
-
-  faltantesStock = computed(() =>
-    this.filas()
-      .filter((fila) => fila.stockDisponible < fila.solicitado)
-      .map((fila) => ({ ...fila, faltante: fila.solicitado - fila.stockDisponible })),
-  );
-
-  inicioBloqueado = computed(() => {
-    const pedido = this.pedido();
-    return (
-      pedido?.estado === 'en_espera_inventario' &&
-      (pedido.items.length === 0 ||
-        pedido.disponibilidad !== 'completo' ||
-        this.faltantesStock().length > 0)
-    );
+    return 'Ajusta la cantidad preparada si es distinta a la solicitada. Al confirmar se registrará la salida de inventario.';
   });
 
   actualizarCantidadPreparada(itemId: number, valor: string): void {
@@ -243,11 +269,6 @@ export class PedidoPrepararDetalleModal {
     });
   }
 
-  accionSiguiente = computed(() => {
-    const p = this.pedido();
-    return p ? etiquetaAccionSiguienteEstado(p.estado) : null;
-  });
-
   estadoLabel(estado: EstadoPedidoPreparar): string {
     return etiquetaEstadoPedidoPreparar(estado);
   }
@@ -256,73 +277,81 @@ export class PedidoPrepararDetalleModal {
     return tonoEstadoPedidoPreparar(estado);
   }
 
+  // Badge por fila en la columna "Stock disponible" (reemplaza el bloque de
+  // texto con la lista de faltantes que habia antes — pedido explicito del
+  // usuario). Es binario a proposito — a diferencia de la disponibilidad
+  // del pedido completo (completo/parcial/sin_stock), una sola fila/producto
+  // siempre alcanza o no alcanza, no existe un "parcial" por item.
+  //
+  // El numero y el badge van apilados (numero arriba, badge abajo sin
+  // repetirlo) en vez de "Stock completo (10)" en una sola linea — mismo
+  // ajuste que se le pidio a la columna "Producto" (nombre + sku), para que
+  // no se vea apretado.
+  private filaSinStockSuficiente(fila: FilaItem): boolean {
+    return fila.stockDisponible < fila.solicitado;
+  }
+
+  disponibilidadFilaEstado(fila: FilaItem): string {
+    return this.filaSinStockSuficiente(fila) ? 'Stock insuficiente' : 'Stock completo';
+  }
+
+  disponibilidadFilaTono(fila: FilaItem): BadgeTone {
+    return this.filaSinStockSuficiente(fila) ? 'danger' : 'success';
+  }
+
+  // Unico modo que hace PATCH desde este modal: "preparar" siempre
+  // representa el pedido en "en_preparacion" (lo garantiza la fila que
+  // abre este modo), asi que esto siempre es el PATCH .../pendiente-entrega
+  // con las cantidades preparadas — "Iniciar preparación" (en_espera -> en
+  // preparacion) ahora es un PATCH directo desde la fila, sin este modal.
   avanzarEstado(): void {
     const p = this.pedido();
-    if (!p || this.avanzando() || this.cargando() || this.error() || this.inicioBloqueado()) return;
-    const siguiente = siguienteEstadoPedidoPreparar(p.estado);
-    if (!siguiente) return;
+    if (
+      !p ||
+      this.modo() !== 'preparar' ||
+      this.avanzando() ||
+      this.cargando() ||
+      this.error() ||
+      this.entregaBloqueada()
+    ) {
+      return;
+    }
 
     this.avanzando.set(true);
     this.errorAvance.set('');
 
-    if (siguiente === 'pendiente_entrega') {
-      const cantidades = this.cantidadesPreparadas();
-      const items = p.items.map((i) => ({
-        productoPresentacionId: i.productoPresentacionId,
-        cantidadPreparada: cantidades.get(i.id) ?? i.cantidad,
-      }));
-
-      this.pedidoService
-        .marcarPendienteEntrega(p.id, items)
-        .pipe(
-          finalize(() => this.avanzando.set(false)),
-          takeUntilDestroyed(this.destroyRef),
-        )
-        .subscribe({
-          next: (actualizado) => {
-            this.pedido.set(actualizado);
-            this.sincronizarCantidadesPreparadas(actualizado);
-            this.actualizado.emit();
-          },
-          // 409 aca significa stock insuficiente en alguna linea (no se crea
-          // nada) — no recargamos, para no perder las cantidades que el
-          // operario esta ajustando.
-          error: (error) => {
-            this.errorAvance.set(
-              error.status === 409
-                ? 'No hay stock suficiente para alguna línea. Ajusta las cantidades e intenta de nuevo.'
-                : error.status === 400
-                  ? 'Las cantidades enviadas no coinciden con los productos del pedido.'
-                  : 'No se pudo registrar la preparación. Intenta nuevamente.',
-            );
-          },
-        });
-      return;
-    }
+    const cantidades = this.cantidadesPreparadas();
+    const items = p.items.map((i) => ({
+      productoPresentacionId: i.productoPresentacionId,
+      cantidadPreparada: cantidades.get(i.id) ?? i.cantidad,
+    }));
 
     this.pedidoService
-      .marcarEnPreparacion(p.id)
+      .marcarPendienteEntrega(p.id, items)
       .pipe(
         finalize(() => this.avanzando.set(false)),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
-        next: (actualizado) => {
-          this.pedido.set(actualizado);
-          this.sincronizarCantidadesPreparadas(actualizado);
+        // Exito = ya no hay nada mas que ajustar aca, se cierra solo (el
+        // listado se refresca via actualizado) — dejarlo abierto mostraba
+        // la misma tabla editable y el mismo boton sobre un pedido que ya
+        // cambio de estado, un segundo click hubiera fallado.
+        next: () => {
           this.actualizado.emit();
+          this.cerrar();
         },
+        // 409 aca significa stock insuficiente en alguna linea (no se crea
+        // nada) — no recargamos, para no perder las cantidades que el
+        // operario esta ajustando.
         error: (error) => {
           this.errorAvance.set(
             error.status === 409
-              ? 'El pedido ya cambió de estado. Se actualizará la lista.'
-              : 'No se pudo actualizar el estado. Intenta nuevamente.',
+              ? 'No hay stock suficiente para alguna línea. Ajusta las cantidades e intenta de nuevo.'
+              : error.status === 400
+                ? 'Las cantidades enviadas no coinciden con los productos del pedido.'
+                : 'No se pudo registrar la preparación. Intenta nuevamente.',
           );
-          if (error.status === 409) {
-            this.actualizado.emit();
-            // El refresco por conflicto no debe borrar el mensaje que lo explica.
-            this.cargar(p.id, true);
-          }
         },
       });
   }

@@ -47,4 +47,9 @@ export interface CrearLoteProductoTerminadoRequestDto {
   cantidad_inicial: number;
   activo?: boolean;
   razon?: string;
+  // Liga el lote a una linea de una solicitud a produccion en_proceso
+  // (OFT0-262, "Agregar lote" con buscador de solicitud) — campo ya
+  // existente en el backend para trazabilidad, opcional: se omite en el
+  // flujo manual "suelto" de registrar un lote sin solicitud.
+  solicitud_produccion_id?: number;
 }

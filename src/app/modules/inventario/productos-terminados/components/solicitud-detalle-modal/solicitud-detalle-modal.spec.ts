@@ -147,8 +147,6 @@ describe('SolicitudDetalleModal', () => {
       presentacionMostrada: '120 gr',
       stockActualMostrado: '0 unid.',
       cantidadSolicitadaMostrada: '12 unid.',
-      cantidadSolicitada: 12,
-      stockInsuficiente: true,
     });
   });
 
@@ -160,7 +158,6 @@ describe('SolicitudDetalleModal', () => {
 
     const [fila] = fixture.componentInstance.filas();
     expect(fila.stockActualMostrado).toBe('—');
-    expect(fila.stockInsuficiente).toBe(false);
   });
 
   it('shows an error state with retry when the request fails', () => {

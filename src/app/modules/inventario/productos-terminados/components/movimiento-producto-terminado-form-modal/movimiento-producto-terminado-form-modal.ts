@@ -11,7 +11,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { LucideArrowLeftRight, LucidePlus, LucideTrash2 } from '@lucide/angular';
-import { finalize } from 'rxjs';
+import { Subscription, finalize } from 'rxjs';
 import { Button } from '../../../../../shared/ds/button/button';
 import { Combobox } from '../../../../../shared/ds/combobox/combobox';
 import { Field } from '../../../../../shared/ds/field/field';
@@ -28,9 +28,12 @@ import {
   TipoMovimientoProductoTerminado,
   filaMovimientoProductoTerminadoVacia,
 } from '../../interfaces/movimiento-producto-terminado.interface';
+import { PedidoPreparar, PedidoPrepararDetalle } from '../../interfaces/pedido-preparar.interface';
 import { ProductoPresentacion } from '../../interfaces/producto-presentacion.interface';
+import { etiquetaPresentacion } from '../../mappers/producto-presentacion.mapper';
 import { LoteProductoTerminadoService } from '../../services/lote-producto-terminado.service';
 import { MovimientoProductoTerminadoService } from '../../services/movimiento-producto-terminado.service';
+import { PedidoPrepararService } from '../../services/pedido-preparar.service';
 import { ProductoPresentacionService } from '../../services/producto-presentacion.service';
 import {
   MovimientoProductoTerminadoFormErrores,
@@ -73,9 +76,11 @@ export class MovimientoProductoTerminadoFormModal {
   private productoService = inject(ProductoPresentacionService);
   private loteService = inject(LoteProductoTerminadoService);
   private movimientoService = inject(MovimientoProductoTerminadoService);
+  private pedidoService = inject(PedidoPrepararService);
   private destroyRef = inject(DestroyRef);
   private estabaAbierto = false;
   private siguienteFilaId = 1;
+  private cargaPedidoSub: Subscription | null = null;
 
   open = input(false);
   // Al abrir desde el icono "Registrar movimiento" de una fila (Stock de
@@ -99,10 +104,14 @@ export class MovimientoProductoTerminadoFormModal {
   // comentario en ProductoTerminadoDto), porque sin ese id no se puede
   // registrar un movimiento para ellos.
   productos = signal<ProductoPresentacion[]>([]);
+  // Nombre + presentacion en el label (no solo el nombre): el mismo
+  // producto puede tener varias presentaciones con el mismo nombre (ej.
+  // "chifles dulce" en 500gr y 1kg) — sin la presentacion, el combobox las
+  // mostraba identicas y era imposible saber cual era cual a simple vista.
   productosOptions = computed<SelectOption[]>(() =>
     this.productos().map((producto) => ({
       value: String(producto.productoTerminadoId),
-      label: producto.productoNombre,
+      label: `${producto.productoNombre} · ${etiquetaPresentacion(producto.presentacionCantidad, producto.presentacionUnidadMedida)}`,
       secondary: producto.sku,
     })),
   );
@@ -112,6 +121,38 @@ export class MovimientoProductoTerminadoFormModal {
   // criterio que MovimientoFormModal.
   private lotesPorProducto = signal<Record<string, LoteProductoTerminado[]>>({});
   private cargandoLotesDe = signal<Set<string>>(new Set());
+
+  // Buscador de pedidos (solo visible/usado en 'salida') — se carga una vez
+  // al abrir el form, igual que productos(), y el combobox filtra en vivo.
+  // Elegir un pedido es una SEGUNDA MANERA de registrar una salida (pedido
+  // explicito del usuario): el modal NO cambia de forma — autocompleta
+  // "Producto" y "Cantidad" de la(s) fila(s) de la MISMA tabla de siempre
+  // (filas, FilaMovimientoProductoTerminadoForm), el resto de columnas
+  // (Stock actual/minimo/Lotes FEFO/Stock lote/Stock producto) ya se
+  // calculan solas con esos dos datos, igual que en el flujo manual. El
+  // boton sigue diciendo "Registrar movimiento", pero adentro confirma la
+  // entrega del pedido (mismo PATCH que "Pedidos por preparar") en vez de
+  // crear un movimiento generico — backend confirmo que no hace falta
+  // endpoint nuevo para esto.
+  pedidoBuscado = signal('');
+  pedidosEnPreparacion = signal<PedidoPreparar[]>([]);
+  pedidosOptions = computed<SelectOption[]>(() =>
+    this.pedidosEnPreparacion().map((pedido) => ({
+      value: String(pedido.id),
+      label: pedido.codigo,
+      secondary: pedido.clienteNombre,
+    })),
+  );
+
+  pedido = signal<PedidoPrepararDetalle | null>(null);
+  cargandoPedido = signal(false);
+
+  // Mismo criterio que "Iniciar preparación"/"Marcar pendiente de entrega"
+  // en Pedidos por preparar: bloqueado salvo disponibilidad === 'completo'.
+  entregaPedidoBloqueada = computed(() => {
+    const p = this.pedido();
+    return p !== null && p.disponibilidad !== 'completo';
+  });
 
   cantidadProductosEnMovimiento = computed(
     () => this.filas().filter((fila) => fila.productoTerminadoId).length,
@@ -127,6 +168,7 @@ export class MovimientoProductoTerminadoFormModal {
       if (estaAbierto && !this.estabaAbierto) {
         this.inicializarFormulario();
         this.cargarProductos();
+        this.cargarPedidosEnPreparacion();
       }
       this.estabaAbierto = estaAbierto;
     });
@@ -136,8 +178,97 @@ export class MovimientoProductoTerminadoFormModal {
     this.closed.emit();
   }
 
+  // Cambiar a un tipo distinto de 'salida' limpia cualquier pedido elegido
+  // (el campo/tabla de pedido solo existe en 'salida') — evita que quede un
+  // pedido "fantasma" seleccionado y que guardar() termine confirmando una
+  // entrega en vez de crear el movimiento de Entrada/Ajuste que se ve en
+  // pantalla (hallazgo de Codex).
   seleccionarTipoMovimiento(valor: string): void {
     this.tipoMovimiento.set(valor as TipoMovimientoProductoTerminado);
+    // Solo limpiar si de verdad habia un pedido elegido (o cargando) — sin
+    // este guard se borraban las filas manuales de la persona con solo
+    // cambiar de tipo, aunque nunca hubiera tocado el buscador de pedidos
+    // (regresion detectada por Codex).
+    const habiaPedido = this.pedido() !== null || this.cargandoPedido() || !!this.pedidoBuscado();
+    if (valor !== 'salida' && habiaPedido) this.limpiarPedidoSeleccionado();
+  }
+
+  // Elegir un pedido carga su detalle y autocompleta "Producto" + "Cantidad"
+  // de las filas de la tabla de siempre — no cierra el form, todo pasa en
+  // el mismo modal, con la misma tabla.
+  seleccionarPedido(valor: string): void {
+    // Cancela cualquier GET anterior todavia en vuelo: sin esto, elegir A y
+    // enseguida B (o limpiar) podia dejar que la respuesta tardia de A
+    // sobreescribiera el pedido/motivo ya resueltos para B (hallazgo de
+    // Codex).
+    this.cargaPedidoSub?.unsubscribe();
+    this.pedidoBuscado.set(valor);
+    this.errorGeneral.set(null);
+
+    if (!valor) {
+      this.pedido.set(null);
+      this.limpiarFilasDePedido();
+      this.cargandoPedido.set(false);
+      return;
+    }
+
+    this.cargandoPedido.set(true);
+    this.cargaPedidoSub = this.pedidoService
+      .obtener(Number(valor))
+      .pipe(
+        finalize(() => this.cargandoPedido.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (detalle) => {
+          this.pedido.set(detalle);
+          this.motivoGeneral.set(`Pedido ${detalle.codigo}`);
+          // Cada item del pedido se resuelve a su productoTerminadoId via
+          // SKU (los items de pedido traen producto_presentacion_id/sku,
+          // la tabla trabaja con productoTerminadoId — ver comentario al
+          // inicio del archivo). Si algun producto no esta en el catalogo
+          // cargado (caso rarisimo: inactivo), esa fila queda sin producto
+          // resuelto — guardarPedido() lo bloquea mas abajo.
+          const nuevasFilas = detalle.items.map((item) => ({
+            id: item.id,
+            productoTerminadoId: this.productoTerminadoIdPorSku(item.sku),
+            loteId: '',
+            cantidad: String(item.cantidad),
+          }));
+          this.filas.set(nuevasFilas);
+          // Sin esto, la columna "Lotes" (desgloseFefoDeFila) se queda
+          // vacia/"insuficiente" para estos productos hasta que algo mas
+          // dispare la carga — mismo flujo que seleccionarProductoDeFila.
+          for (const fila of nuevasFilas) {
+            if (fila.productoTerminadoId) this.cargarLotesDeProducto(fila.productoTerminadoId);
+          }
+        },
+        error: () => {
+          this.pedido.set(null);
+          this.limpiarFilasDePedido();
+          this.errorGeneral.set('No se pudo cargar el pedido. Intenta nuevamente.');
+        },
+      });
+  }
+
+  private productoTerminadoIdPorSku(sku: string): string {
+    const producto = this.productos().find((p) => p.sku === sku);
+    return producto ? String(producto.productoTerminadoId) : '';
+  }
+
+  private limpiarPedidoSeleccionado(): void {
+    this.cargaPedidoSub?.unsubscribe();
+    this.pedidoBuscado.set('');
+    this.pedido.set(null);
+    this.cargandoPedido.set(false);
+    this.limpiarFilasDePedido();
+  }
+
+  // Vuelve la tabla a una sola fila vacia, igual que al abrir el form —
+  // se usa al limpiar el pedido elegido (manualmente o al cambiar de tipo
+  // de movimiento) para no dejar las filas que trajo ese pedido.
+  private limpiarFilasDePedido(): void {
+    this.filas.set([filaMovimientoProductoTerminadoVacia(this.siguienteFilaId++)]);
   }
 
   agregarFila(): void {
@@ -320,6 +451,11 @@ export class MovimientoProductoTerminadoFormModal {
   }
 
   guardar(): void {
+    if (this.pedido()) {
+      this.guardarPedido();
+      return;
+    }
+
     const form = this.formActual();
     const errores = validarMovimientoProductoTerminadoForm(form);
 
@@ -385,6 +521,77 @@ export class MovimientoProductoTerminadoFormModal {
       });
   }
 
+  // Segunda manera de registrar una salida: confirma la entrega del pedido
+  // elegido (PATCH .../pendiente-entrega), igual que "Marcar pendiente de
+  // entrega" en Pedidos por preparar — no pasa por movimientoService, ese
+  // endpoint generico no sabe nada de pedidos.
+  private guardarPedido(): void {
+    const pedido = this.pedido();
+    if (!pedido || this.guardando() || this.cargandoPedido() || this.entregaPedidoBloqueada()) {
+      return;
+    }
+
+    // Caso rarisimo: productoTerminadoIdPorSku no encontro el producto de
+    // algun item en el catalogo (ej. quedo inactivo) — sin esto se mandaria
+    // un producto_presentacion_id valido con una fila vacia en pantalla,
+    // sin que la persona se entere de que algo no cuadra.
+    if (this.filas().some((fila) => !fila.productoTerminadoId)) {
+      this.errorGeneral.set(
+        'No se pudo identificar algún producto de este pedido en el catálogo. Contacta a soporte.',
+      );
+      return;
+    }
+
+    this.errorGeneral.set(null);
+    this.guardando.set(true);
+
+    // Las filas se crearon con id = item.id del pedido (ver seleccionarPedido)
+    // — se matchean por ahi para mandar la cantidad que de verdad quedo en
+    // la tabla (la persona pudo haberla editado, incluso a 0).
+    const cantidadPorId = new Map(this.filas().map((fila) => [fila.id, fila.cantidad]));
+    const items = pedido.items.map((i) => {
+      const texto = cantidadPorId.get(i.id);
+      const cantidadPreparada = texto !== undefined && texto !== '' ? Number(texto) : i.cantidad;
+      return { productoPresentacionId: i.productoPresentacionId, cantidadPreparada };
+    });
+
+    this.pedidoService
+      .marcarPendienteEntrega(pedido.id, items)
+      .pipe(
+        finalize(() => this.guardando.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: () => {
+          this.saved.emit([]);
+          this.closed.emit();
+        },
+        error: (error: unknown) => this.manejarErrorPedido(error),
+      });
+  }
+
+  private manejarErrorPedido(error: unknown): void {
+    if (!(error instanceof HttpErrorResponse)) {
+      this.errorGeneral.set('No se pudo registrar la preparación. Intenta nuevamente.');
+      return;
+    }
+
+    if (error.status === 401 || error.status === 403) {
+      this.errorGeneral.set('No tiene permisos para confirmar la entrega de este pedido.');
+      return;
+    }
+
+    // 409 aca significa stock insuficiente en alguna linea (no se crea
+    // nada) — mismo criterio que pedido-preparar-detalle-modal.
+    this.errorGeneral.set(
+      error.status === 409
+        ? 'No hay stock suficiente para alguna línea. Ajusta las cantidades e intenta de nuevo.'
+        : error.status === 400
+          ? 'Las cantidades enviadas no coinciden con los productos del pedido.'
+          : 'No se pudo registrar la preparación. Intenta nuevamente.',
+    );
+  }
+
   private cargarProductos(): void {
     // Limite alto para traer el catalogo completo de productos activos en
     // una sola pagina — mismo criterio que insumos. Se filtran los que no
@@ -396,6 +603,18 @@ export class MovimientoProductoTerminadoFormModal {
         next: (pagina) =>
           this.productos.set(pagina.productos.filter((p) => p.productoTerminadoId !== null)),
         error: () => this.productos.set([]),
+      });
+  }
+
+  // Limite alto por el mismo motivo que cargarProductos() — el combobox
+  // filtra en vivo sobre esta lista, no hay busqueda contra el backend.
+  private cargarPedidosEnPreparacion(): void {
+    this.pedidoService
+      .listar(1, 100, { estado: 'en_preparacion' })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (pagina) => this.pedidosEnPreparacion.set(pagina.pedidos),
+        error: () => this.pedidosEnPreparacion.set([]),
       });
   }
 
@@ -444,6 +663,13 @@ export class MovimientoProductoTerminadoFormModal {
     this.siguienteFilaId = 1;
     this.tipoMovimiento.set('entrada');
     this.motivoGeneral.set('');
+    // Reseteo directo del pedido (sin pasar por limpiarPedidoSeleccionado,
+    // que tambien reescribe filas() — aca abajo se arma filas() una sola
+    // vez, con el producto preseleccionado si corresponde).
+    this.cargaPedidoSub?.unsubscribe();
+    this.pedidoBuscado.set('');
+    this.pedido.set(null);
+    this.cargandoPedido.set(false);
     const preseleccionado = this.productoPreseleccionado();
     const filaInicial = filaMovimientoProductoTerminadoVacia(this.siguienteFilaId++);
     const productoTerminadoId =

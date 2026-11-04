@@ -27,6 +27,7 @@ function makeResumenDto(
     unidades: 210,
     fecha_entrega: null,
     created_at: '2026-09-12T09:05:00.000Z',
+    disponibilidad: 'completo',
     ...overrides,
   };
 }
@@ -231,7 +232,7 @@ describe('PedidosPorPreparar', () => {
     expect(component.estadoTone('pendiente_entrega')).toBe('success');
   });
 
-  it('opens the detalle modal with the id of the fila clickeada and closes it on cerrarDetalle()', () => {
+  it('opens the detalle modal en modo "ver" with the id of the fila clickeada and closes it on cerrarDetalle()', () => {
     const fixture = create();
     flushPage(
       expectPageRequest((r) => r.params.get('page') === '1'),
@@ -244,9 +245,24 @@ describe('PedidosPorPreparar', () => {
     const [fila] = fixture.componentInstance.pedidos();
     fixture.componentInstance.verDetalle(fila.pedido);
     expect(fixture.componentInstance.pedidoDetalleId()).toBe(1042);
+    expect(fixture.componentInstance.modoDetalle()).toBe('ver');
 
     fixture.componentInstance.cerrarDetalle();
     expect(fixture.componentInstance.pedidoDetalleId()).toBeNull();
+  });
+
+  it('abrirEntrega opens the same modal en modo "preparar"', () => {
+    const fixture = create();
+    flushPage(
+      expectPageRequest((r) => r.params.get('page') === '1'),
+      [makeResumenDto()],
+    );
+    flushResumen();
+
+    const [fila] = fixture.componentInstance.pedidos();
+    fixture.componentInstance.abrirEntrega(fila.pedido);
+    expect(fixture.componentInstance.pedidoDetalleId()).toBe(1042);
+    expect(fixture.componentInstance.modoDetalle()).toBe('preparar');
   });
 
   it('reloads the list and the summary when pedidoActualizado() fires', () => {
@@ -255,6 +271,109 @@ describe('PedidosPorPreparar', () => {
     flushResumen();
 
     fixture.componentInstance.pedidoActualizado();
+    flushPage(expectPageRequest((r) => r.params.get('page') === '1'));
+    flushResumen();
+  });
+
+  it('maps disponibilidad desde el DTO (3 estados)', () => {
+    const fixture = create();
+    flushPage(
+      expectPageRequest((r) => r.params.get('page') === '1'),
+      [makeResumenDto({ disponibilidad: 'parcial' })],
+    );
+    flushResumen();
+
+    expect(fixture.componentInstance.pedidos()[0].disponibilidad).toBe('parcial');
+  });
+
+  it('tooltipIniciar refleja si hay stock suficiente (completo/parcial/sin_stock)', () => {
+    const fixture = create();
+    flushPage(
+      expectPageRequest((r) => r.params.get('page') === '1'),
+      [
+        makeResumenDto({ id: 1, disponibilidad: 'completo' }),
+        makeResumenDto({ id: 2, disponibilidad: 'parcial' }),
+        makeResumenDto({ id: 3, disponibilidad: 'sin_stock' }),
+      ],
+    );
+    flushResumen();
+
+    const [completo, parcial, sinStock] = fixture.componentInstance.pedidos();
+    expect(fixture.componentInstance.tooltipIniciar(completo)).toBe('Iniciar preparación');
+    expect(fixture.componentInstance.tooltipIniciar(parcial)).toBe('Stock parcial');
+    expect(fixture.componentInstance.tooltipIniciar(sinStock)).toBe('Sin stock');
+  });
+
+  it('iniciarPreparacion hace PATCH directo a en-preparacion (sin modal) y recarga', () => {
+    const fixture = create();
+    flushPage(
+      expectPageRequest((r) => r.params.get('page') === '1'),
+      [makeResumenDto()],
+    );
+    flushResumen();
+
+    const [fila] = fixture.componentInstance.pedidos();
+    fixture.componentInstance.iniciarPreparacion(fila);
+
+    expect(fixture.componentInstance.pedidoDetalleId()).toBeNull();
+
+    const req = httpMock.expectOne(`${PEDIDOS_PREPARAR_BASE}/1042/en-preparacion`);
+    expect(req.request.method).toBe('PATCH');
+    req.flush({
+      id: 1042,
+      codigo: 'PED-001042',
+      cliente: { id: 'uuid-1', nombre: 'Supermercados Andina' },
+      origen: 'portal',
+      estado: 'en_preparacion',
+      tipo_entrega: 'delivery',
+      direccion_entrega: null,
+      total: '1250.50',
+      fecha_entrega: null,
+      created_at: '2026-09-12T09:05:00.000Z',
+      updated_at: '2026-09-12T09:06:00.000Z',
+      items: [],
+      disponibilidad: 'completo',
+      pago: null,
+    });
+
+    flushPage(expectPageRequest((r) => r.params.get('page') === '1'));
+    flushResumen();
+  });
+
+  it.each(['parcial', 'sin_stock'] as const)(
+    'iniciarPreparacion no hace nada si la disponibilidad es %s',
+    (disponibilidad) => {
+      const fixture = create();
+      flushPage(
+        expectPageRequest((r) => r.params.get('page') === '1'),
+        [makeResumenDto({ disponibilidad })],
+      );
+      flushResumen();
+
+      const [fila] = fixture.componentInstance.pedidos();
+      fixture.componentInstance.iniciarPreparacion(fila);
+
+      httpMock.expectNone(`${PEDIDOS_PREPARAR_BASE}/1042/en-preparacion`);
+    },
+  );
+
+  it('iniciarPreparacion muestra error y recarga en 409', () => {
+    const fixture = create();
+    flushPage(
+      expectPageRequest((r) => r.params.get('page') === '1'),
+      [makeResumenDto()],
+    );
+    flushResumen();
+
+    const [fila] = fixture.componentInstance.pedidos();
+    fixture.componentInstance.iniciarPreparacion(fila);
+
+    httpMock
+      .expectOne(`${PEDIDOS_PREPARAR_BASE}/1042/en-preparacion`)
+      .flush('conflict', { status: 409, statusText: 'Conflict' });
+
+    expect(fixture.componentInstance.errorIniciar()).toContain('ya cambió de estado');
+
     flushPage(expectPageRequest((r) => r.params.get('page') === '1'));
     flushResumen();
   });
