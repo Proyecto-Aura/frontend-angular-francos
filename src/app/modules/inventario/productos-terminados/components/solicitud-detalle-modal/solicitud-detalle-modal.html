@@ -57,12 +57,3 @@
 <ng-template #productoCell let-fila>
   <app-ds-cell-stack [primary]="fila.productoNombre" [secondary]="fila.sku" />
 </ng-template>
-
-<ng-template #stockCell let-fila>
-  <span
-    [class.text-destructive]="fila.stockInsuficiente"
-    [class.font-medium]="fila.stockInsuficiente"
-  >
-    {{ fila.stockActualMostrado }}
-  </span>
-</ng-template>

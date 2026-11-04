@@ -13,6 +13,7 @@ import {
   toPedidoPrepararDetalle,
   toPedidosPorPrepararPagina,
   toResumenPedidosPorPreparar,
+  tonoDisponibilidadPedidoPreparar,
   tonoEstadoPedidoPreparar,
 } from './pedido-preparar.mapper';
 
@@ -29,6 +30,7 @@ const RESUMEN_DTO: PedidoPrepararResumenDto = {
   unidades: 210,
   fecha_entrega: null,
   created_at: '2026-09-12T09:05:00.000Z',
+  disponibilidad: 'completo',
 };
 
 describe('pedido-preparar.mapper', () => {
@@ -52,6 +54,7 @@ describe('pedido-preparar.mapper', () => {
       clienteNombre: 'Supermercados Andina',
       cantidadProductos: 3,
       cantidadUnidades: 210,
+      disponibilidad: 'completo',
     });
   });
 
@@ -156,15 +159,20 @@ describe('pedido-preparar.mapper', () => {
       created_at: '2026-09-12T08:20:00.000Z',
       updated_at: '2026-09-12T08:25:00.000Z',
       items: [],
-      disponibilidad: 'insuficiente',
+      disponibilidad: 'sin_stock',
       pago: null,
     };
     expect(toPedidoPrepararDetalle(dto).pago).toBeNull();
   });
 
-  it('etiquetaDisponibilidadPedidoPreparar mapea los 2 estados', () => {
+  it('etiquetaDisponibilidadPedidoPreparar y tonoDisponibilidadPedidoPreparar mapean los 3 estados', () => {
     expect(etiquetaDisponibilidadPedidoPreparar('completo')).toBe('Stock completo');
-    expect(etiquetaDisponibilidadPedidoPreparar('insuficiente')).toBe('Stock insuficiente');
+    expect(etiquetaDisponibilidadPedidoPreparar('parcial')).toBe('Stock parcial');
+    expect(etiquetaDisponibilidadPedidoPreparar('sin_stock')).toBe('Sin stock');
+
+    expect(tonoDisponibilidadPedidoPreparar('completo')).toBe('success');
+    expect(tonoDisponibilidadPedidoPreparar('parcial')).toBe('warning');
+    expect(tonoDisponibilidadPedidoPreparar('sin_stock')).toBe('danger');
   });
 
   it('siguienteEstadoPedidoPreparar avanza en_espera_inventario -> en_preparacion -> pendiente_entrega -> null', () => {

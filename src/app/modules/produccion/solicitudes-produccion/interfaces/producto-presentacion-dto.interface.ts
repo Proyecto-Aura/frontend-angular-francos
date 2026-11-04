@@ -22,6 +22,8 @@ export interface ProductoPresentacionDto {
   // Id propio de producto_terminado (no es el "id" de nivel superior) — es
   // el que hay que mandar como producto_terminado_id al crear un lote
   // (confirmado por el backend, OFT0-263). Puede venir null en el caso
-  // rarisimo de que no se haya creado.
-  producto_terminado: { id: number } | null;
+  // rarisimo de que no se haya creado. stock_actual se agrego para el modal
+  // "Registrar entrega" (OFT0-262) — mismo shape que ya usa Inventario en
+  // este mismo endpoint, aca solo se toma el campo que hace falta.
+  producto_terminado: { id: number; stock_actual: number } | null;
 }

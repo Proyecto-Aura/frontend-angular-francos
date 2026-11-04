@@ -1,6 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { LucideEye, LucidePackageCheck } from '@lucide/angular';
 import { environment } from '../../../../../../environments/environment';
 import { PedidoPrepararDetalleDto } from '../../interfaces/pedido-preparar-dto.interface';
 import { PedidoPrepararDetalleModal } from './pedido-preparar-detalle-modal';
@@ -60,8 +61,9 @@ describe('PedidoPrepararDetalleModal', () => {
 
   afterEach(() => httpMock.verify());
 
-  function create(): ComponentFixture<PedidoPrepararDetalleModal> {
+  function create(modo: 'ver' | 'preparar' = 'ver'): ComponentFixture<PedidoPrepararDetalleModal> {
     const fixture = TestBed.createComponent(PedidoPrepararDetalleModal);
+    fixture.componentRef.setInput('modo', modo);
     fixture.detectChanges();
     return fixture;
   }
@@ -94,30 +96,81 @@ describe('PedidoPrepararDetalleModal', () => {
     expect(campos).toContainEqual({ label: 'Cliente', value: 'Supermercados Andina' });
     expect(campos).toContainEqual({ label: 'Productos', value: '1 productos' });
     expect(campos).toContainEqual({ label: 'Unidades', value: '10' });
-    expect(campos).toContainEqual({ label: 'Disponibilidad', value: 'Stock completo' });
+    expect(fixture.componentInstance.disponibilidadLabel()).toBe('Stock completo');
+    expect(fixture.componentInstance.disponibilidadTono()).toBe('success');
     const [fila] = fixture.componentInstance.filas();
     expect(fila).toMatchObject({
       producto: 'Queso fresco',
       sku: 'SKU-1',
       solicitado: 10,
+      solicitadoMostrado: '10 unid.',
       stockDisponible: 15,
+      stockDisponibleMostrado: '15 unid.',
     });
   });
 
-  it('textoAyuda solo se muestra mientras el pedido esta en_espera_inventario', () => {
-    const fixture = create();
-    fixture.componentRef.setInput('pedidoId', 1042);
-    fixture.detectChanges();
-    httpMock.expectOne(`${PEDIDOS_PREPARAR_BASE}/1042`).flush(makeDetalleDto());
-    fixture.detectChanges();
+  it('headerIcon es Eye en modo ver y PackageCheck en modo preparar', () => {
+    const verFixture = create('ver');
+    expect(verFixture.componentInstance.headerIcon()).toBe(LucideEye);
 
-    expect(fixture.componentInstance.textoAyuda()).toContain(
-      'Inicia la preparación para registrar',
-    );
+    const prepararFixture = create('preparar');
+    expect(prepararFixture.componentInstance.headerIcon()).toBe(LucidePackageCheck);
   });
 
-  it('textoAyuda explica el ajuste de cantidades mientras el pedido esta en_preparacion', () => {
-    const fixture = create();
+  it('en modo "ver" siempre muestra la tabla de solo lectura y sin acciones, sin importar el estado del pedido', () => {
+    for (const estado of ['en_espera_inventario', 'en_preparacion'] as const) {
+      const fixture = create('ver');
+      fixture.componentRef.setInput('pedidoId', 1042);
+      fixture.detectChanges();
+      httpMock.expectOne(`${PEDIDOS_PREPARAR_BASE}/1042`).flush(makeDetalleDto({ estado }));
+      fixture.detectChanges();
+
+      const headers = fixture.componentInstance.columnas().map((c) => c.header);
+      expect(headers).toContain('Stock disponible');
+      expect(headers).not.toContain('Cantidad preparada');
+      expect(fixture.componentInstance.textoAyuda()).toBeNull();
+
+      const element: HTMLElement = fixture.nativeElement;
+      const botones = Array.from(element.querySelectorAll('button')).map((b) =>
+        b.textContent?.trim(),
+      );
+      expect(botones).not.toContain('Iniciar preparación');
+      expect(botones).not.toContain('Marcar pendiente de entrega');
+    }
+  });
+
+  it('en modo "ver" con el pedido ya "pendiente_entrega" oculta el campo Disponibilidad y no muestra ninguna columna de stock (ni badge ni numero)', () => {
+    const fixture = create('ver');
+    fixture.componentRef.setInput('pedidoId', 1042);
+    fixture.detectChanges();
+    const base = makeDetalleDto();
+    httpMock.expectOne(`${PEDIDOS_PREPARAR_BASE}/1042`).flush(
+      makeDetalleDto({
+        estado: 'pendiente_entrega',
+        disponibilidad: 'sin_stock',
+        items: [{ ...base.items[0], stock_disponible: 0 }],
+      }),
+    );
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.pedidoEntregado()).toBe(true);
+    // La tabla queda solo con Producto/Presentacion/Solicitado — el backend
+    // revirtio "Stock actual"/"Stock anterior" (el calculo usaba stock en
+    // vivo y el numero se movia solo con otros pedidos del mismo producto).
+    const headers = fixture.componentInstance.columnas().map((c) => c.header);
+    expect(headers).toEqual(['Producto', 'Presentación', 'Solicitado']);
+
+    const element: HTMLElement = fixture.nativeElement;
+    expect(element.textContent).not.toContain('Disponibilidad');
+    expect(element.textContent).not.toContain('Sin stock');
+    expect(element.textContent).not.toContain('Stock completo');
+    expect(element.textContent).not.toContain('Stock insuficiente');
+    expect(element.textContent).not.toContain('Stock actual');
+    expect(element.textContent).not.toContain('Stock anterior');
+  });
+
+  it('en modo "preparar" la tabla es editable, tambien muestra el stock disponible (sin badge) y explica el ajuste de cantidades', () => {
+    const fixture = create('preparar');
     fixture.componentRef.setInput('pedidoId', 1042);
     fixture.detectChanges();
     httpMock
@@ -125,46 +178,51 @@ describe('PedidoPrepararDetalleModal', () => {
       .flush(makeDetalleDto({ estado: 'en_preparacion' }));
     fixture.detectChanges();
 
+    const columnas = fixture.componentInstance.columnas();
+    expect(columnas.map((c) => c.header)).toContain('Cantidad preparada');
+    const colStock = columnas.find((c) => c.key === 'stockDisponibleMostrado');
+    expect(colStock?.header).toBe('Stock disponible');
+    expect(colStock?.cellTemplate).toBeUndefined(); // plano, sin badge/cellTemplate
     expect(fixture.componentInstance.textoAyuda()).toContain('Ajusta la cantidad preparada');
+
+    const [fila] = fixture.componentInstance.filas();
+    expect(fila.stockDisponibleMostrado).toBe('15 unid.');
+
+    const element: HTMLElement = fixture.nativeElement;
+    expect(element.textContent).toContain('15 unid.');
+    const button = Array.from(element.querySelectorAll('button')).find(
+      (b) => b.textContent?.trim() === 'Marcar pendiente de entrega',
+    );
+    expect(button).toBeTruthy();
   });
 
-  it('textoAyuda es null cuando el pedido ya esta pendiente_entrega', () => {
-    const fixture = create();
-    fixture.componentRef.setInput('pedidoId', 1042);
-    fixture.detectChanges();
-    httpMock
-      .expectOne(`${PEDIDOS_PREPARAR_BASE}/1042`)
-      .flush(makeDetalleDto({ estado: 'pendiente_entrega' }));
-    fixture.detectChanges();
+  it.each(['parcial', 'sin_stock'] as const)(
+    'en modo "preparar" deshabilita "Marcar pendiente de entrega" cuando la disponibilidad es %s (mismo criterio que "Iniciar preparación")',
+    (disponibilidad) => {
+      const fixture = create('preparar');
+      fixture.componentRef.setInput('pedidoId', 1042);
+      fixture.detectChanges();
+      httpMock
+        .expectOne(`${PEDIDOS_PREPARAR_BASE}/1042`)
+        .flush(makeDetalleDto({ estado: 'en_preparacion', disponibilidad }));
+      fixture.detectChanges();
 
-    expect(fixture.componentInstance.textoAyuda()).toBeNull();
-  });
+      expect(fixture.componentInstance.entregaBloqueada()).toBe(true);
+      expect(fixture.componentInstance.textoAyuda()).toContain('No se puede confirmar la entrega');
 
-  it('columnas muestra "Cantidad preparada" en_preparacion y "Stock disponible" en los demas estados', () => {
-    const fixture = create();
-    fixture.componentRef.setInput('pedidoId', 1042);
-    fixture.detectChanges();
-    httpMock.expectOne(`${PEDIDOS_PREPARAR_BASE}/1042`).flush(makeDetalleDto());
-    fixture.detectChanges();
+      const element: HTMLElement = fixture.nativeElement;
+      const button = Array.from(element.querySelectorAll('button')).find(
+        (b) => b.textContent?.trim() === 'Marcar pendiente de entrega',
+      );
+      expect(button?.disabled).toBe(true);
 
-    let headers = fixture.componentInstance.columnas().map((c) => c.header);
-    expect(headers).toContain('Stock disponible');
-    expect(headers).not.toContain('Cantidad preparada');
-
-    fixture.componentRef.setInput('pedidoId', 2001);
-    fixture.detectChanges();
-    httpMock
-      .expectOne(`${PEDIDOS_PREPARAR_BASE}/2001`)
-      .flush(makeDetalleDto({ id: 2001, estado: 'en_preparacion' }));
-    fixture.detectChanges();
-
-    headers = fixture.componentInstance.columnas().map((c) => c.header);
-    expect(headers).toContain('Cantidad preparada');
-    expect(headers).not.toContain('Stock disponible');
-  });
+      fixture.componentInstance.avanzarEstado();
+      httpMock.expectNone((r) => r.method === 'PATCH');
+    },
+  );
 
   it('filas() usa la cantidad solicitada como cantidadPreparada por defecto', () => {
-    const fixture = create();
+    const fixture = create('preparar');
     fixture.componentRef.setInput('pedidoId', 1042);
     fixture.detectChanges();
     httpMock
@@ -177,7 +235,7 @@ describe('PedidoPrepararDetalleModal', () => {
   });
 
   it('actualizarCantidadPreparada cambia el valor de esa fila sin tocar las demas', () => {
-    const fixture = create();
+    const fixture = create('preparar');
     fixture.componentRef.setInput('pedidoId', 1042);
     fixture.detectChanges();
     httpMock.expectOne(`${PEDIDOS_PREPARAR_BASE}/1042`).flush(
@@ -233,136 +291,57 @@ describe('PedidoPrepararDetalleModal', () => {
     expect(fixture.componentInstance.error()).toBe(true);
   });
 
-  it('accionSiguiente ofrece "Iniciar preparación" para un pedido en_espera_inventario', () => {
-    const fixture = create();
-    fixture.componentRef.setInput('pedidoId', 1042);
-    fixture.detectChanges();
-    httpMock.expectOne(`${PEDIDOS_PREPARAR_BASE}/1042`).flush(makeDetalleDto());
-    fixture.detectChanges();
-
-    expect(fixture.componentInstance.accionSiguiente()).toBe('Iniciar preparación');
-  });
-
-  it.each([0, 9])(
-    'blocks preparation when one item lacks stock (%s available), even if another has enough',
-    (stock) => {
-      const fixture = create();
-      fixture.componentRef.setInput('pedidoId', 1042);
-      fixture.detectChanges();
-      const base = makeDetalleDto();
-      httpMock.expectOne(`${PEDIDOS_PREPARAR_BASE}/1042`).flush(
-        makeDetalleDto({
-          disponibilidad: 'insuficiente',
-          items: [
-            base.items[0],
-            {
-              ...base.items[0],
-              id: 2,
-              producto_presentacion_id: 20,
-              producto: 'Yogurt',
-              sku: 'SKU-2',
-              stock_disponible: stock,
-            },
-          ],
-        }),
-      );
-      fixture.detectChanges();
-      const component = fixture.componentInstance;
-      expect(component.inicioBloqueado()).toBe(true);
-      expect(component.faltantesStock()).toHaveLength(1);
-      const element: HTMLElement = fixture.nativeElement;
-      const button = Array.from(element.querySelectorAll('button')).find(
-        (b) => b.textContent?.trim() === 'Iniciar preparación',
-      );
-      expect(button?.disabled).toBe(true);
-      expect(element.textContent).toContain(`faltan ${10 - stock} unid.`);
-      expect(component.textoAyuda()).toBeNull();
-      component.avanzarEstado();
-      httpMock.expectNone((r) => r.method === 'PATCH');
-    },
-  );
-
-  it('enables preparation after refreshing sufficient stock, including exact stock', () => {
+  it('badges la fila sin stock como "Stock insuficiente" (danger) y la que si alcanza como "Stock completo" (success)', () => {
     const fixture = create();
     fixture.componentRef.setInput('pedidoId', 1042);
     fixture.detectChanges();
     const base = makeDetalleDto();
     httpMock.expectOne(`${PEDIDOS_PREPARAR_BASE}/1042`).flush(
       makeDetalleDto({
-        disponibilidad: 'insuficiente',
-        items: [{ ...base.items[0], stock_disponible: 0 }],
+        disponibilidad: 'parcial',
+        items: [
+          base.items[0],
+          { ...base.items[0], id: 2, producto_presentacion_id: 20, stock_disponible: 0 },
+        ],
       }),
     );
     fixture.detectChanges();
-    fixture.componentInstance.reintentar();
+
+    const component = fixture.componentInstance;
+    const [filaCompleta, filaInsuficiente] = component.filas();
+    expect(component.disponibilidadFilaEstado(filaCompleta)).toBe('Stock completo');
+    expect(component.disponibilidadFilaTono(filaCompleta)).toBe('success');
+    expect(component.disponibilidadFilaEstado(filaInsuficiente)).toBe('Stock insuficiente');
+    expect(component.disponibilidadFilaTono(filaInsuficiente)).toBe('danger');
+
+    // El numero va aparte del badge (apilado arriba), no repetido adentro.
+    const element: HTMLElement = fixture.nativeElement;
+    expect(element.textContent).toContain(`${filaCompleta.stockDisponible} unid.`);
+    expect(element.textContent).toContain('0 unid.');
+    expect(element.textContent).toContain('Stock insuficiente');
+    expect(element.textContent).toContain('Stock completo');
+    expect(element.textContent).not.toContain('se necesita stock suficiente');
+    expect(element.textContent).not.toContain('Actualizar disponibilidad');
+
+    // La disponibilidad a nivel de PEDIDO (arriba) ahora es un badge de 3
+    // estados, independiente del badge binario por fila.
+    expect(component.disponibilidadLabel()).toBe('Stock parcial');
+    expect(component.disponibilidadTono()).toBe('warning');
+  });
+
+  it('avanzarEstado no hace nada en modo "ver" (las transiciones ya no viven en este modal)', () => {
+    const fixture = create('ver');
+    fixture.componentRef.setInput('pedidoId', 1042);
+    fixture.detectChanges();
+    httpMock.expectOne(`${PEDIDOS_PREPARAR_BASE}/1042`).flush(makeDetalleDto());
+    fixture.detectChanges();
+
     fixture.componentInstance.avanzarEstado();
     httpMock.expectNone((r) => r.method === 'PATCH');
-    httpMock
-      .expectOne(`${PEDIDOS_PREPARAR_BASE}/1042`)
-      .flush(makeDetalleDto({ items: [{ ...base.items[0], stock_disponible: 10 }] }));
-    fixture.detectChanges();
-    expect(fixture.componentInstance.inicioBloqueado()).toBe(false);
-    fixture.componentInstance.avanzarEstado();
-    httpMock
-      .expectOne(`${PEDIDOS_PREPARAR_BASE}/1042/en-preparacion`)
-      .flush(makeDetalleDto({ estado: 'en_preparacion' }));
   });
 
-  it('accionSiguiente es null para un pedido pendiente_entrega', () => {
-    const fixture = create();
-    fixture.componentRef.setInput('pedidoId', 1042);
-    fixture.detectChanges();
-    httpMock
-      .expectOne(`${PEDIDOS_PREPARAR_BASE}/1042`)
-      .flush(makeDetalleDto({ estado: 'pendiente_entrega' }));
-    fixture.detectChanges();
-
-    expect(fixture.componentInstance.accionSiguiente()).toBeNull();
-  });
-
-  it('avanzarEstado hace PATCH en-preparacion y actualiza el pedido con la respuesta, emitiendo actualizado', () => {
-    const fixture = create();
-    fixture.componentRef.setInput('pedidoId', 1042);
-    fixture.detectChanges();
-    httpMock.expectOne(`${PEDIDOS_PREPARAR_BASE}/1042`).flush(makeDetalleDto());
-    fixture.detectChanges();
-
-    let actualizadoEmitido = false;
-    fixture.componentInstance.actualizado.subscribe(() => (actualizadoEmitido = true));
-    fixture.componentInstance.avanzarEstado();
-
-    const req = httpMock.expectOne(`${PEDIDOS_PREPARAR_BASE}/1042/en-preparacion`);
-    expect(req.request.method).toBe('PATCH');
-    req.flush(makeDetalleDto({ estado: 'en_preparacion' }));
-
-    expect(fixture.componentInstance.pedido()?.estado).toBe('en_preparacion');
-    expect(actualizadoEmitido).toBe(true);
-  });
-
-  it('avanzarEstado muestra un mensaje especifico en 409 y refresca', () => {
-    const fixture = create();
-    fixture.componentRef.setInput('pedidoId', 1042);
-    fixture.detectChanges();
-    httpMock.expectOne(`${PEDIDOS_PREPARAR_BASE}/1042`).flush(makeDetalleDto());
-    fixture.detectChanges();
-
-    fixture.componentInstance.avanzarEstado();
-    httpMock
-      .expectOne(`${PEDIDOS_PREPARAR_BASE}/1042/en-preparacion`)
-      .flush('conflict', { status: 409, statusText: 'Conflict' });
-
-    expect(fixture.componentInstance.errorAvance()).toContain('ya cambió de estado');
-    httpMock
-      .expectOne(`${PEDIDOS_PREPARAR_BASE}/1042`)
-      .flush(makeDetalleDto({ estado: 'en_preparacion' }));
-    fixture.detectChanges();
-
-    expect(fixture.componentInstance.errorAvance()).toContain('ya cambió de estado');
-    expect(fixture.componentInstance.pedido()?.estado).toBe('en_preparacion');
-  });
-
-  it('avanzarEstado en en_preparacion manda las cantidades preparadas (con ediciones) y actualiza el pedido', () => {
-    const fixture = create();
+  it('avanzarEstado en modo "preparar" manda las cantidades preparadas (con ediciones) y cierra el modal solo al confirmar', () => {
+    const fixture = create('preparar');
     fixture.componentRef.setInput('pedidoId', 1042);
     fixture.detectChanges();
     httpMock
@@ -374,6 +353,8 @@ describe('PedidoPrepararDetalleModal', () => {
 
     let actualizadoEmitido = false;
     fixture.componentInstance.actualizado.subscribe(() => (actualizadoEmitido = true));
+    let cerrado = false;
+    fixture.componentInstance.closed.subscribe(() => (cerrado = true));
     fixture.componentInstance.avanzarEstado();
 
     const req = httpMock.expectOne(`${PEDIDOS_PREPARAR_BASE}/1042/pendiente-entrega`);
@@ -383,12 +364,16 @@ describe('PedidoPrepararDetalleModal', () => {
     });
     req.flush(makeDetalleDto({ estado: 'pendiente_entrega' }));
 
-    expect(fixture.componentInstance.pedido()?.estado).toBe('pendiente_entrega');
+    // Al confirmar con exito ya no queda nada mas que ajustar: el modal se
+    // cierra solo (un segundo click sobre el mismo pedido ya transicionado
+    // hubiera fallado si se dejaba abierto).
     expect(actualizadoEmitido).toBe(true);
+    expect(cerrado).toBe(true);
+    expect(fixture.componentInstance.pedido()).toBeNull();
   });
 
-  it('avanzarEstado en en_preparacion muestra un mensaje de stock insuficiente en 409 y no recarga', () => {
-    const fixture = create();
+  it('avanzarEstado en modo "preparar" muestra un mensaje de stock insuficiente en 409 y no recarga', () => {
+    const fixture = create('preparar');
     fixture.componentRef.setInput('pedidoId', 1042);
     fixture.detectChanges();
     httpMock
@@ -407,8 +392,8 @@ describe('PedidoPrepararDetalleModal', () => {
     httpMock.expectNone(`${PEDIDOS_PREPARAR_BASE}/1042`);
   });
 
-  it('avanzarEstado en en_preparacion muestra un mensaje distinto en 400', () => {
-    const fixture = create();
+  it('avanzarEstado en modo "preparar" muestra un mensaje distinto en 400', () => {
+    const fixture = create('preparar');
     fixture.componentRef.setInput('pedidoId', 1042);
     fixture.detectChanges();
     httpMock

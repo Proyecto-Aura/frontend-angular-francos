@@ -3,12 +3,17 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { environment } from '../../../../../../environments/environment';
 import { LoteProductoTerminadoDto } from '../../interfaces/lote-producto-terminado-dto.interface';
+import {
+  PedidoPrepararDetalleDto,
+  PedidoPrepararResumenDto,
+} from '../../interfaces/pedido-preparar-dto.interface';
 import { ProductoPresentacionDto } from '../../interfaces/producto-presentacion-dto.interface';
 import { MovimientoProductoTerminadoFormModal } from './movimiento-producto-terminado-form-modal';
 
 const PRODUCTO_PRESENTACIONES_BASE = `${environment.apiUrl}/producto-presentaciones`;
 const LOTES_BASE = `${environment.apiUrl}/lotes-producto-terminado`;
 const MOVIMIENTOS_BASE = `${environment.apiUrl}/movimientos-producto-terminado`;
+const PEDIDOS_PREPARAR_BASE = `${environment.apiUrl}/inventario/pedidos`;
 
 function makeProductoDto(
   overrides: Partial<ProductoPresentacionDto> = {},
@@ -56,6 +61,62 @@ function makeLoteDto(overrides: Partial<LoteProductoTerminadoDto> = {}): LotePro
   };
 }
 
+function makePedidoResumenDto(
+  overrides: Partial<PedidoPrepararResumenDto> = {},
+): PedidoPrepararResumenDto {
+  return {
+    id: 50,
+    codigo: 'PED-000050',
+    cliente: { id: 'uuid-1', nombre: 'Supermercados Andina' },
+    metodo_pago: 'efectivo',
+    total: '100.00',
+    tipo_entrega: 'delivery',
+    estado: 'en_preparacion',
+    origen: 'portal',
+    productos: 1,
+    unidades: 10,
+    fecha_entrega: null,
+    created_at: '2026-09-12T09:05:00.000Z',
+    disponibilidad: 'completo',
+    ...overrides,
+  };
+}
+
+function makePedidoDetalleDto(
+  overrides: Partial<PedidoPrepararDetalleDto> = {},
+): PedidoPrepararDetalleDto {
+  return {
+    id: 50,
+    codigo: 'PED-000050',
+    cliente: { id: 'uuid-1', nombre: 'Supermercados Andina' },
+    origen: 'portal',
+    estado: 'en_preparacion',
+    tipo_entrega: 'delivery',
+    direccion_entrega: 'Av. Siempre Viva 123',
+    total: '100.00',
+    fecha_entrega: null,
+    created_at: '2026-09-12T09:05:00.000Z',
+    updated_at: '2026-09-12T09:05:00.000Z',
+    items: [
+      {
+        id: 1,
+        producto_presentacion_id: 10,
+        sku: 'FR-P3-PR2',
+        producto: 'Pan de molde',
+        presentacion: '500 gr',
+        cantidad: 10,
+        precio_unitario: '12.50',
+        precio_aplicado: '11.00',
+        subtotal: '110.00',
+        stock_disponible: 15,
+      },
+    ],
+    disponibilidad: 'completo',
+    pago: null,
+    ...overrides,
+  };
+}
+
 function makeMovimientoRespuestaDto(
   overrides: Record<string, unknown> = {},
 ): Record<string, unknown> {
@@ -98,6 +159,7 @@ describe('MovimientoProductoTerminadoFormModal', () => {
 
   function openModal(
     productos: ProductoPresentacionDto[] = [makeProductoDto()],
+    pedidos: PedidoPrepararResumenDto[] = [],
   ): ComponentFixture<MovimientoProductoTerminadoFormModal> {
     const fixture = TestBed.createComponent(MovimientoProductoTerminadoFormModal);
     fixture.componentRef.setInput('open', true);
@@ -108,6 +170,16 @@ describe('MovimientoProductoTerminadoFormModal', () => {
       .flush({
         data: productos,
         meta: { total: productos.length, page: 1, limit: 100, total_pages: 1 },
+      });
+    httpMock
+      .expectOne(
+        (request) =>
+          request.url === PEDIDOS_PREPARAR_BASE &&
+          request.params.get('estado') === 'en_preparacion',
+      )
+      .flush({
+        data: pedidos,
+        meta: { total: pedidos.length, page: 1, limit: 100, total_pages: 1 },
       });
     fixture.detectChanges();
 
@@ -131,11 +203,239 @@ describe('MovimientoProductoTerminadoFormModal', () => {
     fixture.detectChanges();
   }
 
+  it('loads pedidos en_preparacion into pedidosOptions when opened', () => {
+    const fixture = openModal([makeProductoDto()], [makePedidoResumenDto()]);
+
+    expect(fixture.componentInstance.pedidosOptions()).toEqual([
+      { value: '50', label: 'PED-000050', secondary: 'Supermercados Andina' },
+    ]);
+  });
+
+  function seleccionarPedidoYResolverDetalle(
+    fixture: ComponentFixture<MovimientoProductoTerminadoFormModal>,
+    overrides: Partial<PedidoPrepararDetalleDto> = {},
+  ): void {
+    fixture.componentInstance.seleccionarPedido('50');
+    httpMock
+      .expectOne((request) => request.url === `${PEDIDOS_PREPARAR_BASE}/50`)
+      .flush(makePedidoDetalleDto(overrides));
+    fixture.detectChanges();
+
+    // seleccionarPedido tambien dispara cargarLotesDeProducto() para cada
+    // producto resuelto (para que la columna "Lotes" no quede vacia) —
+    // se flushean esas peticiones (vacias por defecto) para no dejar
+    // requests abiertas en httpMock.verify().
+    httpMock
+      .match((request) => request.url === LOTES_BASE)
+      .forEach((req) =>
+        req.flush({ data: [], meta: { total: 0, page: 1, limit: 100, total_pages: 0 } }),
+      );
+    fixture.detectChanges();
+  }
+
+  it('seleccionarPedido carga el detalle y autocompleta producto+cantidad en la MISMA tabla (filas) y motivoGeneral, sin cerrar el form', () => {
+    const fixture = openModal([makeProductoDto()], [makePedidoResumenDto()]);
+
+    let cerrado = false;
+    fixture.componentInstance.closed.subscribe(() => (cerrado = true));
+
+    seleccionarPedidoYResolverDetalle(fixture);
+
+    expect(cerrado).toBe(false);
+    expect(fixture.componentInstance.motivoGeneral()).toBe('Pedido PED-000050');
+    // productoTerminadoId '256' se resuelve por SKU contra el catalogo
+    // (makeProductoDto tiene sku 'FR-P3-PR2' -> producto_terminado.id 256,
+    // igual que el item del pedido).
+    expect(fixture.componentInstance.filas()).toEqual([
+      { id: 1, productoTerminadoId: '256', loteId: '', cantidad: '10' },
+    ]);
+  });
+
+  it('seleccionarPedido con valor vacio limpia pedido() y vuelve la tabla a una fila vacia', () => {
+    const fixture = openModal([makeProductoDto()], [makePedidoResumenDto()]);
+    seleccionarPedidoYResolverDetalle(fixture);
+
+    fixture.componentInstance.seleccionarPedido('');
+
+    expect(fixture.componentInstance.pedido()).toBeNull();
+    const [fila] = fixture.componentInstance.filas();
+    expect(fixture.componentInstance.filas()).toHaveLength(1);
+    expect(fila).toMatchObject({ productoTerminadoId: '', loteId: '', cantidad: '' });
+    httpMock.expectNone(`${PEDIDOS_PREPARAR_BASE}/50`);
+  });
+
+  it('el combobox de producto queda deshabilitado por fila mientras hay un pedido elegido', () => {
+    const fixture = openModal([makeProductoDto()], [makePedidoResumenDto()]);
+    seleccionarPedidoYResolverDetalle(fixture);
+
+    const combobox: HTMLInputElement | null = fixture.nativeElement.querySelector(
+      '#movimiento-pt-producto-1',
+    );
+    expect(combobox?.disabled).toBe(true);
+  });
+
+  it('seleccionarPedido dispara la carga de lotes para cada producto resuelto (la columna Lotes no queda vacia)', () => {
+    const fixture = openModal([makeProductoDto()], [makePedidoResumenDto()]);
+
+    fixture.componentInstance.seleccionarPedido('50');
+    httpMock
+      .expectOne((r) => r.url === `${PEDIDOS_PREPARAR_BASE}/50`)
+      .flush(makePedidoDetalleDto());
+
+    const loteReq = httpMock.expectOne(
+      (r) => r.url === LOTES_BASE && r.params.get('producto_terminado_id') === '256',
+    );
+    loteReq.flush({
+      data: [makeLoteDto()],
+      meta: { total: 1, page: 1, limit: 100, total_pages: 1 },
+    });
+    fixture.detectChanges();
+
+    const [fila] = fixture.componentInstance.filas();
+    expect(fixture.componentInstance.lotesDeFila(fila)).toEqual([
+      expect.objectContaining({ id: 1 }),
+    ]);
+  });
+
+  it('guardar() con pedido elegido bloquea con error si algun producto del pedido no se pudo resolver en el catalogo', () => {
+    const fixture = openModal([makeProductoDto()], [makePedidoResumenDto()]);
+    seleccionarPedidoYResolverDetalle(fixture, {
+      items: [
+        {
+          id: 1,
+          producto_presentacion_id: 99,
+          sku: 'FR-NO-EXISTE',
+          producto: 'Producto fantasma',
+          presentacion: '1 kg',
+          cantidad: 5,
+          precio_unitario: '1.00',
+          precio_aplicado: '1.00',
+          subtotal: '5.00',
+          stock_disponible: 0,
+        },
+      ],
+    });
+
+    fixture.componentInstance.guardar();
+
+    expect(fixture.componentInstance.errorGeneral()).toContain('No se pudo identificar');
+    httpMock.expectNone((r) => r.method === 'PATCH');
+  });
+
+  it('actualizarCantidadDeFila sigue funcionando sobre la fila autocompletada por el pedido', () => {
+    const fixture = openModal([makeProductoDto()], [makePedidoResumenDto()]);
+    seleccionarPedidoYResolverDetalle(fixture);
+
+    fixture.componentInstance.actualizarCantidadDeFila(1, '7');
+
+    expect(fixture.componentInstance.filas()[0].cantidad).toBe('7');
+  });
+
+  it('guardar() con pedido elegido llama a marcarPendienteEntrega (no al endpoint generico) y cierra al confirmar', () => {
+    const fixture = openModal([makeProductoDto()], [makePedidoResumenDto()]);
+    seleccionarPedidoYResolverDetalle(fixture);
+    fixture.componentInstance.actualizarCantidadDeFila(1, '8');
+
+    let guardadoEmitido: unknown;
+    fixture.componentInstance.saved.subscribe((v) => (guardadoEmitido = v));
+    let cerrado = false;
+    fixture.componentInstance.closed.subscribe(() => (cerrado = true));
+
+    fixture.componentInstance.guardar();
+
+    const req = httpMock.expectOne(`${PEDIDOS_PREPARAR_BASE}/50/pendiente-entrega`);
+    expect(req.request.method).toBe('PATCH');
+    expect(req.request.body).toEqual({
+      items: [{ producto_presentacion_id: 10, cantidad_preparada: 8 }],
+    });
+    req.flush(makePedidoDetalleDto({ estado: 'pendiente_entrega' }));
+
+    expect(guardadoEmitido).toEqual([]);
+    expect(cerrado).toBe(true);
+    httpMock.expectNone((r) => r.url === MOVIMIENTOS_BASE);
+  });
+
+  it('guardar() con pedido elegido muestra un mensaje de stock insuficiente en 409', () => {
+    const fixture = openModal([makeProductoDto()], [makePedidoResumenDto()]);
+    seleccionarPedidoYResolverDetalle(fixture);
+
+    fixture.componentInstance.guardar();
+
+    httpMock
+      .expectOne(`${PEDIDOS_PREPARAR_BASE}/50/pendiente-entrega`)
+      .flush('conflict', { status: 409, statusText: 'Conflict' });
+
+    expect(fixture.componentInstance.errorGeneral()).toContain('No hay stock suficiente');
+  });
+
+  it('entregaPedidoBloqueada es true cuando la disponibilidad del pedido no es completo, y guardar() no hace nada', () => {
+    const fixture = openModal([makeProductoDto()], [makePedidoResumenDto()]);
+    seleccionarPedidoYResolverDetalle(fixture, { disponibilidad: 'parcial' });
+
+    expect(fixture.componentInstance.entregaPedidoBloqueada()).toBe(true);
+
+    fixture.componentInstance.guardar();
+    httpMock.expectNone((r) => r.method === 'PATCH');
+  });
+
+  it('seleccionarTipoMovimiento limpia el pedido elegido al salir de "salida" (no queda un pedido fantasma)', () => {
+    const fixture = openModal([makeProductoDto()], [makePedidoResumenDto()]);
+    fixture.componentInstance.seleccionarTipoMovimiento('salida');
+    seleccionarPedidoYResolverDetalle(fixture);
+    expect(fixture.componentInstance.pedido()).not.toBeNull();
+
+    fixture.componentInstance.seleccionarTipoMovimiento('entrada');
+
+    expect(fixture.componentInstance.pedido()).toBeNull();
+    expect(fixture.componentInstance.pedidoBuscado()).toBe('');
+    expect(fixture.componentInstance.filas()).toHaveLength(1);
+    expect(fixture.componentInstance.filas()[0]).toMatchObject({
+      productoTerminadoId: '',
+      loteId: '',
+      cantidad: '',
+    });
+
+    // guardar() ahora debe ir por el camino de movimiento generico, no al
+    // PATCH de pendiente-entrega.
+    httpMock.expectNone((r) => r.url === `${PEDIDOS_PREPARAR_BASE}/50/pendiente-entrega`);
+  });
+
+  it('seleccionarPedido cancela el GET anterior: elegir B mientras A seguia en vuelo no deja que A sobreescriba el resultado', () => {
+    const fixture = openModal(
+      [makeProductoDto()],
+      [makePedidoResumenDto({ id: 50 }), makePedidoResumenDto({ id: 60, codigo: 'PED-000060' })],
+    );
+
+    fixture.componentInstance.seleccionarPedido('50');
+    const reqA = httpMock.expectOne((r) => r.url === `${PEDIDOS_PREPARAR_BASE}/50`);
+
+    fixture.componentInstance.seleccionarPedido('60');
+    const reqB = httpMock.expectOne((r) => r.url === `${PEDIDOS_PREPARAR_BASE}/60`);
+
+    // El unsubscribe() al elegir B cancela el GET de A — HttpTestingController
+    // no deja flushear una request cancelada, asi que ni se intenta: con que
+    // quede marcada "cancelled" ya confirma que una respuesta tardia de A no
+    // podria aplicarse.
+    expect(reqA.cancelled).toBe(true);
+
+    reqB.flush(makePedidoDetalleDto({ id: 60, codigo: 'PED-000060' }));
+
+    // El producto de B tambien resuelve por SKU, asi que dispara su propia
+    // carga de lotes (ver seleccionarPedido) — se flushea para no dejarla
+    // abierta.
+    httpMock
+      .expectOne((r) => r.url === LOTES_BASE && r.params.get('producto_terminado_id') === '256')
+      .flush({ data: [], meta: { total: 0, page: 1, limit: 100, total_pages: 0 } });
+
+    expect(fixture.componentInstance.pedido()?.id).toBe(60);
+    expect(fixture.componentInstance.motivoGeneral()).toBe('Pedido PED-000060');
+  });
+
   it('loads productos con productoTerminadoId resuelto into the combobox options when opened', () => {
     const fixture = openModal();
 
     expect(fixture.componentInstance.productosOptions()).toEqual([
-      { value: '256', label: 'Pan de molde', secondary: 'FR-P3-PR2' },
+      { value: '256', label: 'Pan de molde · 500 gr', secondary: 'FR-P3-PR2' },
     ]);
   });
 
@@ -192,6 +492,9 @@ describe('MovimientoProductoTerminadoFormModal', () => {
         meta: { total: 1, page: 1, limit: 100, total_pages: 1 },
       });
     httpMock
+      .expectOne((request) => request.url === PEDIDOS_PREPARAR_BASE)
+      .flush({ data: [], meta: { total: 0, page: 1, limit: 100, total_pages: 0 } });
+    httpMock
       .expectOne(
         (request) =>
           request.url === LOTES_BASE && request.params.get('producto_terminado_id') === '256',
@@ -230,6 +533,9 @@ describe('MovimientoProductoTerminadoFormModal', () => {
 
     httpMock
       .expectOne((request) => request.url === PRODUCTO_PRESENTACIONES_BASE)
+      .flush({ data: [], meta: { total: 0, page: 1, limit: 100, total_pages: 0 } });
+    httpMock
+      .expectOne((request) => request.url === PEDIDOS_PREPARAR_BASE)
       .flush({ data: [], meta: { total: 0, page: 1, limit: 100, total_pages: 0 } });
     httpMock.expectNone(LOTES_BASE);
   });

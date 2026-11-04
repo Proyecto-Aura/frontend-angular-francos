@@ -13,7 +13,26 @@
     <app-ds-icon [img]="LucideLayers" [size]="18" />
   </span>
 
-  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+  <app-ds-field
+    label="Solicitud"
+    htmlFor="lote-pt-solicitud"
+    hint="Opcional. Elige una solicitud en proceso para ligar el lote y mostrar solo sus productos pendientes."
+  >
+    <app-ds-combobox
+      id="lote-pt-solicitud"
+      [value]="solicitudProduccionId()"
+      (valueChange)="seleccionarSolicitud($event)"
+      [options]="solicitudesOptions()"
+      placeholder="Buscar solicitud en proceso…"
+      emptyMessage="Sin solicitudes en proceso."
+    />
+  </app-ds-field>
+
+  @if (cargandoSolicitud()) {
+    <p class="mt-2 text-ds-sm text-muted-foreground">Cargando productos pendientes…</p>
+  }
+
+  <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
     <app-ds-field
       label="Código de lote"
       [hint]="

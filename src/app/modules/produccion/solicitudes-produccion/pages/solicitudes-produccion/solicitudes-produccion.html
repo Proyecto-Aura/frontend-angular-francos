@@ -137,7 +137,12 @@
       }
     </app-ds-card>
 
-    <app-solicitud-detalle-modal [solicitudId]="solicitudDetalleId()" (closed)="cerrarDetalle()" />
+    <app-solicitud-detalle-modal
+      [solicitudId]="solicitudDetalleId()"
+      [modo]="modalModo()"
+      (closed)="cerrarDetalle()"
+      (entregaRegistrada)="recargarTodo()"
+    />
   } @else {
     <app-lotes-producto-terminado-general (registrado)="cargarLotesTotal()" />
   }
@@ -160,18 +165,26 @@
       <app-ds-icon [img]="LucideEye" [size]="16" />
     </app-ds-icon-button>
 
-    @if (accionSiguiente(fila.estado); as etiqueta) {
+    @if (fila.estado === 'pendiente') {
       <app-ds-icon-button
-        [label]="etiqueta"
+        label="Iniciar producción"
         variant="secondary"
         size="md"
         [disabled]="cambiandoId() === fila.solicitud.id"
         (clicked)="avanzarEstado(fila.solicitud)"
       >
-        <app-ds-icon
-          [img]="fila.estado === 'pendiente' ? LucidePlay : LucideCircleCheck"
-          [size]="16"
-        />
+        <app-ds-icon [img]="LucidePlay" [size]="16" />
+      </app-ds-icon-button>
+    }
+
+    @if (fila.estado === 'en_proceso') {
+      <app-ds-icon-button
+        label="Registrar entrega"
+        variant="secondary"
+        size="md"
+        (clicked)="abrirEntrega(fila.solicitud)"
+      >
+        <app-ds-icon [img]="LucidePackageCheck" [size]="16" />
       </app-ds-icon-button>
     }
 

@@ -9,6 +9,10 @@ export interface DetalleSolicitudProduccion {
   presentacionCantidad: number;
   presentacionUnidadMedida: 'kg' | 'gr';
   cantidadSolicitada: number;
+  // true si ya existe un lote de producto terminado ligado a esta linea —
+  // usado por "Registrar entrega" (OFT0-262) y por el buscador de
+  // solicitud en "Agregar lote" para filtrar solo lo pendiente.
+  loteCreado: boolean;
 }
 
 export interface SolicitudProduccion {

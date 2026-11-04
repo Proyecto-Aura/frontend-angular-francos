@@ -7,6 +7,9 @@ export interface ProductoPresentacion {
   productoNombre: string;
   presentacionCantidad: number;
   presentacionUnidadMedida: 'kg' | 'gr';
+  // null en el mismo caso rarisimo que productoTerminadoId — usado por el
+  // modal "Registrar entrega" (OFT0-262) para mostrar "Stock actual".
+  stockActual: number | null;
 }
 
 export interface ProductoPresentacionesPagina {

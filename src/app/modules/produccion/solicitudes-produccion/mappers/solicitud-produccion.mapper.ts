@@ -49,6 +49,7 @@ export function toDetalleSolicitudProduccion(
     presentacionCantidad: dto.presentacion_cantidad,
     presentacionUnidadMedida: dto.presentacion_unidad_medida,
     cantidadSolicitada: dto.cantidad_solicitada,
+    loteCreado: dto.lote_creado,
   };
 }
 

@@ -67,10 +67,14 @@ export class SolicitudProduccionFormModal {
   filas = signal<FilaDetalleSolicitudProduccionForm[]>([]);
 
   productos = signal<ProductoPresentacion[]>([]);
+  // Nombre + presentacion en el label (no solo el nombre, y ya no en una
+  // columna aparte de la tabla) — el mismo producto puede tener varias
+  // presentaciones con el mismo nombre (ej. "chifles dulce" en 500gr y
+  // 1kg), sin la presentacion eran indistinguibles en el combobox.
   productosOptions = computed<SelectOption[]>(() =>
     this.productos().map((producto) => ({
       value: String(producto.productoTerminadoId),
-      label: producto.productoNombre,
+      label: `${producto.productoNombre} · ${etiquetaPresentacion(producto.presentacionCantidad, producto.presentacionUnidadMedida)}`,
       secondary: producto.sku,
     })),
   );
@@ -133,13 +137,6 @@ export class SolicitudProduccionFormModal {
         (producto) => String(producto.productoTerminadoId) === fila.productoTerminadoId,
       ) ?? null
     );
-  }
-
-  presentacionDeFila(fila: FilaDetalleSolicitudProduccionForm): string {
-    const producto = this.productoDeFila(fila);
-    return producto
-      ? etiquetaPresentacion(producto.presentacionCantidad, producto.presentacionUnidadMedida)
-      : '—';
   }
 
   stockActualDeFila(fila: FilaDetalleSolicitudProduccionForm): string {

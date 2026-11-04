@@ -39,6 +39,7 @@ const SOLICITUD_DTO: SolicitudProduccionDto = {
       presentacion_unidad_medida: 'gr',
       cantidad_solicitada: 20,
       created_at: '2026-09-12T00:00:00.000Z',
+      lote_creado: false,
     },
   ],
 };
@@ -69,6 +70,7 @@ describe('solicitud-produccion.mapper (Produccion)', () => {
         presentacionCantidad: 500,
         presentacionUnidadMedida: 'gr',
         cantidadSolicitada: 20,
+        loteCreado: false,
       },
     ]);
   });

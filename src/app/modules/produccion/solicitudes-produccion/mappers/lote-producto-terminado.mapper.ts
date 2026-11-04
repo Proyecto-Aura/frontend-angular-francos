@@ -49,6 +49,9 @@ export function toCrearLoteProductoTerminadoRequest(
     // el campo acepta omitirse).
     ...(form.fechaVencimiento ? { fecha_vencimiento: form.fechaVencimiento } : {}),
     cantidad_inicial: Number(form.cantidadInicial),
+    ...(form.solicitudProduccionId
+      ? { solicitud_produccion_id: Number(form.solicitudProduccionId) }
+      : {}),
   };
 }
 

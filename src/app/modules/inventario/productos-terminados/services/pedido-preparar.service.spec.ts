@@ -26,6 +26,7 @@ function makeResumenDto(
     unidades: 210,
     fecha_entrega: null,
     created_at: '2026-09-12T09:05:00.000Z',
+    disponibilidad: 'completo',
     ...overrides,
   };
 }
@@ -116,6 +117,7 @@ describe('PedidoPrepararService', () => {
       clienteNombre: 'Supermercados Andina',
       cantidadProductos: 3,
       cantidadUnidades: 210,
+      disponibilidad: 'completo',
     });
   });
 

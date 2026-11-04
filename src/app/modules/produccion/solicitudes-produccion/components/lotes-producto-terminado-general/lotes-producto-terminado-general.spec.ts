@@ -41,7 +41,7 @@ function makeProductoDto(
     estado: true,
     producto: { id: 3, nombre: 'Camote frito' },
     presentacion: { id: 2, cantidad: 500, unidad_medida: 'gr' },
-    producto_terminado: { id: 256 },
+    producto_terminado: { id: 256, stock_actual: 0 },
     ...overrides,
   };
 }

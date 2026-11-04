@@ -18,6 +18,7 @@ import {
   LucideEye,
   LucideLayers,
   LucidePackage,
+  LucidePackageCheck,
   LucidePlay,
   LucideSearch,
 } from '@lucide/angular';
@@ -114,6 +115,7 @@ export class SolicitudesProduccion implements OnInit, AfterViewInit {
   readonly LucideClock = LucideClock;
   readonly LucideEye = LucideEye;
   readonly LucidePackage = LucidePackage;
+  readonly LucidePackageCheck = LucidePackageCheck;
   readonly LucidePlay = LucidePlay;
   readonly LucideSearch = LucideSearch;
 
@@ -181,9 +183,12 @@ export class SolicitudesProduccion implements OnInit, AfterViewInit {
 
   resumen = signal<ResumenSolicitudesProduccion>(RESUMEN_VACIO);
 
-  // null = cerrado. Se abre con el id de la fila clickeada en "Ver detalle";
-  // el modal pide GET /solicitudes-produccion/:id por su cuenta.
+  // null = cerrado. Se abre con el id de la fila clickeada en "Ver detalle"
+  // o "Registrar entrega"; el modal pide GET /solicitudes-produccion/:id
+  // por su cuenta. modalModo decide si abre en modo lectura o en el modo
+  // que agrega la columna "Stock actual" + el boton "Registrar entrega".
   solicitudDetalleId = signal<number | null>(null);
+  modalModo = signal<'ver' | 'entregar'>('ver');
 
   ngOnInit(): void {
     this.cargarSolicitudes();
@@ -278,6 +283,12 @@ export class SolicitudesProduccion implements OnInit, AfterViewInit {
   }
 
   verDetalle(solicitud: SolicitudProduccion): void {
+    this.modalModo.set('ver');
+    this.solicitudDetalleId.set(solicitud.id);
+  }
+
+  abrirEntrega(solicitud: SolicitudProduccion): void {
+    this.modalModo.set('entregar');
     this.solicitudDetalleId.set(solicitud.id);
   }
 

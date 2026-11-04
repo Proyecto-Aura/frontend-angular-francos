@@ -36,13 +36,28 @@ export function tonoEstadoPedidoPreparar(estado: EstadoPedidoPreparar): BadgeTon
 
 const DISPONIBILIDAD_LABEL: Record<DisponibilidadPedidoPreparar, string> = {
   completo: 'Stock completo',
-  insuficiente: 'Stock insuficiente',
+  parcial: 'Stock parcial',
+  sin_stock: 'Sin stock',
+};
+
+// Mismo criterio de tonos que ya usa "Stock de productos" para su estado
+// (normal/bajo/agotado -> success/warning/danger).
+const DISPONIBILIDAD_TONE: Record<DisponibilidadPedidoPreparar, BadgeTone> = {
+  completo: 'success',
+  parcial: 'warning',
+  sin_stock: 'danger',
 };
 
 export function etiquetaDisponibilidadPedidoPreparar(
   disponibilidad: DisponibilidadPedidoPreparar,
 ): string {
   return DISPONIBILIDAD_LABEL[disponibilidad];
+}
+
+export function tonoDisponibilidadPedidoPreparar(
+  disponibilidad: DisponibilidadPedidoPreparar,
+): BadgeTone {
+  return DISPONIBILIDAD_TONE[disponibilidad];
 }
 
 export function toPedidoPreparar(dto: PedidoPrepararResumenDto): PedidoPreparar {
@@ -54,6 +69,7 @@ export function toPedidoPreparar(dto: PedidoPrepararResumenDto): PedidoPreparar 
     clienteNombre: dto.cliente.nombre,
     cantidadProductos: dto.productos,
     cantidadUnidades: dto.unidades,
+    disponibilidad: dto.disponibilidad,
   };
 }
 

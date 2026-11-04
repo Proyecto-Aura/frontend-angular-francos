@@ -31,4 +31,9 @@ export interface LoteProductoTerminadoForm {
   fechaProduccion: string;
   fechaVencimiento: string;
   cantidadInicial: string;
+  // '' = lote "suelto", sin ligar a ninguna solicitud (flujo manual que ya
+  // existia). Si viene seteado, liga el lote a esa linea de la solicitud
+  // (OFT0-262) para que "lote_creado" pase a true la proxima vez que se
+  // pida el detalle.
+  solicitudProduccionId: string;
 }
