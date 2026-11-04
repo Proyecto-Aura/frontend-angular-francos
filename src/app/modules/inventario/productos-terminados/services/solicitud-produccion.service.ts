@@ -27,7 +27,7 @@ import {
   toSolicitudesProduccionPagina,
 } from '../mappers/solicitud-produccion.mapper';
 
-const SOLICITUDES_BASE = `${environment.apiUrl}/solicitudes-produccion`;
+const SOLICITUDES_BASE = `${environment.apiUrl}/produccion/solicitudes`;
 
 export interface FiltrosSolicitudesProduccion {
   search?: string;

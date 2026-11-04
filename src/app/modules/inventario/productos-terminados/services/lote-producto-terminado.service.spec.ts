@@ -5,7 +5,7 @@ import { environment } from '../../../../../environments/environment';
 import { LoteProductoTerminadoDto } from '../interfaces/lote-producto-terminado-dto.interface';
 import { LoteProductoTerminadoService } from './lote-producto-terminado.service';
 
-const LOTES_BASE = `${environment.apiUrl}/lotes-producto-terminado`;
+const LOTES_BASE = `${environment.apiUrl}/produccion/lotes-producto-terminado`;
 
 function makeLoteDto(overrides: Partial<LoteProductoTerminadoDto> = {}): LoteProductoTerminadoDto {
   return {

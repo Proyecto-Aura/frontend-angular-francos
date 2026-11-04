@@ -6,7 +6,7 @@ import { LotesProductoTerminadoPageDto } from '../interfaces/lote-producto-termi
 import { LotesProductoTerminadoPagina } from '../interfaces/lote-producto-terminado.interface';
 import { toLotesProductoTerminadoPagina } from '../mappers/lote-producto-terminado.mapper';
 
-const LOTES_BASE = `${environment.apiUrl}/lotes-producto-terminado`;
+const LOTES_BASE = `${environment.apiUrl}/produccion/lotes-producto-terminado`;
 
 export interface FiltrosLotesProductoTerminado {
   search?: string;
