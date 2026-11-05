@@ -289,6 +289,39 @@ describe('SolicitudInsumoDetalleModal (Inventario)', () => {
       expect(fixture.componentInstance.filas()[0].cantidadPreparada).toBe(20);
     });
 
+    it.each(['parcial', 'sin_stock'] as const)(
+      'entregaBloqueada es true y el texto de ayuda avisa cuando la disponibilidad es %s',
+      (disponibilidad) => {
+        const fixture = createEntregar();
+        abrir(fixture, makeSolicitudDto({ estado: 'en_proceso', disponibilidad }));
+
+        expect(fixture.componentInstance.entregaBloqueada()).toBe(true);
+        expect(fixture.componentInstance.textoAyuda()).toBe(
+          'No se puede registrar la entrega: falta stock para completar la solicitud.',
+        );
+      },
+    );
+
+    it('entregaBloqueada es false cuando la disponibilidad es completo', () => {
+      const fixture = createEntregar();
+      abrir(fixture);
+
+      expect(fixture.componentInstance.entregaBloqueada()).toBe(false);
+    });
+
+    it.each(['parcial', 'sin_stock'] as const)(
+      'registrarEntrega no hace nada cuando la disponibilidad es %s',
+      (disponibilidad) => {
+        const fixture = createEntregar();
+        abrir(fixture, makeSolicitudDto({ estado: 'en_proceso', disponibilidad }));
+
+        fixture.componentInstance.registrarEntrega();
+
+        httpMock.expectNone(`${SOLICITUDES_BASE}/10/estado`);
+        expect(fixture.componentInstance.registrando()).toBe(false);
+      },
+    );
+
     it('registrarEntrega hace PATCH .../estado a "entregado" mandando items con la cantidad solicitada por defecto, y emite entregaRegistrada + closed', () => {
       const fixture = createEntregar();
       abrir(fixture);

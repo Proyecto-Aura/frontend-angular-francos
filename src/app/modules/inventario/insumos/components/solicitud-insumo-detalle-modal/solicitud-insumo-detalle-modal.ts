@@ -269,8 +269,20 @@ export class SolicitudInsumoDetalleModal {
     }));
   });
 
+  // Bloquea "Registrar entrega" si la disponibilidad no es "completo"
+  // (pedido explicito del usuario, mismo criterio que entregaBloqueada en
+  // PedidoPrepararDetalleModal): puede haber mas de una solicitud
+  // "en_proceso" a la vez sobre el mismo insumo, y si una ya se entrego
+  // primero el stock restante puede no alcanzar para esta — mejor frenar
+  // aca que dejar que tire 409 despues de que la persona ya ajusto
+  // cantidades.
+  entregaBloqueada = computed(() => this.solicitud()?.disponibilidad !== 'completo');
+
   textoAyuda = computed(() => {
     if (this.modo() !== 'entregar') return null;
+    if (this.entregaBloqueada()) {
+      return 'No se puede registrar la entrega: falta stock para completar la solicitud.';
+    }
     return 'Ajusta la cantidad preparada si es distinta a la solicitada. Al confirmar se registrará la salida de inventario.';
   });
 
@@ -309,7 +321,14 @@ export class SolicitudInsumoDetalleModal {
   // backend exige que cubra exactamente las lineas del detalle.
   registrarEntrega(): void {
     const s = this.solicitud();
-    if (!s || this.modo() !== 'entregar' || this.registrando() || this.cargando() || this.error()) {
+    if (
+      !s ||
+      this.modo() !== 'entregar' ||
+      this.registrando() ||
+      this.cargando() ||
+      this.error() ||
+      this.entregaBloqueada()
+    ) {
       return;
     }
 

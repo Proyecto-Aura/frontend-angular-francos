@@ -72,7 +72,7 @@
     @if (modo() === 'entregar') {
       <app-ds-button
         variant="destructive"
-        [disabled]="registrando() || cargando() || error()"
+        [disabled]="registrando() || cargando() || error() || entregaBloqueada()"
         (clicked)="registrarEntrega()"
       >
         {{ registrando() ? 'Registrando…' : 'Registrar entrega' }}
