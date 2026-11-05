@@ -8,7 +8,7 @@ import { construirCodigoSolicitud } from '../../mappers/solicitud-produccion.map
 import { SolicitudProduccionFormModal } from './solicitud-produccion-form-modal';
 
 const PRODUCTO_PRESENTACIONES_BASE = `${environment.apiUrl}/producto-presentaciones`;
-const SOLICITUDES_BASE = `${environment.apiUrl}/solicitudes-produccion`;
+const SOLICITUDES_BASE = `${environment.apiUrl}/produccion/solicitudes`;
 // El preview real usa new Date() (hoy), asi que los tests tienen que
 // calcular el codigo esperado igual, no un string pelado — mismo criterio
 // que hoyIsoLocal() en otros specs del modulo.

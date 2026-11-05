@@ -1,1 +1,195 @@
-<p>solicitudes-insumos works!</p>
+<div class="flex flex-col gap-6 p-(--page-padding)">
+  <div>
+    <h1 class="text-ds-2xl font-medium text-foreground">Solicitudes de insumos</h1>
+  </div>
+
+  <div class="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-4">
+    <app-ds-kpi-card
+      label="Pendientes"
+      [value]="resumen().pendientes"
+      [hasIcon]="true"
+      iconTone="warning"
+    >
+      <span icon><app-ds-icon [img]="LucideClock" [size]="16" /></span>
+    </app-ds-kpi-card>
+
+    <app-ds-kpi-card
+      label="En proceso"
+      [value]="resumen().enProceso"
+      [hasIcon]="true"
+      iconTone="info"
+    >
+      <span icon><app-ds-icon [img]="LucidePackage" [size]="16" /></span>
+    </app-ds-kpi-card>
+
+    <app-ds-kpi-card
+      label="Entregadas"
+      [value]="resumen().completadas"
+      [hasIcon]="true"
+      iconTone="success"
+    >
+      <span icon><app-ds-icon [img]="LucideCircleCheck" [size]="16" /></span>
+    </app-ds-kpi-card>
+
+    <app-ds-kpi-card
+      label="Rechazadas"
+      [value]="resumen().canceladas"
+      [hasIcon]="true"
+      iconTone="danger"
+    >
+      <span icon><app-ds-icon [img]="LucideBan" [size]="16" /></span>
+    </app-ds-kpi-card>
+  </div>
+
+  <app-ds-filter-bar [hasSearch]="true">
+    <label search class="sr-only" for="inventario-solicitudes-insumos-busqueda">
+      Buscar por código de solicitud
+    </label>
+    <app-ds-input
+      id="inventario-solicitudes-insumos-busqueda"
+      search
+      [value]="search()"
+      (valueChange)="setSearch($event)"
+      placeholder="Código de solicitud…"
+      [hasIcon]="true"
+    >
+      <span icon><app-ds-icon [img]="LucideSearch" [size]="16" /></span>
+    </app-ds-input>
+
+    <div filters class="w-[188px]">
+      <label class="sr-only" for="inventario-solicitudes-insumos-estado">Filtrar por estado</label>
+      <app-ds-select
+        id="inventario-solicitudes-insumos-estado"
+        [value]="estadoFiltro()"
+        (valueChange)="setEstado($event)"
+        [options]="estadoOptions"
+        placeholder="Todos los estados"
+      />
+    </div>
+
+    <div filters class="flex items-center gap-2 text-ds-sm text-muted-foreground">
+      <label for="inventario-solicitudes-insumos-fecha-desde">Fecha desde</label>
+      <span class="w-[160px]">
+        <app-ds-input
+          id="inventario-solicitudes-insumos-fecha-desde"
+          type="date"
+          [value]="fechaDesde()"
+          (valueChange)="setFechaDesde($event)"
+          [invalid]="rangoInvalido()"
+        />
+      </span>
+    </div>
+    <div filters class="flex items-center gap-2 text-ds-sm text-muted-foreground">
+      <label for="inventario-solicitudes-insumos-fecha-hasta">Fecha hasta</label>
+      <span class="w-[160px]">
+        <app-ds-input
+          id="inventario-solicitudes-insumos-fecha-hasta"
+          type="date"
+          [value]="fechaHasta()"
+          (valueChange)="setFechaHasta($event)"
+          [invalid]="rangoInvalido()"
+        />
+      </span>
+    </div>
+  </app-ds-filter-bar>
+
+  @if (rangoInvalido()) {
+    <p role="alert" class="text-ds-sm text-destructive">
+      «Fecha desde» no puede ser posterior a «Fecha hasta».
+    </p>
+  }
+
+  @if (errorCambioEstado()) {
+    <p role="alert" class="text-ds-sm text-destructive">{{ errorCambioEstado() }}</p>
+  }
+
+  <app-ds-card [padded]="false" [hasFooter]="totalPaginas() > 1">
+    @if (cargando()) {
+      <div role="status" class="p-12 text-center text-muted-foreground">Cargando…</div>
+    } @else if (errorCarga()) {
+      <div class="flex flex-col items-center gap-3 p-12 text-center">
+        <p role="alert" class="text-muted-foreground">No se pudieron cargar las solicitudes.</p>
+        <app-ds-button variant="secondary" (clicked)="cargarSolicitudes()"
+          >Reintentar</app-ds-button
+        >
+      </div>
+    } @else {
+      <app-ds-data-table
+        [columns]="columnas()"
+        [rows]="solicitudes()"
+        empty="Sin solicitudes registradas"
+      />
+    }
+
+    @if (totalPaginas() > 1) {
+      <div footer>
+        <app-ds-pagination
+          [page]="pagina()"
+          [pageCount]="totalPaginas()"
+          [total]="total()"
+          [pageSize]="tamanioPagina"
+          (changed)="cambiarPagina($event)"
+        />
+      </div>
+    }
+  </app-ds-card>
+
+  <app-solicitud-insumo-detalle-modal
+    [solicitudId]="solicitudDetalleId()"
+    [modo]="modalModo()"
+    (closed)="cerrarDetalle()"
+    (entregaRegistrada)="recargarTodo()"
+  />
+</div>
+
+<ng-template #estadoCell let-fila>
+  <app-ds-badge [tone]="estadoTone(fila.estado)" [dot]="true">
+    {{ estadoLabel(fila.estado) }}
+  </app-ds-badge>
+</ng-template>
+
+<ng-template #accionesCell let-fila>
+  <div class="flex justify-end gap-2">
+    <app-ds-icon-button
+      label="Ver detalle"
+      variant="secondary"
+      size="md"
+      (clicked)="verDetalle(fila.solicitud)"
+    >
+      <app-ds-icon [img]="LucideEye" [size]="16" />
+    </app-ds-icon-button>
+
+    @if (fila.estado === 'pendiente') {
+      <app-ds-icon-button
+        label="Iniciar entrega"
+        variant="secondary"
+        size="md"
+        [disabled]="cambiandoId() === fila.solicitud.id"
+        (clicked)="avanzarEstado(fila.solicitud)"
+      >
+        <app-ds-icon [img]="LucidePlay" [size]="16" />
+      </app-ds-icon-button>
+
+      <app-ds-icon-button
+        label="Cancelar"
+        variant="secondary"
+        size="md"
+        [disabled]="cambiandoId() === fila.solicitud.id"
+        (clicked)="cancelarSolicitud(fila.solicitud)"
+      >
+        <app-ds-icon [img]="LucideBan" [size]="16" />
+      </app-ds-icon-button>
+    }
+
+    @if (fila.estado === 'en_proceso') {
+      <app-ds-icon-button
+        label="Registrar entrega"
+        variant="secondary"
+        size="md"
+        (clicked)="abrirEntrega(fila.solicitud)"
+      >
+        <app-ds-icon [img]="LucidePackageCheck" [size]="16" />
+      </app-ds-icon-button>
+    }
+  </div>
+</ng-template>

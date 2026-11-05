@@ -6,7 +6,7 @@ import { environment } from '../../../../../../environments/environment';
 import { SolicitudProduccionDto } from '../../interfaces/solicitud-produccion-dto.interface';
 import { SolicitudDetalleModal } from './solicitud-detalle-modal';
 
-const SOLICITUDES_BASE = `${environment.apiUrl}/solicitudes-produccion`;
+const SOLICITUDES_BASE = `${environment.apiUrl}/produccion/solicitudes`;
 
 function makeSolicitudDto(overrides: Partial<SolicitudProduccionDto> = {}): SolicitudProduccionDto {
   return {

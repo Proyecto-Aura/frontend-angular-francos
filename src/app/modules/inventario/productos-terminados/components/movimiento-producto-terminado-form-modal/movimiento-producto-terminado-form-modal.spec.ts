@@ -11,7 +11,7 @@ import { ProductoPresentacionDto } from '../../interfaces/producto-presentacion-
 import { MovimientoProductoTerminadoFormModal } from './movimiento-producto-terminado-form-modal';
 
 const PRODUCTO_PRESENTACIONES_BASE = `${environment.apiUrl}/producto-presentaciones`;
-const LOTES_BASE = `${environment.apiUrl}/lotes-producto-terminado`;
+const LOTES_BASE = `${environment.apiUrl}/produccion/lotes-producto-terminado`;
 const MOVIMIENTOS_BASE = `${environment.apiUrl}/movimientos-producto-terminado`;
 const PEDIDOS_PREPARAR_BASE = `${environment.apiUrl}/inventario/pedidos`;
 

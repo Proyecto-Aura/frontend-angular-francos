@@ -194,54 +194,26 @@ describe('solicitudProduccionMapper', () => {
   });
 
   describe('siguienteSecuencialSolicitud', () => {
-    const hoy = new Date(2026, 8, 12); // 2026-09-12
-    const hoyIso = '2026-09-12';
-
-    function solicitudDeHoy(codigo: string) {
-      return { codigo, fechaCreacion: hoyIso };
-    }
-
-    it('computes the next sequence as the highest used today plus one, not a row count', () => {
+    // El filtro "solo de HOY" ya no se hace aca comparando fecha_creacion
+    // (se le pide al backend via fecha_desde/fecha_hasta, ver el service)
+    // — esta funcion solo calcula el maximo entre los codigos que recibe.
+    it('computes the next sequence as the highest used plus one, not a row count', () => {
       expect(
-        siguienteSecuencialSolicitud(
-          [solicitudDeHoy('FR-SPR-089-260912'), solicitudDeHoy('FR-SPR-090-260912')],
-          hoy,
-        ),
+        siguienteSecuencialSolicitud([
+          { codigo: 'FR-SPR-089-260912' },
+          { codigo: 'FR-SPR-090-260912' },
+        ]),
       ).toBe(91);
     });
 
-    it('returns 1 when there are no solicitudes today', () => {
-      expect(siguienteSecuencialSolicitud([], hoy)).toBe(1);
-    });
-
-    it('ignores solicitudes de otro dia al calcular el maximo (se reinicia por dia)', () => {
-      expect(
-        siguienteSecuencialSolicitud(
-          [
-            { codigo: 'FR-SPR-040-260911', fechaCreacion: '2026-09-11' },
-            solicitudDeHoy('FR-SPR-001-260912'),
-          ],
-          hoy,
-        ),
-      ).toBe(2);
+    it('returns 1 when there are no solicitudes', () => {
+      expect(siguienteSecuencialSolicitud([])).toBe(1);
     });
 
     it('ignores codigos que no siguen el patron FR-SPR (datos legados)', () => {
       expect(
-        siguienteSecuencialSolicitud(
-          [solicitudDeHoy('LEGACY-001'), solicitudDeHoy('FR-SPR-012-260912')],
-          hoy,
-        ),
+        siguienteSecuencialSolicitud([{ codigo: 'LEGACY-001' }, { codigo: 'FR-SPR-012-260912' }]),
       ).toBe(13);
-    });
-
-    it('handles a fecha_creacion que viene como datetime completo, no solo YYYY-MM-DD', () => {
-      expect(
-        siguienteSecuencialSolicitud(
-          [{ codigo: 'FR-SPR-005-260912', fechaCreacion: '2026-09-12T14:00:00.000Z' }],
-          hoy,
-        ),
-      ).toBe(6);
     });
   });
 

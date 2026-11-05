@@ -9,7 +9,7 @@ import { environment } from '../../../../../../environments/environment';
 import { SolicitudProduccionDto } from '../../interfaces/solicitud-produccion-dto.interface';
 import { SolicitudesProduccion } from './solicitudes-produccion';
 
-const SOLICITUDES_BASE = `${environment.apiUrl}/solicitudes-produccion`;
+const SOLICITUDES_BASE = `${environment.apiUrl}/produccion/solicitudes`;
 
 function makeSolicitudDto(overrides: Partial<SolicitudProduccionDto> = {}): SolicitudProduccionDto {
   return {
@@ -62,7 +62,7 @@ describe('SolicitudesProduccion (Produccion)', () => {
     httpMock
       .expectOne(
         (r) =>
-          r.url === `${environment.apiUrl}/lotes-producto-terminado` &&
+          r.url === `${environment.apiUrl}/produccion/lotes-producto-terminado` &&
           r.params.get('limit') === '1',
       )
       .flush({ data: [], meta: { total: 9, page: 1, limit: 1, total_pages: 9 } });

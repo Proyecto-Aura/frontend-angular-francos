@@ -10,7 +10,7 @@ import { LoteProductoTerminadoDto } from '../../interfaces/lote-producto-termina
 import { ProductoPresentacionDto } from '../../interfaces/producto-presentacion-dto.interface';
 import { LotesProductoTerminadoGeneral } from './lotes-producto-terminado-general';
 
-const LOTES_BASE = `${environment.apiUrl}/lotes-producto-terminado`;
+const LOTES_BASE = `${environment.apiUrl}/produccion/lotes-producto-terminado`;
 const PRODUCTOS_BASE = `${environment.apiUrl}/producto-presentaciones`;
 
 function makeLoteDto(overrides: Partial<LoteProductoTerminadoDto> = {}): LoteProductoTerminadoDto {

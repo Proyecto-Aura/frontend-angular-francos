@@ -13,7 +13,7 @@ const PRODUCTO_PRESENTACIONES_BASE = `${environment.apiUrl}/producto-presentacio
 const INDICADORES_URL = `${environment.apiUrl}/productos-terminados/indicadores`;
 const CATEGORIAS_BASE = `${environment.apiUrl}/categorias`;
 const PRESENTACIONES_BASE = `${environment.apiUrl}/presentaciones`;
-const LOTES_BASE = `${environment.apiUrl}/lotes-producto-terminado`;
+const LOTES_BASE = `${environment.apiUrl}/produccion/lotes-producto-terminado`;
 
 const INDICADORES_VACIOS = { total: 0, normal: 0, alto: 0, bajo: 0, agotado: 0 };
 

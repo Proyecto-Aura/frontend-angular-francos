@@ -8,8 +8,8 @@ import { SolicitudProduccionDto } from '../../interfaces/solicitud-produccion-dt
 import { LoteFormModal } from './lote-form-modal';
 
 const PRODUCTOS_BASE = `${environment.apiUrl}/producto-presentaciones`;
-const LOTES_BASE = `${environment.apiUrl}/lotes-producto-terminado`;
-const SOLICITUDES_BASE = `${environment.apiUrl}/solicitudes-produccion`;
+const LOTES_BASE = `${environment.apiUrl}/produccion/lotes-producto-terminado`;
+const SOLICITUDES_BASE = `${environment.apiUrl}/produccion/solicitudes`;
 
 function hoyIsoLocal(): string {
   const hoy = new Date();

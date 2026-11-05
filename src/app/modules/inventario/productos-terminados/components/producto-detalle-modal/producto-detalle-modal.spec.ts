@@ -7,7 +7,7 @@ import { MovimientoProductoTerminadoDto } from '../../interfaces/movimiento-prod
 import { ProductoPresentacion } from '../../interfaces/producto-presentacion.interface';
 import { ProductoDetalleModal } from './producto-detalle-modal';
 
-const LOTES_BASE = `${environment.apiUrl}/lotes-producto-terminado`;
+const LOTES_BASE = `${environment.apiUrl}/produccion/lotes-producto-terminado`;
 const MOVIMIENTOS_BASE = `${environment.apiUrl}/movimientos-producto-terminado`;
 
 function makeProducto(overrides: Partial<ProductoPresentacion> = {}): ProductoPresentacion {
