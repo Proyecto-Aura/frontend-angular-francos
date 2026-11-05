@@ -4,11 +4,13 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { environment } from '../../../../../../environments/environment';
 import { InsumoDto } from '../../interfaces/insumo-dto.interface';
 import { LoteInsumoDto } from '../../interfaces/lote-insumo-dto.interface';
+import { SolicitudInsumoDto } from '../../interfaces/solicitud-insumo-dto.interface';
 import { MovimientoFormModal } from './movimiento-form-modal';
 
 const INSUMOS_BASE = `${environment.apiUrl}/insumos`;
 const LOTES_BASE = `${environment.apiUrl}/lotes-insumo`;
 const MOVIMIENTOS_BASE = `${environment.apiUrl}/movimientos-insumo`;
+const SOLICITUDES_BASE = `${environment.apiUrl}/produccion/solicitudes-insumos`;
 
 function makeInsumoDto(overrides: Partial<InsumoDto> = {}): InsumoDto {
   return {
@@ -41,6 +43,35 @@ function makeLoteDto(overrides: Partial<LoteInsumoDto> = {}): LoteInsumoDto {
     activo: true,
     created_at: '2026-10-01T00:00:00.000Z',
     updated_at: '2026-10-01T00:00:00.000Z',
+    ...overrides,
+  };
+}
+
+function makeSolicitudDto(overrides: Partial<SolicitudInsumoDto> = {}): SolicitudInsumoDto {
+  return {
+    id: 50,
+    codigo_solicitud: 'FR-SIN-001-261105',
+    solicitud_produccion_id: null,
+    estado: 'en_proceso',
+    fecha_creacion: '2026-11-05T19:00:00.000Z',
+    fecha_limite: '2026-11-12',
+    solicitado_por: 'uuid-1',
+    solicitado_por_nombre: "Admin Sistema Franco's",
+    created_at: '2026-11-05T19:00:00.000Z',
+    updated_at: '2026-11-05T19:00:00.000Z',
+    detalle: [
+      {
+        id: 1,
+        insumo_id: 9,
+        insumo_sku: 'FR-INS-9',
+        insumo_nombre: 'Harina de trigo',
+        insumo_unidad_medida: 'kg',
+        stock_disponible: 300,
+        cantidad_solicitada: 10,
+        created_at: '2026-11-05T19:00:00.000Z',
+      },
+    ],
+    disponibilidad: 'completo',
     ...overrides,
   };
 }
@@ -82,6 +113,7 @@ describe('MovimientoFormModal', () => {
 
   function openModal(
     insumos: InsumoDto[] = [makeInsumoDto()],
+    solicitudes: SolicitudInsumoDto[] = [],
   ): ComponentFixture<MovimientoFormModal> {
     const fixture = TestBed.createComponent(MovimientoFormModal);
     fixture.componentRef.setInput('open', true);
@@ -92,6 +124,15 @@ describe('MovimientoFormModal', () => {
       .flush({
         data: insumos,
         meta: { total: insumos.length, page: 1, limit: 100, total_pages: 1 },
+      });
+    httpMock
+      .expectOne(
+        (request) =>
+          request.url === SOLICITUDES_BASE && request.params.get('estado') === 'en_proceso',
+      )
+      .flush({
+        data: solicitudes,
+        meta: { total: solicitudes.length, page: 1, limit: 100, total_pages: 1 },
       });
     fixture.detectChanges();
 
@@ -156,6 +197,9 @@ describe('MovimientoFormModal', () => {
     httpMock
       .expectOne((request) => request.url === INSUMOS_BASE)
       .flush({ data: [makeInsumoDto()], meta: { total: 1, page: 1, limit: 100, total_pages: 1 } });
+    httpMock
+      .expectOne((request) => request.url === SOLICITUDES_BASE)
+      .flush({ data: [], meta: { total: 0, page: 1, limit: 100, total_pages: 0 } });
     httpMock
       .expectOne((request) => request.url === LOTES_BASE && request.params.get('insumo_id') === '9')
       .flush({
@@ -724,5 +768,214 @@ describe('MovimientoFormModal', () => {
     expect(component.errorGeneral()).toBe(
       'No se pudo registrar el movimiento. Intente nuevamente.',
     );
+  });
+
+  describe('Solicitud (OFT0-257, segunda manera de registrar una salida)', () => {
+    it('loads solicitudes en_proceso into solicitudesOptions when opened', () => {
+      const fixture = openModal([makeInsumoDto()], [makeSolicitudDto()]);
+
+      expect(fixture.componentInstance.solicitudesOptions()).toEqual([
+        { value: '50', label: 'FR-SIN-001-261105', secondary: "Admin Sistema Franco's" },
+      ]);
+    });
+
+    function seleccionarSolicitudYResolverDetalle(
+      fixture: ComponentFixture<MovimientoFormModal>,
+      overrides: Partial<SolicitudInsumoDto> = {},
+    ): void {
+      fixture.componentInstance.seleccionarSolicitud('50');
+      httpMock
+        .expectOne((request) => request.url === `${SOLICITUDES_BASE}/50`)
+        .flush(makeSolicitudDto(overrides));
+      fixture.detectChanges();
+
+      // seleccionarSolicitud tambien dispara cargarLotesDeInsumo() para cada
+      // linea (para que la columna "Lotes" no quede vacia) — se flushean
+      // esas peticiones (vacias por defecto) para no dejar requests
+      // abiertas en httpMock.verify().
+      httpMock
+        .match((request) => request.url === LOTES_BASE)
+        .forEach((req) =>
+          req.flush({ data: [], meta: { total: 0, page: 1, limit: 100, total_pages: 0 } }),
+        );
+      fixture.detectChanges();
+    }
+
+    it('seleccionarSolicitud carga el detalle y autocompleta insumo+cantidad en la MISMA tabla (filas) y motivoGeneral, sin cerrar el form', () => {
+      const fixture = openModal([makeInsumoDto()], [makeSolicitudDto()]);
+
+      let cerrado = false;
+      fixture.componentInstance.closed.subscribe(() => (cerrado = true));
+
+      seleccionarSolicitudYResolverDetalle(fixture);
+
+      expect(cerrado).toBe(false);
+      expect(fixture.componentInstance.motivoGeneral()).toBe('Solicitud FR-SIN-001-261105');
+      expect(fixture.componentInstance.filas()).toEqual([
+        { id: 1, insumoId: '9', loteId: '', cantidad: '10' },
+      ]);
+    });
+
+    it('seleccionarSolicitud con valor vacio limpia solicitud() y vuelve la tabla a una fila vacia', () => {
+      const fixture = openModal([makeInsumoDto()], [makeSolicitudDto()]);
+      seleccionarSolicitudYResolverDetalle(fixture);
+
+      fixture.componentInstance.seleccionarSolicitud('');
+
+      expect(fixture.componentInstance.solicitud()).toBeNull();
+      const [fila] = fixture.componentInstance.filas();
+      expect(fixture.componentInstance.filas()).toHaveLength(1);
+      expect(fila).toMatchObject({ insumoId: '', loteId: '', cantidad: '' });
+      httpMock.expectNone(`${SOLICITUDES_BASE}/50`);
+    });
+
+    it('el combobox de insumo queda deshabilitado por fila mientras hay una solicitud elegida', () => {
+      const fixture = openModal([makeInsumoDto()], [makeSolicitudDto()]);
+      seleccionarSolicitudYResolverDetalle(fixture);
+
+      const combobox: HTMLInputElement | null =
+        fixture.nativeElement.querySelector('#movimiento-insumo-1');
+      expect(combobox?.disabled).toBe(true);
+    });
+
+    it('seleccionarSolicitud dispara la carga de lotes para cada insumo resuelto (la columna Lotes no queda vacia)', () => {
+      const fixture = openModal([makeInsumoDto()], [makeSolicitudDto()]);
+
+      fixture.componentInstance.seleccionarSolicitud('50');
+      httpMock.expectOne((r) => r.url === `${SOLICITUDES_BASE}/50`).flush(makeSolicitudDto());
+
+      const loteReq = httpMock.expectOne(
+        (r) => r.url === LOTES_BASE && r.params.get('insumo_id') === '9',
+      );
+      loteReq.flush({
+        data: [makeLoteDto()],
+        meta: { total: 1, page: 1, limit: 100, total_pages: 1 },
+      });
+      fixture.detectChanges();
+
+      const [fila] = fixture.componentInstance.filas();
+      expect(fixture.componentInstance.lotesDeFila(fila)).toEqual([
+        expect.objectContaining({ id: 1 }),
+      ]);
+    });
+
+    it('actualizarCantidadDeFila sigue funcionando sobre la fila autocompletada por la solicitud', () => {
+      const fixture = openModal([makeInsumoDto()], [makeSolicitudDto()]);
+      seleccionarSolicitudYResolverDetalle(fixture);
+
+      fixture.componentInstance.actualizarCantidadDeFila(1, '7');
+
+      expect(fixture.componentInstance.filas()[0].cantidad).toBe('7');
+    });
+
+    it('guardar() con solicitud elegida llama a PATCH .../estado con items (no al endpoint generico) y cierra al confirmar', () => {
+      const fixture = openModal([makeInsumoDto()], [makeSolicitudDto()]);
+      seleccionarSolicitudYResolverDetalle(fixture);
+      fixture.componentInstance.actualizarCantidadDeFila(1, '8');
+
+      let guardadoEmitido: unknown;
+      fixture.componentInstance.saved.subscribe((v) => (guardadoEmitido = v));
+      let cerrado = false;
+      fixture.componentInstance.closed.subscribe(() => (cerrado = true));
+
+      fixture.componentInstance.guardar();
+
+      const req = httpMock.expectOne(`${SOLICITUDES_BASE}/50/estado`);
+      expect(req.request.method).toBe('PATCH');
+      expect(req.request.body).toEqual({
+        estado: 'entregado',
+        items: [{ insumo_id: 9, cantidad_entregada: 8 }],
+      });
+      req.flush({});
+
+      expect(guardadoEmitido).toEqual([]);
+      expect(cerrado).toBe(true);
+      httpMock.expectNone((r) => r.url === MOVIMIENTOS_BASE);
+    });
+
+    it('guardar() con solicitud elegida muestra un mensaje de stock insuficiente en 409', () => {
+      const fixture = openModal([makeInsumoDto()], [makeSolicitudDto()]);
+      seleccionarSolicitudYResolverDetalle(fixture);
+
+      fixture.componentInstance.guardar();
+
+      httpMock
+        .expectOne(`${SOLICITUDES_BASE}/50/estado`)
+        .flush('conflict', { status: 409, statusText: 'Conflict' });
+
+      expect(fixture.componentInstance.errorGeneral()).toContain('No hay stock suficiente');
+    });
+
+    it('guardar() con solicitud elegida muestra un mensaje de cantidades que no coinciden en 400', () => {
+      const fixture = openModal([makeInsumoDto()], [makeSolicitudDto()]);
+      seleccionarSolicitudYResolverDetalle(fixture);
+
+      fixture.componentInstance.guardar();
+
+      httpMock
+        .expectOne(`${SOLICITUDES_BASE}/50/estado`)
+        .flush('bad request', { status: 400, statusText: 'Bad Request' });
+
+      expect(fixture.componentInstance.errorGeneral()).toContain(
+        'Las cantidades enviadas no coinciden',
+      );
+    });
+
+    it('entregaSolicitudBloqueada es true cuando la disponibilidad no es completo, y guardar() no hace nada', () => {
+      const fixture = openModal([makeInsumoDto()], [makeSolicitudDto()]);
+      seleccionarSolicitudYResolverDetalle(fixture, { disponibilidad: 'parcial' });
+
+      expect(fixture.componentInstance.entregaSolicitudBloqueada()).toBe(true);
+
+      fixture.componentInstance.guardar();
+      httpMock.expectNone((r) => r.method === 'PATCH');
+    });
+
+    it('seleccionarTipoMovimiento limpia la solicitud elegida al salir de "salida" (no queda una solicitud fantasma)', () => {
+      const fixture = openModal([makeInsumoDto()], [makeSolicitudDto()]);
+      fixture.componentInstance.seleccionarTipoMovimiento('salida');
+      seleccionarSolicitudYResolverDetalle(fixture);
+      expect(fixture.componentInstance.solicitud()).not.toBeNull();
+
+      fixture.componentInstance.seleccionarTipoMovimiento('entrada');
+
+      expect(fixture.componentInstance.solicitud()).toBeNull();
+      expect(fixture.componentInstance.solicitudBuscada()).toBe('');
+      expect(fixture.componentInstance.filas()).toHaveLength(1);
+      expect(fixture.componentInstance.filas()[0]).toMatchObject({
+        insumoId: '',
+        loteId: '',
+        cantidad: '',
+      });
+
+      httpMock.expectNone(`${SOLICITUDES_BASE}/50/estado`);
+    });
+
+    it('seleccionarSolicitud cancela el GET anterior: elegir B mientras A seguia en vuelo no deja que A sobreescriba el resultado', () => {
+      const fixture = openModal(
+        [makeInsumoDto()],
+        [
+          makeSolicitudDto({ id: 50 }),
+          makeSolicitudDto({ id: 60, codigo_solicitud: 'FR-SIN-002-261105' }),
+        ],
+      );
+
+      fixture.componentInstance.seleccionarSolicitud('50');
+      const reqA = httpMock.expectOne((r) => r.url === `${SOLICITUDES_BASE}/50`);
+
+      fixture.componentInstance.seleccionarSolicitud('60');
+      const reqB = httpMock.expectOne((r) => r.url === `${SOLICITUDES_BASE}/60`);
+
+      expect(reqA.cancelled).toBe(true);
+
+      reqB.flush(makeSolicitudDto({ id: 60, codigo_solicitud: 'FR-SIN-002-261105' }));
+
+      httpMock
+        .expectOne((r) => r.url === LOTES_BASE && r.params.get('insumo_id') === '9')
+        .flush({ data: [], meta: { total: 0, page: 1, limit: 100, total_pages: 0 } });
+
+      expect(fixture.componentInstance.solicitud()?.id).toBe(60);
+      expect(fixture.componentInstance.motivoGeneral()).toBe('Solicitud FR-SIN-002-261105');
+    });
   });
 });

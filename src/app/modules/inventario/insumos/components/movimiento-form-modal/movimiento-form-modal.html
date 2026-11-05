@@ -13,7 +13,11 @@
     <app-ds-icon [img]="LucideArrowLeftRight" [size]="18" />
   </span>
 
-  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+  <div
+    class="grid grid-cols-1 gap-4"
+    [class.sm:grid-cols-2]="tipoMovimiento() !== 'salida'"
+    [class.sm:grid-cols-3]="tipoMovimiento() === 'salida'"
+  >
     <app-ds-field label="Tipo de movimiento" htmlFor="movimiento-tipo" [required]="true">
       <app-ds-select
         id="movimiento-tipo"
@@ -36,11 +40,34 @@
         [invalid]="!!errores().motivoGeneral"
       />
     </app-ds-field>
+
+    @if (tipoMovimiento() === 'salida') {
+      <app-ds-field label="Solicitud" htmlFor="movimiento-solicitud">
+        <app-ds-combobox
+          id="movimiento-solicitud"
+          [value]="solicitudBuscada()"
+          (valueChange)="seleccionarSolicitud($event)"
+          [options]="solicitudesOptions()"
+          placeholder="Buscar solicitud por código…"
+          emptyMessage="Sin solicitudes en proceso."
+        />
+      </app-ds-field>
+    }
   </div>
 
   <p class="mt-3 text-ds-sm text-muted-foreground">
     La fecha, la hora y el responsable se registran automáticamente.
   </p>
+
+  @if (cargandoSolicitud()) {
+    <p class="mt-3 text-ds-sm text-muted-foreground">Cargando solicitud…</p>
+  }
+
+  @if (entregaSolicitudBloqueada()) {
+    <p class="mt-3 text-ds-sm text-muted-foreground">
+      No se puede confirmar la entrega: falta stock para completar la solicitud.
+    </p>
+  }
 
   @if (errores().filas) {
     <div class="mt-3 rounded-lg bg-destructive/10 px-3.5 py-3 text-ds-sm text-destructive">
@@ -102,6 +129,7 @@
                 placeholder="Buscar insumo…"
                 emptyMessage="Sin insumos que coincidan."
                 [invalid]="!!errorDeFila(fila.id, 'insumoId')"
+                [disabled]="solicitud() !== null"
                 size="sm"
               />
             </td>
@@ -203,14 +231,16 @@
               [class.border-b]="!isLast"
               [class.border-border]="!isLast"
             >
-              <app-ds-icon-button
-                label="Quitar insumo"
-                variant="ghost"
-                size="sm"
-                (clicked)="quitarFila(fila.id)"
-              >
-                <app-ds-icon [img]="LucideTrash2" [size]="16" />
-              </app-ds-icon-button>
+              @if (solicitud() === null) {
+                <app-ds-icon-button
+                  label="Quitar insumo"
+                  variant="ghost"
+                  size="sm"
+                  (clicked)="quitarFila(fila.id)"
+                >
+                  <app-ds-icon [img]="LucideTrash2" [size]="16" />
+                </app-ds-icon-button>
+              }
             </td>
           </tr>
         }
@@ -218,15 +248,17 @@
     </table>
   </div>
 
-  <div class="mt-3 flex items-center justify-between gap-3">
-    <app-ds-button variant="secondary" size="sm" (clicked)="agregarFila()">
-      <span icon><app-ds-icon [img]="LucidePlus" [size]="16" /></span>
-      Agregar insumo
-    </app-ds-button>
-    <span class="text-ds-sm text-muted-foreground">
-      {{ cantidadInsumosEnMovimiento() }} insumo(s) en este movimiento
-    </span>
-  </div>
+  @if (solicitud() === null) {
+    <div class="mt-3 flex items-center justify-between gap-3">
+      <app-ds-button variant="secondary" size="sm" (clicked)="agregarFila()">
+        <span icon><app-ds-icon [img]="LucidePlus" [size]="16" /></span>
+        Agregar insumo
+      </app-ds-button>
+      <span class="text-ds-sm text-muted-foreground">
+        {{ cantidadInsumosEnMovimiento() }} insumo(s) en este movimiento
+      </span>
+    </div>
+  }
 
   @if (errorGeneral()) {
     <div class="mt-4 rounded-lg bg-destructive/10 px-3.5 py-3 text-ds-sm text-destructive">
@@ -236,7 +268,11 @@
 
   <span footer class="flex gap-2">
     <app-ds-button variant="secondary" (clicked)="cerrar()">Cancelar</app-ds-button>
-    <app-ds-button variant="primary" [disabled]="guardando()" (clicked)="guardar()">
+    <app-ds-button
+      variant="primary"
+      [disabled]="guardando() || cargandoSolicitud() || entregaSolicitudBloqueada()"
+      (clicked)="guardar()"
+    >
       {{ guardando() ? 'Registrando…' : 'Registrar movimiento' }}
     </app-ds-button>
   </span>
