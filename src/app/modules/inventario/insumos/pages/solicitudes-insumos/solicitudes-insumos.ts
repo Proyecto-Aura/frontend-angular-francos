@@ -33,12 +33,14 @@ import { Pagination } from '../../../../../shared/ds/pagination/pagination';
 import { Select, SelectOption } from '../../../../../shared/ds/select/select';
 import { SolicitudInsumoDetalleModal } from '../../components/solicitud-insumo-detalle-modal/solicitud-insumo-detalle-modal';
 import {
+  DisponibilidadSolicitudInsumo,
   EstadoSolicitudInsumo,
   ResumenSolicitudesInsumo,
   SolicitudInsumo,
 } from '../../interfaces/solicitud-insumo.interface';
 import {
   etiquetaAccionSiguienteEstadoInsumo,
+  etiquetaDisponibilidadSolicitudInsumo,
   etiquetaEstadoSolicitudInsumo,
   puedeCancelarSolicitudInsumo,
   siguienteEstadoSolicitudInsumo,
@@ -54,6 +56,10 @@ interface FilaSolicitud {
   fechaLimiteMostrada: string;
   solicitante: string;
   estado: EstadoSolicitudInsumo;
+  // Solo tiene sentido mientras "pendiente" — se pide siempre con
+  // conDisponibilidad=true (ver el servicio) para poder deshabilitar
+  // "Iniciar entrega" sin abrir el detalle de cada fila.
+  disponibilidad?: DisponibilidadSolicitudInsumo;
 }
 
 const RESUMEN_VACIO: ResumenSolicitudesInsumo = {
@@ -267,9 +273,16 @@ export class SolicitudesInsumos implements OnInit, AfterViewInit {
   // modo="entregar" en vez de disparar el PATCH aca mismo (ver abrirEntrega),
   // porque ese paso SI mueve stock real y conviene mostrar "Stock actual"
   // antes de confirmar.
+  //
+  // "Iniciar entrega" se bloquea si la disponibilidad no es "completo"
+  // (pedido explicito del usuario, mismo criterio que "Iniciar preparación"
+  // en Pedidos por preparar) — el boton ya queda deshabilitado en la
+  // plantilla, esto es solo el guard defensivo por si igual se dispara.
   avanzarEstado(solicitud: SolicitudInsumo): void {
     const siguiente = siguienteEstadoSolicitudInsumo(solicitud.estado);
     if (!siguiente || this.cambiandoId() !== null) return;
+
+    if (siguiente === 'en_proceso' && solicitud.disponibilidad !== 'completo') return;
 
     if (siguiente === 'entregado') {
       this.abrirEntrega(solicitud);
@@ -277,6 +290,14 @@ export class SolicitudesInsumos implements OnInit, AfterViewInit {
     }
 
     this.cambiarEstado(solicitud, siguiente);
+  }
+
+  // Texto del icon-button "Iniciar entrega" — explica por que esta
+  // deshabilitado en vez de solo mostrar "Iniciar entrega" sin motivo
+  // (mismo criterio que tooltipIniciar() en Pedidos).
+  tooltipIniciar(fila: FilaSolicitud): string {
+    if (!fila.disponibilidad || fila.disponibilidad === 'completo') return 'Iniciar entrega';
+    return etiquetaDisponibilidadSolicitudInsumo(fila.disponibilidad);
   }
 
   puedeCancelar(estado: EstadoSolicitudInsumo): boolean {
@@ -327,6 +348,7 @@ export class SolicitudesInsumos implements OnInit, AfterViewInit {
       fechaLimiteMostrada: s.fechaLimite ? this.formatearFecha(s.fechaLimite) : '—',
       solicitante: s.solicitadoPorNombre,
       estado: s.estado,
+      disponibilidad: s.disponibilidad,
     };
   }
 

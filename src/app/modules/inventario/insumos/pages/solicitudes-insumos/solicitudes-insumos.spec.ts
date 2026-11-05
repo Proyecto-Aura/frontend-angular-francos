@@ -34,6 +34,7 @@ function makeSolicitudDto(overrides: Partial<SolicitudInsumoDto> = {}): Solicitu
         created_at: '2026-11-04T19:30:00.000Z',
       },
     ],
+    disponibilidad: 'completo',
     ...overrides,
   };
 }
@@ -108,6 +109,13 @@ describe('SolicitudesInsumos (Inventario)', () => {
     flushResumen();
 
     expect(fixture.componentInstance.cargando()).toBe(false);
+  });
+
+  it('pide siempre conDisponibilidad=true (OFT0-257, para poder deshabilitar "Iniciar entrega" por fila)', () => {
+    create();
+
+    flushPage(expectPageRequest((r) => r.params.get('conDisponibilidad') === 'true'));
+    flushResumen();
   });
 
   it('maps a row: codigo, insumos, fechas, solicitante y estado', () => {
@@ -282,6 +290,41 @@ describe('SolicitudesInsumos (Inventario)', () => {
     flushPage(expectPageRequest((r) => r.params.get('page') === '1'));
     flushResumen();
   });
+
+  it('tooltipIniciar refleja si hay stock suficiente (completo/parcial/sin_stock)', () => {
+    const fixture = create();
+    flushPage(
+      expectPageRequest((r) => r.params.get('page') === '1'),
+      [
+        makeSolicitudDto({ id: 1, disponibilidad: 'completo' }),
+        makeSolicitudDto({ id: 2, disponibilidad: 'parcial' }),
+        makeSolicitudDto({ id: 3, disponibilidad: 'sin_stock' }),
+      ],
+    );
+    flushResumen();
+
+    const [completo, parcial, sinStock] = fixture.componentInstance.solicitudes();
+    expect(fixture.componentInstance.tooltipIniciar(completo)).toBe('Iniciar entrega');
+    expect(fixture.componentInstance.tooltipIniciar(parcial)).toBe('Stock parcial');
+    expect(fixture.componentInstance.tooltipIniciar(sinStock)).toBe('Sin stock');
+  });
+
+  it.each(['parcial', 'sin_stock'] as const)(
+    'avanzarEstado no hace nada desde "pendiente" si la disponibilidad es %s',
+    (disponibilidad) => {
+      const fixture = create();
+      flushPage(
+        expectPageRequest((r) => r.params.get('page') === '1'),
+        [makeSolicitudDto({ disponibilidad })],
+      );
+      flushResumen();
+
+      const [fila] = fixture.componentInstance.solicitudes();
+      fixture.componentInstance.avanzarEstado(fila.solicitud);
+
+      httpMock.expectNone(`${SOLICITUDES_BASE}/10/estado`);
+    },
+  );
 
   it('avanzarEstado desde "en_proceso" abre el modal en modo "entregar" en vez de hacer PATCH directo', () => {
     const fixture = create();

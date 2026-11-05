@@ -1,11 +1,16 @@
 export type EstadoSolicitudInsumo = 'pendiente' | 'en_proceso' | 'entregado' | 'rechazado';
 
+// Solo viene en el GET :id (ver el comentario en el DTO) — ausente en el
+// listado y en el alta.
+export type DisponibilidadSolicitudInsumo = 'completo' | 'parcial' | 'sin_stock';
+
 export interface DetalleSolicitudInsumo {
   id: number;
   insumoId: number;
   sku: string;
   insumoNombre: string;
   unidadMedida: 'kg' | 'litros' | 'unidad';
+  stockDisponible: number | null;
   cantidadSolicitada: number;
 }
 
@@ -19,6 +24,7 @@ export interface SolicitudInsumo {
   fechaLimite: string | null;
   solicitadoPorNombre: string;
   detalle: DetalleSolicitudInsumo[];
+  disponibilidad?: DisponibilidadSolicitudInsumo;
 }
 
 export interface SolicitudesInsumoPagina {

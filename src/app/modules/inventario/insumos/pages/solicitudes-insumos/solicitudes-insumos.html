@@ -161,10 +161,10 @@
 
     @if (fila.estado === 'pendiente') {
       <app-ds-icon-button
-        label="Iniciar entrega"
+        [label]="tooltipIniciar(fila)"
         variant="secondary"
         size="md"
-        [disabled]="cambiandoId() === fila.solicitud.id"
+        [disabled]="fila.disponibilidad !== 'completo' || cambiandoId() === fila.solicitud.id"
         (clicked)="avanzarEstado(fila.solicitud)"
       >
         <app-ds-icon [img]="LucidePlay" [size]="16" />

@@ -39,12 +39,22 @@ export interface FiltrosSolicitudesInsumo {
 export class SolicitudInsumoService {
   private http = inject(HttpClient);
 
+  // conDisponibilidad=true (OFT0-257, confirmado por el backend, mismo
+  // patron que Pedidos por preparar) pide que cada fila del listado incluya
+  // "disponibilidad" — sin el param la respuesta queda igual que antes, sin
+  // ese campo. Se manda siempre desde aca: esta vista necesita saber si
+  // puede habilitar "Iniciar entrega" para TODAS las filas de la pagina,
+  // no solo la que se abra en el modal de detalle.
   listar(
     pagina = 1,
     limite = 10,
     filtros: FiltrosSolicitudesInsumo = {},
   ): Observable<SolicitudesInsumoPagina> {
-    const params: Record<string, string | number> = { page: pagina, limit: limite };
+    const params: Record<string, string | number | boolean> = {
+      page: pagina,
+      limit: limite,
+      conDisponibilidad: true,
+    };
     if (filtros.search) params['search'] = filtros.search;
     if (filtros.estado) params['estado'] = filtros.estado;
     if (filtros.fechaDesde) params['fecha_desde'] = filtros.fechaDesde;

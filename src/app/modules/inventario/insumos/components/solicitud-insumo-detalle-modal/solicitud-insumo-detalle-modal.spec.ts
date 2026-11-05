@@ -3,30 +3,10 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { LucidePackageCheck } from '@lucide/angular';
 import { environment } from '../../../../../../environments/environment';
-import { InsumoDto } from '../../interfaces/insumo-dto.interface';
 import { SolicitudInsumoDto } from '../../interfaces/solicitud-insumo-dto.interface';
 import { SolicitudInsumoDetalleModal } from './solicitud-insumo-detalle-modal';
 
 const SOLICITUDES_BASE = `${environment.apiUrl}/produccion/solicitudes-insumos`;
-const INSUMOS_BASE = `${environment.apiUrl}/insumos`;
-
-function makeInsumoDto(overrides: Partial<InsumoDto> = {}): InsumoDto {
-  return {
-    id: 50,
-    sku: 'INS-050',
-    nombre: 'Harina de camote',
-    descripcion: null,
-    unidad_medida: 'kg',
-    stock_actual: 35,
-    stock_minimo: 10,
-    stock_maximo: 100,
-    tipo: 'materia_prima',
-    estado: true,
-    created_at: '2026-01-01T00:00:00.000Z',
-    updated_at: '2026-01-01T00:00:00.000Z',
-    ...overrides,
-  };
-}
 
 function makeSolicitudDto(overrides: Partial<SolicitudInsumoDto> = {}): SolicitudInsumoDto {
   return {
@@ -47,10 +27,12 @@ function makeSolicitudDto(overrides: Partial<SolicitudInsumoDto> = {}): Solicitu
         insumo_sku: 'INS-050',
         insumo_nombre: 'Harina de camote',
         insumo_unidad_medida: 'kg',
+        stock_disponible: 35,
         cantidad_solicitada: 20,
         created_at: '2026-11-04T19:30:00.000Z',
       },
     ],
+    disponibilidad: 'completo',
     ...overrides,
   };
 }
@@ -73,26 +55,16 @@ describe('SolicitudInsumoDetalleModal (Inventario)', () => {
     return fixture;
   }
 
-  function flushCarga(
-    solicitudDto: SolicitudInsumoDto = makeSolicitudDto(),
-    insumosDto: InsumoDto[] = [makeInsumoDto()],
-  ): void {
+  function flushCarga(solicitudDto: SolicitudInsumoDto = makeSolicitudDto()): void {
     httpMock.expectOne(`${SOLICITUDES_BASE}/10`).flush(solicitudDto);
-    httpMock
-      .expectOne((request) => request.url === INSUMOS_BASE)
-      .flush({
-        data: insumosDto,
-        meta: { total: insumosDto.length, page: 1, limit: 100, total_pages: 1 },
-      });
   }
 
   it('does not request anything while closed (solicitudId null)', () => {
     create();
     httpMock.expectNone(`${SOLICITUDES_BASE}/10`);
-    httpMock.expectNone((request) => request.url === INSUMOS_BASE);
   });
 
-  it('requests la solicitud y el catalogo de insumos cuando solicitudId cambia', () => {
+  it('requests la solicitud cuando solicitudId cambia', () => {
     const fixture = create();
     fixture.componentRef.setInput('solicitudId', 10);
     fixture.detectChanges();
@@ -104,7 +76,7 @@ describe('SolicitudInsumoDetalleModal (Inventario)', () => {
     expect(fixture.componentInstance.cargando()).toBe(false);
   });
 
-  it('builds campos y filas desde el detalle, resolviendo el stock actual contra el catalogo', () => {
+  it('builds campos y filas desde el detalle, con el stock_disponible que ya manda el backend', () => {
     const fixture = create();
     fixture.componentRef.setInput('solicitudId', 10);
     fixture.detectChanges();
@@ -118,32 +90,111 @@ describe('SolicitudInsumoDetalleModal (Inventario)', () => {
       insumoNombre: 'Harina de camote',
       sku: 'INS-050',
       unidadMedida: 'kg',
-      stockActualMostrado: '35 kg',
+      stockDisponible: 35,
+      stockDisponibleMostrado: '35 kg',
       cantidadSolicitadaMostrada: '20 kg',
     });
   });
 
-  it('shows — para stock actual cuando el insumo ya no esta en el catalogo activo', () => {
+  it('shows — para stock disponible cuando el backend no lo manda', () => {
     const fixture = create();
     fixture.componentRef.setInput('solicitudId', 10);
     fixture.detectChanges();
-    flushCarga(makeSolicitudDto(), []);
+    flushCarga(
+      makeSolicitudDto({
+        detalle: [
+          {
+            id: 1,
+            insumo_id: 50,
+            insumo_sku: 'INS-050',
+            insumo_nombre: 'Harina de camote',
+            insumo_unidad_medida: 'kg',
+            cantidad_solicitada: 20,
+            created_at: '2026-11-04T19:30:00.000Z',
+          },
+        ],
+      }),
+    );
     fixture.detectChanges();
 
-    expect(fixture.componentInstance.filas()[0].stockActualMostrado).toBe('—');
+    expect(fixture.componentInstance.filas()[0].stockDisponibleMostrado).toBe('—');
   });
 
-  it('no incluye la columna "cantidadPreparada" en modo="ver"', () => {
-    const fixture = create();
-    fixture.componentRef.setInput('solicitudId', 10);
-    fixture.detectChanges();
-    flushCarga();
-    fixture.detectChanges();
+  describe('badges de disponibilidad (modo="ver")', () => {
+    it('no incluye la columna "cantidadPreparada" en modo="ver"', () => {
+      const fixture = create();
+      fixture.componentRef.setInput('solicitudId', 10);
+      fixture.detectChanges();
+      flushCarga();
+      fixture.detectChanges();
 
-    expect(fixture.componentInstance.columnas().map((c) => c.key)).not.toContain(
-      'cantidadPreparada',
-    );
-    expect(fixture.componentInstance.textoAyuda()).toBeNull();
+      expect(fixture.componentInstance.columnas().map((c) => c.key)).not.toContain(
+        'cantidadPreparada',
+      );
+      expect(fixture.componentInstance.textoAyuda()).toBeNull();
+    });
+
+    it('shows el badge "Disponibilidad" de la solicitud (completo/parcial/sin_stock)', () => {
+      const fixture = create();
+      fixture.componentRef.setInput('solicitudId', 10);
+      fixture.detectChanges();
+      flushCarga(makeSolicitudDto({ disponibilidad: 'parcial' }));
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.mostrarDisponibilidad()).toBe(true);
+      expect(fixture.componentInstance.disponibilidadLabel()).toBe('Stock parcial');
+      expect(fixture.componentInstance.disponibilidadTono()).toBe('warning');
+    });
+
+    it('no muestra el badge "Disponibilidad" una vez que la solicitud ya esta entregada', () => {
+      const fixture = create();
+      fixture.componentRef.setInput('solicitudId', 10);
+      fixture.detectChanges();
+      flushCarga(makeSolicitudDto({ estado: 'entregado', disponibilidad: 'completo' }));
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.mostrarDisponibilidad()).toBe(false);
+    });
+
+    it('marca una fila como "Stock completo" cuando el stock disponible alcanza lo solicitado', () => {
+      const fixture = create();
+      fixture.componentRef.setInput('solicitudId', 10);
+      fixture.detectChanges();
+      flushCarga();
+      fixture.detectChanges();
+
+      const [fila] = fixture.componentInstance.filas();
+      expect(fixture.componentInstance.disponibilidadFilaEstado(fila)).toBe('Stock completo');
+      expect(fixture.componentInstance.disponibilidadFilaTono(fila)).toBe('success');
+    });
+
+    it('marca una fila como "Stock insuficiente" cuando el stock disponible no alcanza lo solicitado', () => {
+      const fixture = create();
+      fixture.componentRef.setInput('solicitudId', 10);
+      fixture.detectChanges();
+      flushCarga(
+        makeSolicitudDto({
+          detalle: [
+            {
+              id: 1,
+              insumo_id: 50,
+              insumo_sku: 'INS-050',
+              insumo_nombre: 'Harina de camote',
+              insumo_unidad_medida: 'kg',
+              stock_disponible: 10,
+              cantidad_solicitada: 20,
+              created_at: '2026-11-04T19:30:00.000Z',
+            },
+          ],
+          disponibilidad: 'sin_stock',
+        }),
+      );
+      fixture.detectChanges();
+
+      const [fila] = fixture.componentInstance.filas();
+      expect(fixture.componentInstance.disponibilidadFilaEstado(fila)).toBe('Stock insuficiente');
+      expect(fixture.componentInstance.disponibilidadFilaTono(fila)).toBe('danger');
+    });
   });
 
   it('shows — para fecha limite cuando viene null', () => {
@@ -164,11 +215,9 @@ describe('SolicitudInsumoDetalleModal (Inventario)', () => {
     fixture.componentRef.setInput('solicitudId', 10);
     fixture.detectChanges();
 
-    const insumosRequest = httpMock.expectOne((request) => request.url === INSUMOS_BASE);
     httpMock
       .expectOne(`${SOLICITUDES_BASE}/10`)
       .flush('error', { status: 500, statusText: 'Server Error' });
-    expect(insumosRequest.cancelled).toBe(true);
     fixture.detectChanges();
 
     expect(fixture.componentInstance.error()).toBe(true);
@@ -221,11 +270,13 @@ describe('SolicitudInsumoDetalleModal (Inventario)', () => {
       expect(fixture.componentInstance.headerIcon()).toBe(LucidePackageCheck);
     });
 
-    it('incluye la columna "cantidadPreparada" y el texto de ayuda', () => {
+    it('incluye las columnas "stockDisponibleMostrado" y "cantidadPreparada", y el texto de ayuda', () => {
       const fixture = createEntregar();
       abrir(fixture);
 
-      expect(fixture.componentInstance.columnas().map((c) => c.key)).toContain('cantidadPreparada');
+      const keys = fixture.componentInstance.columnas().map((c) => c.key);
+      expect(keys).toContain('stockDisponibleMostrado');
+      expect(keys).toContain('cantidadPreparada');
       expect(fixture.componentInstance.textoAyuda()).toBe(
         'Ajusta la cantidad preparada si es distinta a la solicitada. Al confirmar se registrará la salida de inventario.',
       );
