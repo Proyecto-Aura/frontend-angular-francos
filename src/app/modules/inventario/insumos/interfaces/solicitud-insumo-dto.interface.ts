@@ -11,15 +11,27 @@
 // nada con 409 si falta stock).
 export type EstadoSolicitudInsumoDto = 'pendiente' | 'en_proceso' | 'entregado' | 'rechazado';
 
+// "stock_disponible" (OFT0-257, pedido explicito del usuario: mismo UX que
+// "Pedidos por preparar") lo agrego el backend SOLO al GET :id, no al
+// listado ni al alta — es insumo.stock_actual de esa linea, sin sumar
+// lotes a mano (mismo campo que ya se usa en el detalle del insumo;
+// confirmado por el backend que ya excluye lotes vencidos via trigger).
 export interface DetalleSolicitudInsumoDto {
   id: number;
   insumo_id: number;
   insumo_sku: string;
   insumo_nombre: string;
   insumo_unidad_medida: 'kg' | 'litros' | 'unidad';
+  stock_disponible?: number;
   cantidad_solicitada: number;
   created_at: string;
 }
+
+// 'completo' si TODAS las lineas tienen stock_disponible >= cantidad
+// solicitada, 'sin_stock' si NINGUNA alcanza, 'parcial' en cualquier otro
+// caso (formula confirmada por el backend, misma que calcularDisponibilidad
+// de Pedidos).
+export type DisponibilidadSolicitudInsumoDto = 'completo' | 'parcial' | 'sin_stock';
 
 export interface SolicitudInsumoDto {
   id: number;
@@ -37,6 +49,9 @@ export interface SolicitudInsumoDto {
   // presenter del POST puede no traer "detalle" embebido igual que el GET
   // por :id.
   detalle?: DetalleSolicitudInsumoDto[];
+  // Opcional: solo viene en el GET :id (confirmado por el backend, igual
+  // que "stock_disponible" de arriba) — ausente en el listado y en el alta.
+  disponibilidad?: DisponibilidadSolicitudInsumoDto;
 }
 
 export interface SolicitudesInsumoPageDto {

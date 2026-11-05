@@ -75,7 +75,8 @@ describe('SolicitudInsumoService (Inventario)', () => {
         request.params.get('search') === 'SIN' &&
         request.params.get('estado') === 'pendiente' &&
         request.params.get('fecha_desde') === '2026-11-01' &&
-        request.params.get('fecha_hasta') === '2026-11-30',
+        request.params.get('fecha_hasta') === '2026-11-30' &&
+        request.params.get('conDisponibilidad') === 'true',
     );
     expect(req.request.method).toBe('GET');
     req.flush({
@@ -101,6 +102,16 @@ describe('SolicitudInsumoService (Inventario)', () => {
         !request.params.has('estado') &&
         !request.params.has('fecha_desde') &&
         !request.params.has('fecha_hasta'),
+    );
+    req.flush({ data: [], meta: { total: 0, page: 1, limit: 10, total_pages: 0 } });
+  });
+
+  it('siempre manda conDisponibilidad=true (OFT0-257, mismo patron que Pedidos)', () => {
+    service.listar().subscribe();
+
+    const req = httpMock.expectOne(
+      (request) =>
+        request.url === SOLICITUDES_BASE && request.params.get('conDisponibilidad') === 'true',
     );
     req.flush({ data: [], meta: { total: 0, page: 1, limit: 10, total_pages: 0 } });
   });

@@ -11,7 +11,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { LucideArrowLeftRight, LucidePlus, LucideTrash2 } from '@lucide/angular';
-import { finalize } from 'rxjs';
+import { Subscription, finalize } from 'rxjs';
 import { Button } from '../../../../../shared/ds/button/button';
 import { Combobox } from '../../../../../shared/ds/combobox/combobox';
 import { Field } from '../../../../../shared/ds/field/field';
@@ -29,9 +29,11 @@ import {
   TipoMovimientoInsumo,
   filaMovimientoVacia,
 } from '../../interfaces/movimiento-insumo.interface';
+import { SolicitudInsumo } from '../../interfaces/solicitud-insumo.interface';
 import { InsumoService } from '../../services/insumo.service';
 import { LoteInsumoService } from '../../services/lote-insumo.service';
 import { MovimientoInsumoService } from '../../services/movimiento-insumo.service';
+import { SolicitudInsumoService } from '../../services/solicitud-insumo.service';
 import { MovimientoFormErrores, validarMovimientoForm } from './movimiento-form.validaciones';
 
 const TIPOS_MOVIMIENTO: SelectOption[] = [
@@ -54,6 +56,9 @@ export interface DesgloseFefo {
   insuficiente: boolean;
 }
 
+// Ver el comentario sobre "solicitudBuscada" mas abajo para el flujo de
+// "Solicitud" (OFT0-257, pedido explicito del usuario, mismo patron que el
+// campo "Pedido" de MovimientoProductoTerminadoFormModal).
 @Component({
   imports: [Button, Combobox, Field, Icon, IconButton, Input, Modal, Select],
   selector: 'app-movimiento-form-modal',
@@ -63,9 +68,11 @@ export class MovimientoFormModal {
   private insumoService = inject(InsumoService);
   private loteService = inject(LoteInsumoService);
   private movimientoService = inject(MovimientoInsumoService);
+  private solicitudService = inject(SolicitudInsumoService);
   private destroyRef = inject(DestroyRef);
   private estabaAbierto = false;
   private siguienteFilaId = 1;
+  private cargaSolicitudSub: Subscription | null = null;
 
   open = input(false);
   // Al abrir desde el icono "Registrar movimiento" de una fila (Stock de
@@ -103,6 +110,39 @@ export class MovimientoFormModal {
   private lotesPorInsumo = signal<Record<string, LoteInsumo[]>>({});
   private cargandoLotesDe = signal<Set<string>>(new Set());
 
+  // Buscador de solicitudes de insumos (solo visible/usado en 'salida') —
+  // mismo patron que el buscador de "Pedido" en
+  // MovimientoProductoTerminadoFormModal: elegir una solicitud es una
+  // SEGUNDA MANERA de registrar una salida (pedido explicito del usuario).
+  // El modal NO cambia de forma, solo autocompleta "Insumo" + "Cantidad" de
+  // las filas de la MISMA tabla de siempre, con las lineas EXACTAS del
+  // detalle de esa solicitud (el backend exige que "items" cubra todas las
+  // lineas, ni de mas ni de menos — por eso agregarFila()/quitarFila() se
+  // ocultan mientras hay una solicitud elegida, ver el html). El boton sigue
+  // diciendo "Registrar movimiento", pero adentro llama al mismo
+  // PATCH .../estado que ya usa "Registrar entrega" en el detalle de
+  // Solicitudes de insumos — confirmado por el backend que no hace falta
+  // endpoint nuevo para esto (mismo criterio que Pedidos).
+  solicitudBuscada = signal('');
+  solicitudesEnProceso = signal<SolicitudInsumo[]>([]);
+  solicitudesOptions = computed<SelectOption[]>(() =>
+    this.solicitudesEnProceso().map((solicitud) => ({
+      value: String(solicitud.id),
+      label: solicitud.codigo,
+      secondary: solicitud.solicitadoPorNombre,
+    })),
+  );
+
+  solicitud = signal<SolicitudInsumo | null>(null);
+  cargandoSolicitud = signal(false);
+
+  // Mismo criterio que entregaBloqueada en SolicitudInsumoDetalleModal: no
+  // se puede confirmar la entrega si la disponibilidad no es "completo".
+  entregaSolicitudBloqueada = computed(() => {
+    const s = this.solicitud();
+    return s !== null && s.disponibilidad !== 'completo';
+  });
+
   cantidadInsumosEnMovimiento = computed(() => this.filas().filter((fila) => fila.insumoId).length);
 
   errores = signal<MovimientoFormErrores>({});
@@ -115,6 +155,7 @@ export class MovimientoFormModal {
       if (estaAbierto && !this.estabaAbierto) {
         this.inicializarFormulario();
         this.cargarInsumos();
+        this.cargarSolicitudesEnProceso();
       }
       this.estabaAbierto = estaAbierto;
     });
@@ -124,8 +165,85 @@ export class MovimientoFormModal {
     this.closed.emit();
   }
 
+  // Cambiar a un tipo distinto de 'salida' limpia cualquier solicitud
+  // elegida (el campo/tabla de solicitud solo existe en 'salida') — evita
+  // que quede una solicitud "fantasma" elegida y que guardar() termine
+  // confirmando una entrega en vez de crear el movimiento de
+  // Entrada/Ajuste que se ve en pantalla (mismo hallazgo de Codex que ya
+  // se corrigio para Pedidos).
   seleccionarTipoMovimiento(valor: string): void {
     this.tipoMovimiento.set(valor as TipoMovimientoInsumo);
+    const habiaSolicitud =
+      this.solicitud() !== null || this.cargandoSolicitud() || !!this.solicitudBuscada();
+    if (valor !== 'salida' && habiaSolicitud) this.limpiarSolicitudSeleccionada();
+  }
+
+  // Elegir una solicitud carga su detalle y autocompleta "Insumo" +
+  // "Cantidad" de las filas de la tabla de siempre, con las lineas EXACTAS
+  // del detalle (ni de mas ni de menos) — no cierra el form, todo pasa en
+  // el mismo modal, con la misma tabla.
+  seleccionarSolicitud(valor: string): void {
+    // Cancela cualquier GET anterior todavia en vuelo: sin esto, elegir A y
+    // enseguida B (o limpiar) podia dejar que la respuesta tardia de A
+    // sobreescribiera la solicitud/motivo ya resueltos para B (mismo
+    // hallazgo de Codex que ya se corrigio para Pedidos).
+    this.cargaSolicitudSub?.unsubscribe();
+    this.solicitudBuscada.set(valor);
+    this.errorGeneral.set(null);
+
+    if (!valor) {
+      this.solicitud.set(null);
+      this.limpiarFilasDeSolicitud();
+      this.cargandoSolicitud.set(false);
+      return;
+    }
+
+    this.cargandoSolicitud.set(true);
+    this.cargaSolicitudSub = this.solicitudService
+      .obtener(Number(valor))
+      .pipe(
+        finalize(() => this.cargandoSolicitud.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (detalle) => {
+          this.solicitud.set(detalle);
+          this.motivoGeneral.set(`Solicitud ${detalle.codigo}`);
+          const nuevasFilas = detalle.detalle.map((item) => ({
+            id: item.id,
+            insumoId: String(item.insumoId),
+            loteId: '',
+            cantidad: String(item.cantidadSolicitada),
+          }));
+          this.filas.set(nuevasFilas);
+          // Sin esto, la columna "Lotes" (desgloseFefoDeFila) se queda
+          // vacia/"insuficiente" para estos insumos hasta que algo mas
+          // dispare la carga — mismo flujo que seleccionarInsumoDeFila.
+          for (const fila of nuevasFilas) {
+            this.cargarLotesDeInsumo(fila.insumoId);
+          }
+        },
+        error: () => {
+          this.solicitud.set(null);
+          this.limpiarFilasDeSolicitud();
+          this.errorGeneral.set('No se pudo cargar la solicitud. Intenta nuevamente.');
+        },
+      });
+  }
+
+  private limpiarSolicitudSeleccionada(): void {
+    this.cargaSolicitudSub?.unsubscribe();
+    this.solicitudBuscada.set('');
+    this.solicitud.set(null);
+    this.cargandoSolicitud.set(false);
+    this.limpiarFilasDeSolicitud();
+  }
+
+  // Vuelve la tabla a una sola fila vacia, igual que al abrir el form — se
+  // usa al limpiar la solicitud elegida (manualmente o al cambiar de tipo
+  // de movimiento) para no dejar las filas que trajo esa solicitud.
+  private limpiarFilasDeSolicitud(): void {
+    this.filas.set([filaMovimientoVacia(this.siguienteFilaId++)]);
   }
 
   agregarFila(): void {
@@ -336,6 +454,11 @@ export class MovimientoFormModal {
   }
 
   guardar(): void {
+    if (this.solicitud()) {
+      this.guardarSolicitud();
+      return;
+    }
+
     const form = this.formActual();
     const errores = validarMovimientoForm(form);
 
@@ -409,6 +532,75 @@ export class MovimientoFormModal {
       });
   }
 
+  // Segunda manera de registrar una salida: confirma la entrega de la
+  // solicitud elegida (PATCH .../estado con items), igual que "Registrar
+  // entrega" en el detalle de Solicitudes de insumos — no pasa por
+  // movimientoService, ese endpoint generico no sabe nada de solicitudes.
+  private guardarSolicitud(): void {
+    const solicitud = this.solicitud();
+    if (
+      !solicitud ||
+      this.guardando() ||
+      this.cargandoSolicitud() ||
+      this.entregaSolicitudBloqueada()
+    ) {
+      return;
+    }
+
+    this.errorGeneral.set(null);
+    this.guardando.set(true);
+
+    // Las filas se crearon con id = detalle.id de la solicitud (ver
+    // seleccionarSolicitud) — se matchean por ahi para mandar la cantidad
+    // que de verdad quedo en la tabla (la persona pudo haberla editado).
+    // El backend exige que "items" cubra EXACTAMENTE todas las lineas del
+    // detalle, por eso se recorre solicitud.detalle (no filas()) para
+    // armar el array.
+    const cantidadPorId = new Map(this.filas().map((fila) => [fila.id, fila.cantidad]));
+    const items = solicitud.detalle.map((d) => {
+      const texto = cantidadPorId.get(d.id);
+      const cantidadEntregada =
+        texto !== undefined && texto !== '' ? Number(texto) : d.cantidadSolicitada;
+      return { insumoId: d.insumoId, cantidadEntregada };
+    });
+
+    this.solicitudService
+      .cambiarEstado(solicitud.id, 'entregado', items)
+      .pipe(
+        finalize(() => this.guardando.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: () => {
+          this.saved.emit([]);
+          this.closed.emit();
+        },
+        error: (error: unknown) => this.manejarErrorSolicitud(error),
+      });
+  }
+
+  private manejarErrorSolicitud(error: unknown): void {
+    if (!(error instanceof HttpErrorResponse)) {
+      this.errorGeneral.set('No se pudo registrar la entrega. Intenta nuevamente.');
+      return;
+    }
+
+    if (error.status === 401 || error.status === 403) {
+      this.errorGeneral.set('No tiene permisos para confirmar la entrega de esta solicitud.');
+      return;
+    }
+
+    // 409 aca significa stock insuficiente en alguna linea (no se registra
+    // nada) — mismo criterio que solicitud-insumo-detalle-modal.
+    this.errorGeneral.set(
+      error.status === 409
+        ? 'No hay stock suficiente para alguna línea. Ajusta las cantidades e intenta de nuevo.'
+        : error.status === 400
+          ? 'Las cantidades enviadas no coinciden con los insumos de la solicitud.'
+          : 'No se pudo registrar la entrega. Intenta nuevamente.',
+    );
+  }
+
   private cargarInsumos(): void {
     // Limite alto para traer el catalogo completo de insumos activos en una
     // sola pagina — igual criterio que lote-form-modal.
@@ -418,6 +610,18 @@ export class MovimientoFormModal {
       .subscribe({
         next: (pagina) => this.insumos.set(pagina.insumos),
         error: () => this.insumos.set([]),
+      });
+  }
+
+  // Limite alto por el mismo motivo que cargarInsumos() — el combobox
+  // filtra en vivo sobre esta lista, no hay busqueda contra el backend.
+  private cargarSolicitudesEnProceso(): void {
+    this.solicitudService
+      .listar(1, 100, { estado: 'en_proceso' })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (pagina) => this.solicitudesEnProceso.set(pagina.solicitudes),
+        error: () => this.solicitudesEnProceso.set([]),
       });
   }
 
@@ -458,6 +662,14 @@ export class MovimientoFormModal {
     this.siguienteFilaId = 1;
     this.tipoMovimiento.set('entrada');
     this.motivoGeneral.set('');
+    // Reseteo directo de la solicitud (sin pasar por
+    // limpiarSolicitudSeleccionada, que tambien reescribe filas() — aca
+    // abajo se arma filas() una sola vez, con el insumo preseleccionado si
+    // corresponde).
+    this.cargaSolicitudSub?.unsubscribe();
+    this.solicitudBuscada.set('');
+    this.solicitud.set(null);
+    this.cargandoSolicitud.set(false);
     const preseleccionado = this.insumoPreseleccionado();
     const filaInicial = filaMovimientoVacia(this.siguienteFilaId++);
     this.filas.set([

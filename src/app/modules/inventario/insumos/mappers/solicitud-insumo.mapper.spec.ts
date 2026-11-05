@@ -4,9 +4,11 @@ import {
 } from '../interfaces/solicitud-insumo-dto.interface';
 import {
   etiquetaAccionSiguienteEstadoInsumo,
+  etiquetaDisponibilidadSolicitudInsumo,
   etiquetaEstadoSolicitudInsumo,
   puedeCancelarSolicitudInsumo,
   siguienteEstadoSolicitudInsumo,
+  tonoDisponibilidadSolicitudInsumo,
   tonoEstadoSolicitudInsumo,
   toResumenSolicitudesInsumo,
   toSolicitudInsumo,
@@ -63,10 +65,22 @@ describe('solicitudInsumoMapper (Inventario)', () => {
           sku: 'INS-050',
           insumoNombre: 'Harina de camote',
           unidadMedida: 'kg',
+          stockDisponible: null,
           cantidadSolicitada: 20,
         },
       ],
     });
+  });
+
+  it('maps stock_disponible por linea y disponibilidad a nivel solicitud cuando vienen (GET :id)', () => {
+    const solicitud = toSolicitudInsumo(
+      makeSolicitudDto({
+        detalle: [makeDetalleDto({ stock_disponible: 10 })],
+        disponibilidad: 'parcial',
+      }),
+    );
+    expect(solicitud.detalle[0].stockDisponible).toBe(10);
+    expect(solicitud.disponibilidad).toBe('parcial');
   });
 
   it('usa el conteo del listado aunque la respuesta no incluya detalle', () => {
@@ -165,6 +179,18 @@ describe('solicitudInsumoMapper (Inventario)', () => {
       expect(puedeCancelarSolicitudInsumo('en_proceso')).toBe(false);
       expect(puedeCancelarSolicitudInsumo('entregado')).toBe(false);
       expect(puedeCancelarSolicitudInsumo('rechazado')).toBe(false);
+    });
+  });
+
+  describe('etiquetaDisponibilidadSolicitudInsumo / tonoDisponibilidadSolicitudInsumo', () => {
+    it('mapea los 3 estados a sus etiquetas y tonos (mismo criterio que Pedidos)', () => {
+      expect(etiquetaDisponibilidadSolicitudInsumo('completo')).toBe('Stock completo');
+      expect(etiquetaDisponibilidadSolicitudInsumo('parcial')).toBe('Stock parcial');
+      expect(etiquetaDisponibilidadSolicitudInsumo('sin_stock')).toBe('Sin stock');
+
+      expect(tonoDisponibilidadSolicitudInsumo('completo')).toBe('success');
+      expect(tonoDisponibilidadSolicitudInsumo('parcial')).toBe('warning');
+      expect(tonoDisponibilidadSolicitudInsumo('sin_stock')).toBe('danger');
     });
   });
 });

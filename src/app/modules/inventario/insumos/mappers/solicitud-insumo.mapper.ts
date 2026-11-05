@@ -7,6 +7,7 @@ import {
 } from '../interfaces/solicitud-insumo-dto.interface';
 import {
   DetalleSolicitudInsumo,
+  DisponibilidadSolicitudInsumo,
   EstadoSolicitudInsumo,
   ResumenSolicitudesInsumo,
   SolicitudInsumo,
@@ -44,6 +45,7 @@ export function toDetalleSolicitudInsumo(dto: DetalleSolicitudInsumoDto): Detall
     sku: dto.insumo_sku,
     insumoNombre: dto.insumo_nombre,
     unidadMedida: dto.insumo_unidad_medida,
+    stockDisponible: dto.stock_disponible ?? null,
     cantidadSolicitada: dto.cantidad_solicitada,
   };
 }
@@ -61,7 +63,36 @@ export function toSolicitudInsumo(dto: SolicitudInsumoDto): SolicitudInsumo {
     // dto.detalle ?? [] a proposito — mismo blindaje que solicitud de
     // produccion por si el POST no trae "detalle" embebido igual que el GET.
     detalle: (dto.detalle ?? []).map(toDetalleSolicitudInsumo),
+    disponibilidad: dto.disponibilidad,
   };
+}
+
+// "Stock completo"/"Stock parcial"/"Sin stock" (OFT0-257, mismo criterio
+// visual y de tonos que Pedidos por preparar) — el valor lo calcula el
+// backend (ver el comentario en DisponibilidadSolicitudInsumoDto), este
+// mapper solo lo traduce a etiqueta/tono.
+const DISPONIBILIDAD_SOLICITUD_INSUMO_LABEL: Record<DisponibilidadSolicitudInsumo, string> = {
+  completo: 'Stock completo',
+  parcial: 'Stock parcial',
+  sin_stock: 'Sin stock',
+};
+
+const DISPONIBILIDAD_SOLICITUD_INSUMO_TONE: Record<DisponibilidadSolicitudInsumo, BadgeTone> = {
+  completo: 'success',
+  parcial: 'warning',
+  sin_stock: 'danger',
+};
+
+export function etiquetaDisponibilidadSolicitudInsumo(
+  disponibilidad: DisponibilidadSolicitudInsumo,
+): string {
+  return DISPONIBILIDAD_SOLICITUD_INSUMO_LABEL[disponibilidad];
+}
+
+export function tonoDisponibilidadSolicitudInsumo(
+  disponibilidad: DisponibilidadSolicitudInsumo,
+): BadgeTone {
+  return DISPONIBILIDAD_SOLICITUD_INSUMO_TONE[disponibilidad];
 }
 
 export function toSolicitudesInsumoPagina(
