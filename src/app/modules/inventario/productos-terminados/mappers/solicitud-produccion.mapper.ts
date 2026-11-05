@@ -120,14 +120,6 @@ export function toResumenSolicitudesProduccion(
   };
 }
 
-// YYYY-MM-DD en hora local, no UTC — mismo criterio que lote-insumo.mapper.ts.
-function fechaIsoLocal(fecha: Date): string {
-  const anio = fecha.getFullYear();
-  const mes = String(fecha.getMonth() + 1).padStart(2, '0');
-  const dia = String(fecha.getDate()).padStart(2, '0');
-  return `${anio}-${mes}-${dia}`;
-}
-
 // Codigo de solicitud FR-SPR-[000]-[YYMMDD] — mismo formato que
 // codigo_lote (FR-LT-[000]-[YYMMDD]-INS{id}), sin el sufijo de entidad
 // porque una solicitud no esta scoped a un solo producto.
@@ -143,25 +135,25 @@ const PATRON_SECUENCIAL_CODIGO_SOLICITUD = /^FR-SPR-(\d+)-\d{6}$/;
 
 export interface SolicitudExistente {
   codigo: string;
-  fechaCreacion: string;
 }
 
-// El proximo secuencial sale del MAXIMO ya usado en los codigos de HOY (se
-// reinicia por dia) — confirmado por el backend, mismo criterio que
-// siguienteSecuencialLote (ver lote-insumo.mapper.ts, bug reportado y
-// corregido ahi). El backend solo valida que no este duplicado (409 si ya
-// existe), el valor en si lo arma el front via construirCodigoSolicitud().
-export function siguienteSecuencialSolicitud(
-  solicitudes: SolicitudExistente[],
-  hoy = new Date(),
-): number {
-  const hoyIso = fechaIsoLocal(hoy);
-  const codigosDeHoy = solicitudes
-    .filter((s) => s.fechaCreacion.slice(0, 10) === hoyIso)
-    .map((s) => s.codigo);
-
-  const maximo = codigosDeHoy.reduce((max, codigo) => {
-    const match = codigo.match(PATRON_SECUENCIAL_CODIGO_SOLICITUD);
+// El proximo secuencial sale del MAXIMO ya usado entre los codigos que
+// trae la respuesta. El filtro "solo de HOY" (se reinicia por dia) ya NO
+// se hace aca comparando fecha_creacion contra la fecha local — el caller
+// (SolicitudProduccionService.siguienteSecuencial) le pide al backend
+// directamente las solicitudes de hoy via fecha_desde/fecha_hasta, que el
+// backend resuelve en zona Lima. Bug real encontrado por el backend:
+// fecha_creacion se guardaba con la fecha UTC de new Date() en el server,
+// no la de Lima — entre las 19:00 y medianoche hora Lima el dia UTC ya es
+// "mañana", asi que comparar fecha_creacion.slice(0,10) contra la fecha
+// local del navegador podia no encontrar nunca la solicitud recien creada
+// (el secuencial se quedaba repitiendo el mismo numero, mismo bug
+// encontrado en solicitud de insumos). El backend ya corrigio como se
+// guarda fecha_creacion, pero ademas conviene no volver a comparar
+// fechas-string en el cliente.
+export function siguienteSecuencialSolicitud(solicitudes: SolicitudExistente[]): number {
+  const maximo = solicitudes.reduce((max, s) => {
+    const match = s.codigo.match(PATRON_SECUENCIAL_CODIGO_SOLICITUD);
     const numero = match ? Number(match[1]) : 0;
     return Math.max(max, numero);
   }, 0);

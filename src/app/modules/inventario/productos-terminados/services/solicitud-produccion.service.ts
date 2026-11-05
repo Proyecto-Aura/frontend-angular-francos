@@ -29,6 +29,16 @@ import {
 
 const SOLICITUDES_BASE = `${environment.apiUrl}/produccion/solicitudes`;
 
+// YYYY-MM-DD en hora local del navegador, no UTC — se manda tal cual como
+// fecha_desde/fecha_hasta a GET .../solicitudes para que el backend
+// resuelva "hoy" en zona Lima (ver siguienteSecuencial() mas abajo).
+function fechaIsoLocal(fecha: Date): string {
+  const anio = fecha.getFullYear();
+  const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+  const dia = String(fecha.getDate()).padStart(2, '0');
+  return `${anio}-${mes}-${dia}`;
+}
+
 export interface FiltrosSolicitudesProduccion {
   search?: string;
   estado?: EstadoSolicitudProduccion;
@@ -57,23 +67,25 @@ export class SolicitudProduccionService {
   }
 
   // Proximo secuencial de codigo de solicitud: se calcula a partir del
-  // MAXIMO numero ya usado en los codigos de HOY (se reinicia por dia, ver
-  // siguienteSecuencialSolicitud en el mapper) — mismo criterio que
-  // LoteInsumoService.siguienteSecuencial(). El string final
+  // MAXIMO numero ya usado entre las solicitudes de HOY (se reinicia por
+  // dia, ver siguienteSecuencialSolicitud en el mapper). El string final
   // (FR-SPR-[seq]-[YYMMDD]) lo arma el caller via construirCodigoSolicitud(),
-  // no este servicio. No se filtra por fecha contra el backend (la
-  // semantica exacta de fecha_desde/fecha_hasta — si filtran fecha_creacion
-  // o fecha_limite — no esta confirmada): se trae una pagina razonable de
-  // orden reciente y se filtra por fecha_creacion del lado del front, que
-  // si esta confirmado.
+  // no este servicio. "Hoy" se le pide al backend via fecha_desde/
+  // fecha_hasta (confirmado por el backend que filtran fecha_creacion y
+  // resuelven zona Lima) en vez de filtrar fecha_creacion contra la fecha
+  // local en el cliente — ese filtro en el cliente tenia un bug real
+  // (fecha_creacion se guardaba con la fecha UTC del server en vez de la
+  // de Lima, asi que el secuencial podia repetirse; ya corregido por el
+  // backend, pero igual conviene no comparar fechas-string en el cliente).
   siguienteSecuencial(): Observable<number> {
+    const hoy = fechaIsoLocal(new Date());
     return this.http
-      .get<SolicitudesProduccionPageDto>(SOLICITUDES_BASE, { params: { page: 1, limit: 100 } })
+      .get<SolicitudesProduccionPageDto>(SOLICITUDES_BASE, {
+        params: { page: 1, limit: 100, fecha_desde: hoy, fecha_hasta: hoy },
+      })
       .pipe(
         map((pageDto) =>
-          siguienteSecuencialSolicitud(
-            pageDto.data.map((dto) => ({ codigo: dto.codigo, fechaCreacion: dto.fecha_creacion })),
-          ),
+          siguienteSecuencialSolicitud(pageDto.data.map((dto) => ({ codigo: dto.codigo }))),
         ),
       );
   }

@@ -1,6 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { vi } from 'vitest';
 import { environment } from '../../../../../environments/environment';
 import { SolicitudProduccionDto } from '../interfaces/solicitud-produccion-dto.interface';
 import {
@@ -56,7 +57,13 @@ describe('SolicitudProduccionService', () => {
     httpMock = TestBed.inject(HttpTestingController);
   });
 
-  afterEach(() => httpMock.verify());
+  afterEach(() => {
+    try {
+      httpMock.verify();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 
   it('lists a requested page and maps the response, incluyendo el detalle', () => {
     let result: ReturnType<SolicitudProduccionService['listar']> extends import('rxjs').Observable<
@@ -108,7 +115,9 @@ describe('SolicitudProduccionService', () => {
     req.flush({ data: [], meta: { total: 0, page: 1, limit: 10, total_pages: 0 } });
   });
 
-  it('computes el proximo secuencial a partir de las solicitudes de hoy', () => {
+  it('pide a HOY via fecha_desde/fecha_hasta (no filtra fecha_creacion en el cliente) y usa el maximo devuelto', () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 0, 1, 23));
     let siguiente: number | undefined;
     service.siguienteSecuencial().subscribe((v) => (siguiente = v));
 
@@ -116,11 +125,12 @@ describe('SolicitudProduccionService', () => {
       (request) =>
         request.url === SOLICITUDES_BASE &&
         request.params.get('page') === '1' &&
-        request.params.get('limit') === '100',
+        request.params.get('limit') === '100' &&
+        request.params.get('fecha_desde') === '2026-01-01' &&
+        request.params.get('fecha_hasta') === '2026-01-01',
     );
-    const hoyIso = new Date().toISOString().slice(0, 10);
     req.flush({
-      data: [makeSolicitudDto({ codigo: 'FR-SPR-005-260101', fecha_creacion: hoyIso })],
+      data: [makeSolicitudDto({ codigo: 'FR-SPR-005-260101' })],
       meta: { total: 1, page: 1, limit: 100, total_pages: 1 },
     });
 
