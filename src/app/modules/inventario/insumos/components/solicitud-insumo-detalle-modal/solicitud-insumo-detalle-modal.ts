@@ -136,6 +136,14 @@ export class SolicitudInsumoDetalleModal {
     });
   }
 
+  // Una vez "entregado" ya se aplico el descuento de stock: la tabla se
+  // queda sin ninguna columna de stock (ni badge ni texto), pedido
+  // explicito del usuario — mismo criterio que PedidoPrepararDetalleModal
+  // una vez "pendiente_entrega" (mostrar el stock ahi ya no informa nada
+  // util sobre ESTA solicitud, y puede confundir con el stock actual, que
+  // ya cambio por otros movimientos).
+  solicitudEntregada = computed(() => this.solicitud()?.estado === 'entregado');
+
   columnas = computed<DsColumn[]>(() => {
     const columnas: DsColumn[] = [
       { key: 'insumoNombre', header: 'Insumo', cellTemplate: this.insumoCellTpl },
@@ -157,7 +165,7 @@ export class SolicitudInsumoDetalleModal {
           cellTemplate: this.cantidadPreparadaCellTpl,
         },
       );
-    } else {
+    } else if (!this.solicitudEntregada()) {
       columnas.push({
         key: 'stockDisponible',
         header: 'Stock disponible',

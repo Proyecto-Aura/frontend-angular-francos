@@ -156,6 +156,30 @@ describe('SolicitudInsumoDetalleModal (Inventario)', () => {
       expect(fixture.componentInstance.mostrarDisponibilidad()).toBe(false);
     });
 
+    it('quita la columna "Stock disponible" de la tabla una vez que la solicitud ya esta entregada', () => {
+      const fixture = create();
+      fixture.componentRef.setInput('solicitudId', 10);
+      fixture.detectChanges();
+      flushCarga(makeSolicitudDto({ estado: 'entregado', disponibilidad: 'completo' }));
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.solicitudEntregada()).toBe(true);
+      expect(fixture.componentInstance.columnas().map((c) => c.key)).not.toContain(
+        'stockDisponible',
+      );
+    });
+
+    it('mantiene la columna "Stock disponible" mientras la solicitud no esta entregada', () => {
+      const fixture = create();
+      fixture.componentRef.setInput('solicitudId', 10);
+      fixture.detectChanges();
+      flushCarga(makeSolicitudDto({ estado: 'en_proceso' }));
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.solicitudEntregada()).toBe(false);
+      expect(fixture.componentInstance.columnas().map((c) => c.key)).toContain('stockDisponible');
+    });
+
     it('marca una fila como "Stock completo" cuando el stock disponible alcanza lo solicitado', () => {
       const fixture = create();
       fixture.componentRef.setInput('solicitudId', 10);
