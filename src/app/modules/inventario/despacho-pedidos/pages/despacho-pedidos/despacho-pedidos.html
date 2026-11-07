@@ -1,0 +1,112 @@
+<div class="flex flex-col gap-6 p-(--page-padding)">
+  <div>
+    <h1 class="text-ds-2xl font-medium text-foreground">Despachos</h1>
+  </div>
+
+  <div class="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-4">
+    <app-ds-kpi-card
+      label="Pendientes a entregar"
+      [value]="resumen().pendienteEntrega"
+      [hasIcon]="true"
+      iconTone="warning"
+    >
+      <span icon><app-ds-icon [img]="LucideTruck" [size]="16" /></span>
+    </app-ds-kpi-card>
+
+    <app-ds-kpi-card
+      label="En camino"
+      [value]="resumen().enCamino"
+      [hasIcon]="true"
+      iconTone="info"
+    >
+      <span icon><app-ds-icon [img]="LucideTruck" [size]="16" /></span>
+    </app-ds-kpi-card>
+
+    <app-ds-kpi-card
+      label="Entregados"
+      [value]="resumen().entregado"
+      [hasIcon]="true"
+      iconTone="success"
+    >
+      <span icon><app-ds-icon [img]="LucideCheck" [size]="16" /></span>
+    </app-ds-kpi-card>
+  </div>
+
+  <app-ds-filter-bar>
+    <div filters class="w-[220px]">
+      <label class="sr-only" for="despacho-estado">Filtrar por estado de entrega</label>
+      <app-ds-select
+        id="despacho-estado"
+        [value]="estadoFiltro()"
+        (valueChange)="setEstado($event)"
+        [options]="estadoOptions"
+        placeholder="Todos los estados"
+      />
+    </div>
+  </app-ds-filter-bar>
+
+  <app-ds-card [padded]="false" [hasFooter]="totalPaginas() > 1">
+    @if (cargando()) {
+      <div role="status" class="p-12 text-center text-muted-foreground">Cargando…</div>
+    } @else if (errorCarga()) {
+      <div class="flex flex-col items-center gap-3 p-12 text-center">
+        <p role="alert" class="text-muted-foreground">No se pudieron cargar los despachos.</p>
+        <app-ds-button variant="secondary" (clicked)="cargarPedidos()">Reintentar</app-ds-button>
+      </div>
+    } @else {
+      <app-ds-data-table
+        [columns]="columnas()"
+        [rows]="pedidos()"
+        empty="Sin despachos con estos filtros"
+      />
+    }
+
+    @if (totalPaginas() > 1) {
+      <div footer>
+        <app-ds-pagination
+          [page]="pagina()"
+          [pageCount]="totalPaginas()"
+          [total]="total()"
+          [pageSize]="tamanioPagina"
+          (changed)="cambiarPagina($event)"
+        />
+      </div>
+    }
+  </app-ds-card>
+
+  <app-despacho-detalle-modal
+    [pedidoId]="pedidoDetalleId()"
+    (closed)="cerrarDetalle()"
+    (actualizado)="pedidoActualizado()"
+  />
+</div>
+
+<ng-template #pedidoCell let-fila>
+  <app-ds-cell-stack [primary]="fila.codigo" [secondary]="fila.horaMostrada" />
+</ng-template>
+
+<ng-template #clienteCell let-fila>
+  <span class="inline-flex min-w-0 items-center gap-2.5">
+    <app-ds-avatar [name]="fila.cliente" size="sm" />
+    {{ fila.cliente }}
+  </span>
+</ng-template>
+
+<ng-template #estadoCell let-fila>
+  <app-ds-badge [tone]="estadoTone(fila.estado)" [dot]="true">
+    {{ estadoLabel(fila.estado) }}
+  </app-ds-badge>
+</ng-template>
+
+<ng-template #accionesCell let-fila>
+  <div class="flex justify-end gap-2">
+    <app-ds-icon-button
+      label="Ver detalle"
+      variant="secondary"
+      size="md"
+      (clicked)="verDetalle(fila.pedido)"
+    >
+      <app-ds-icon [img]="LucideEye" [size]="16" />
+    </app-ds-icon-button>
+  </div>
+</ng-template>
