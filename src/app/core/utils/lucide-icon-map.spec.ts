@@ -1,5 +1,11 @@
 import { resolveLucideIcon } from './lucide-icon-map';
-import { LucideBoxes, LucideBuilding2, LucideHandshake, LucideStore } from '@lucide/angular';
+import {
+  LucideBoxes,
+  LucideBuilding2,
+  LucideHandshake,
+  LucideStore,
+  LucideTruck,
+} from '@lucide/angular';
 
 describe('resolveLucideIcon', () => {
   it('resolves a known kebab-case name to its Lucide component', () => {
@@ -17,6 +23,10 @@ describe('resolveLucideIcon', () => {
 
   it('resolves the handshake icon used by the Producción module', () => {
     expect(resolveLucideIcon('handshake')).toBe(LucideHandshake);
+  });
+
+  it('resolves the truck icon used by the Despachos screen', () => {
+    expect(resolveLucideIcon('truck')).toBe(LucideTruck);
   });
 
   it('returns undefined for an unknown name instead of throwing', () => {
