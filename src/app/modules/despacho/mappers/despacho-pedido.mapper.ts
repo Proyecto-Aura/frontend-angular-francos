@@ -1,4 +1,4 @@
-import { BadgeTone } from '../../../../shared/ds/badge/badge';
+import { BadgeTone } from '../../../shared/ds/badge/badge';
 import {
   DespachoPedidoDetalleDto,
   DespachoPedidoResumenDto,

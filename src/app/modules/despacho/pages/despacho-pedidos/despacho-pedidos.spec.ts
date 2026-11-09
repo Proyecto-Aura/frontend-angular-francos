@@ -5,7 +5,7 @@ import {
   provideHttpClientTesting,
 } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { environment } from '../../../../../../environments/environment';
+import { environment } from '../../../../../environments/environment';
 import { DespachoPedidoResumenDto } from '../../interfaces/despacho-pedido-dto.interface';
 import { resumenDto } from '../../testing/despacho-data';
 import { DespachoPedidos } from './despacho-pedidos';

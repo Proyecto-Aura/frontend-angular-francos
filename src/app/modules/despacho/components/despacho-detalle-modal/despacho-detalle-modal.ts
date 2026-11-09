@@ -13,13 +13,13 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { LucideTruck } from '@lucide/angular';
 import { Observable, Subscription, finalize } from 'rxjs';
-import { Badge, BadgeTone } from '../../../../../shared/ds/badge/badge';
-import { Button } from '../../../../../shared/ds/button/button';
-import { Card } from '../../../../../shared/ds/card/card';
-import { CellStack } from '../../../../../shared/ds/cell-stack/cell-stack';
-import { DataTable, DsColumn } from '../../../../../shared/ds/data-table/data-table';
-import { Icon } from '../../../../../shared/ds/icon/icon';
-import { Modal } from '../../../../../shared/ds/modal/modal';
+import { Badge, BadgeTone } from '../../../../shared/ds/badge/badge';
+import { Button } from '../../../../shared/ds/button/button';
+import { Card } from '../../../../shared/ds/card/card';
+import { CellStack } from '../../../../shared/ds/cell-stack/cell-stack';
+import { DataTable, DsColumn } from '../../../../shared/ds/data-table/data-table';
+import { Icon } from '../../../../shared/ds/icon/icon';
+import { Modal } from '../../../../shared/ds/modal/modal';
 import { DespachoPedidoDetalle, EstadoDespacho } from '../../interfaces/despacho-pedido.interface';
 import {
   etiquetaEstadoDespacho,

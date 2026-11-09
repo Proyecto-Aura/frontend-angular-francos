@@ -11,18 +11,18 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { LucideCheck, LucideEye, LucideTruck } from '@lucide/angular';
 import { finalize } from 'rxjs';
-import { Avatar } from '../../../../../shared/ds/avatar/avatar';
-import { Badge, BadgeTone } from '../../../../../shared/ds/badge/badge';
-import { Button } from '../../../../../shared/ds/button/button';
-import { Card } from '../../../../../shared/ds/card/card';
-import { CellStack } from '../../../../../shared/ds/cell-stack/cell-stack';
-import { DataTable, DsColumn } from '../../../../../shared/ds/data-table/data-table';
-import { FilterBar } from '../../../../../shared/ds/filter-bar/filter-bar';
-import { Icon } from '../../../../../shared/ds/icon/icon';
-import { IconButton } from '../../../../../shared/ds/icon-button/icon-button';
-import { KpiCard } from '../../../../../shared/ds/kpi-card/kpi-card';
-import { Pagination } from '../../../../../shared/ds/pagination/pagination';
-import { Select, SelectOption } from '../../../../../shared/ds/select/select';
+import { Avatar } from '../../../../shared/ds/avatar/avatar';
+import { Badge, BadgeTone } from '../../../../shared/ds/badge/badge';
+import { Button } from '../../../../shared/ds/button/button';
+import { Card } from '../../../../shared/ds/card/card';
+import { CellStack } from '../../../../shared/ds/cell-stack/cell-stack';
+import { DataTable, DsColumn } from '../../../../shared/ds/data-table/data-table';
+import { FilterBar } from '../../../../shared/ds/filter-bar/filter-bar';
+import { Icon } from '../../../../shared/ds/icon/icon';
+import { IconButton } from '../../../../shared/ds/icon-button/icon-button';
+import { KpiCard } from '../../../../shared/ds/kpi-card/kpi-card';
+import { Pagination } from '../../../../shared/ds/pagination/pagination';
+import { Select, SelectOption } from '../../../../shared/ds/select/select';
 import { DespachoDetalleModal } from '../../components/despacho-detalle-modal/despacho-detalle-modal';
 import {
   DespachoPedido,

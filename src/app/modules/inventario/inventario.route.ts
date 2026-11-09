@@ -1,5 +1,4 @@
 import { Routes } from '@angular/router';
-import { permisoGuard } from '../../core/guards/permiso.guard';
 
 export const INVENTARIO_ROUTES: Routes = [
   {
@@ -21,16 +20,6 @@ export const INVENTARIO_ROUTES: Routes = [
         loadChildren: () =>
           import('./productos-terminados/productos-terminados.route').then(
             (m) => m.PRODUCTOS_TERMINADOS_ROUTES,
-          ),
-      },
-      {
-        // Despachos (HU-A-023): una sola pantalla, sin submenú. El path es el
-        // `nombre` de su ruta en el backend (ver insumos.route.ts).
-        path: 'despacho-pedidos',
-        canActivate: [permisoGuard],
-        loadComponent: () =>
-          import('./despacho-pedidos/pages/despacho-pedidos/despacho-pedidos').then(
-            (c) => c.DespachoPedidos,
           ),
       },
       {

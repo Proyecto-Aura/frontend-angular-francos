@@ -130,6 +130,31 @@ describe('HomeModules', () => {
     });
   });
 
+  it('shows the Despachos card when the API returns it (HU-A-023), ordered between Producción y Configuración', () => {
+    const fixture = create();
+    httpMock
+      .expectOne(TREE_URL)
+      .flush([
+        nodo({ nombre: 'configuracion', etiqueta: 'Configuración' }),
+        nodo({ nombre: 'produccion', etiqueta: 'Producción' }),
+        nodo({ nombre: 'despacho-pedidos', etiqueta: 'Despachos', icono: 'truck' }),
+      ]);
+    fixture.detectChanges();
+
+    const modules = fixture.componentInstance['modules']();
+    expect(modules.map((m: { title: string }) => m.title)).toEqual([
+      'Producción',
+      'Despachos',
+      'Configuración',
+    ]);
+    expect(modules[1]).toEqual({
+      icon: '/icons/module_despacho.svg',
+      title: 'Despachos',
+      description: '',
+      routerLink: '/despacho-pedidos',
+    });
+  });
+
   it('filters out a module the API returns that has no known MODULE_CARD_INFO entry (no real page yet)', () => {
     const fixture = create();
     httpMock

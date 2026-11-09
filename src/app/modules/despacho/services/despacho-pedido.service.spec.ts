@@ -1,7 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { environment } from '../../../../../environments/environment';
+import { environment } from '../../../../environments/environment';
 import { ResumenDespacho } from '../interfaces/despacho-pedido.interface';
 import { detalleDto, resumenDto } from '../testing/despacho-data';
 import { DespachoPedidoService } from './despacho-pedido.service';
