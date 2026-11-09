@@ -50,6 +50,15 @@ export const routes: Routes = [
       import('./modules/configuracion/configuracion.route').then((m) => m.CONFIGURACION_ROUTES),
   },
   {
+    // HU-A-023, modulo de primer nivel (ver despacho.route.ts) — mismo
+    // criterio que ventas/inventario/produccion de arriba: el guard de
+    // permiso real vive un nivel mas adentro, sobre la pagina "gestion-
+    // despachos" (su propio nombre en el backend), no aca.
+    path: 'despacho-pedidos',
+    canActivate: [authGuard],
+    loadChildren: () => import('./modules/despacho/despacho.route').then((m) => m.DESPACHO_ROUTES),
+  },
+  {
     path: 'ds-showcase',
     loadComponent: () => import('./ds-showcase/ds-showcase').then((c) => c.DsShowcase),
   },
