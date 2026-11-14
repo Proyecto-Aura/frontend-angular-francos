@@ -33,16 +33,18 @@ describe('UsuarioFormModal', () => {
     input.dispatchEvent(new Event('input'));
     fixture.detectChanges();
   };
-  const elegir = (id: string, valor: string) => {
-    const select = el.querySelector<HTMLSelectElement>(`select#${id}`)!;
-    select.value = valor;
-    select.dispatchEvent(new Event('change'));
-    fixture.detectChanges();
-  };
   const boton = (texto: string) =>
     Array.from(el.querySelectorAll<HTMLButtonElement>('button')).find((b) =>
       b.textContent?.includes(texto),
     )!;
+  const interruptorRol = (etiqueta: string) =>
+    Array.from(el.querySelectorAll<HTMLLabelElement>('app-ds-switch label'))
+      .find((l) => l.textContent?.includes(etiqueta))!
+      .querySelector<HTMLInputElement>('input')!;
+  const alternarRol = (etiqueta: string) => {
+    interruptorRol(etiqueta).click();
+    fixture.detectChanges();
+  };
   const llenarNuevo = () => {
     escribir('u-nombres', 'Lucia');
     escribir('u-apellido-paterno', 'Quispe');
@@ -51,7 +53,7 @@ describe('UsuarioFormModal', () => {
     escribir('u-email', 'Lucia@Francos.test');
     escribir('u-username', 'lquispe');
     escribir('u-contrasena', 'Clave1234');
-    elegir('u-rol', '2');
+    alternarRol('Ventas');
   };
 
   beforeEach(() => {
@@ -80,13 +82,23 @@ describe('UsuarioFormModal', () => {
       expect(el.textContent).toContain('Puede ingresar al sistema');
     });
 
-    it('no incluye el rol cliente entre las opciones y ofrece solo los roles recibidos', () => {
+    it('no incluye el rol cliente entre las opciones y ofrece un switch por cada rol recibido', () => {
       abrir();
 
-      const opciones = Array.from(el.querySelectorAll<HTMLOptionElement>('select#u-rol option'))
-        .map((o) => o.textContent?.trim())
-        .filter(Boolean);
-      expect(opciones).toEqual(['Seleccionar rol', 'Admin', 'Ventas', 'Inventario']);
+      expect(interruptorRol('Admin')).not.toBeNull();
+      expect(interruptorRol('Ventas')).not.toBeNull();
+      expect(interruptorRol('Inventario')).not.toBeNull();
+      expect(el.textContent).not.toContain('Cliente');
+    });
+
+    it('permite activar varios roles a la vez', () => {
+      abrir();
+      alternarRol('Admin');
+      alternarRol('Ventas');
+
+      expect(interruptorRol('Admin').checked).toBe(true);
+      expect(interruptorRol('Ventas').checked).toBe(true);
+      expect(interruptorRol('Inventario').checked).toBe(false);
     });
 
     it('al guardar vacío muestra los errores y no llama al backend', () => {
@@ -100,7 +112,7 @@ describe('UsuarioFormModal', () => {
       expect(el.textContent).toContain('Ingresar el número de documento');
       expect(el.textContent).toContain('Email inválido');
       expect(el.textContent).toContain('Ingresar una contraseña');
-      expect(el.textContent).toContain('Seleccionar un rol');
+      expect(el.textContent).toContain('Seleccionar al menos un rol');
       http.expectNone(URL);
     });
 
@@ -217,7 +229,8 @@ describe('UsuarioFormModal', () => {
 
     it('si solo cambia el rol, hace únicamente el PUT de roles', () => {
       abrir(usuario);
-      elegir('u-rol', '4');
+      alternarRol('Ventas');
+      alternarRol('Inventario');
 
       boton('Guardar cambios').click();
 
@@ -226,6 +239,26 @@ describe('UsuarioFormModal', () => {
       expect(req.request.body).toEqual({ rol_ids: [4] });
       req.flush(makeUsuarioDto({ roles: [{ id: 4, nombre: 'inventario' }] }));
       expect(guardados).toHaveLength(1);
+    });
+
+    it('permite sumar un rol adicional al que ya tenía, sin quitarle el que tenía', () => {
+      abrir(usuario);
+      alternarRol('Inventario');
+
+      boton('Guardar cambios').click();
+
+      const req = http.expectOne({ method: 'PUT', url: `${URL}/u-1/roles` });
+      expect(req.request.body.rol_ids.sort()).toEqual([2, 4]);
+    });
+
+    it('no manda el PUT de roles si se desmarca y vuelve a marcar el mismo rol', () => {
+      abrir(usuario);
+      alternarRol('Ventas');
+      alternarRol('Ventas');
+
+      boton('Guardar cambios').click();
+
+      http.expectNone({ method: 'PUT', url: `${URL}/u-1/roles` });
     });
 
     it('si cambia un dato, manda solo ese dato en el PATCH', () => {

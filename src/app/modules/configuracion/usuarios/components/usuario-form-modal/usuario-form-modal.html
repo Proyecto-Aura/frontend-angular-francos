@@ -155,16 +155,16 @@
       </app-ds-field>
     </div>
 
-    <app-ds-field label="Rol" [required]="true" htmlFor="u-rol" [error]="errores().rolId ?? null">
-      <app-ds-select
-        id="u-rol"
-        size="lg"
-        placeholder="Seleccionar rol"
-        [value]="form().rolId"
-        (valueChange)="cambiar('rolId', $event)"
-        [options]="opcionesRol()"
-        [invalid]="!!errores().rolId"
-      />
+    <app-ds-field label="Roles" [required]="true" [error]="errores().rolIds ?? null">
+      <div class="flex flex-col gap-3">
+        @for (rol of roles(); track rol.id) {
+          <app-ds-switch
+            [label]="rol.etiqueta"
+            [checked]="tieneRol(rol.id)"
+            (checkedChange)="alternarRol(rol.id, $event)"
+          />
+        }
+      </div>
     </app-ds-field>
 
     @if (modo() === 'nuevo') {

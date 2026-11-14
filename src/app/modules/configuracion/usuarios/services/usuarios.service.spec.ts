@@ -98,7 +98,7 @@ describe('UsuariosService', () => {
       email: 'lucia@francos.test',
       username: 'lquispe',
       contrasena: 'Clave1234',
-      rolId: '2',
+      rolIds: ['2'],
     };
     let nombre = '';
     service.crear(form).subscribe((u) => (nombre = u.nombreCompleto));
@@ -129,7 +129,7 @@ describe('UsuariosService', () => {
     });
 
     it('si solo cambió el rol, manda únicamente el PUT de roles', () => {
-      const form = { ...usuarioFormDe(original), rolId: '4' };
+      const form = { ...usuarioFormDe(original), rolIds: ['4'] };
       let rol = 0;
       service.editar(original, form, true).subscribe((u) => (rol = u.roles[0].id));
 
@@ -141,8 +141,24 @@ describe('UsuariosService', () => {
       expect(rol).toBe(4);
     });
 
+    it('si el usuario queda con varios roles, manda todos los ids en el PUT', () => {
+      const form = { ...usuarioFormDe(original), rolIds: ['2', '4'] };
+      service.editar(original, form, true).subscribe();
+
+      const req = http.expectOne({ method: 'PUT', url: `${URL}/u-1/roles` });
+      expect(req.request.body).toEqual({ rol_ids: [2, 4] });
+      req.flush(
+        makeUsuarioDto({
+          roles: [
+            { id: 2, nombre: 'ventas' },
+            { id: 4, nombre: 'inventario' },
+          ],
+        }),
+      );
+    });
+
     it('si cambiaron datos y rol, hace primero el PATCH y luego el PUT', () => {
-      const form = { ...usuarioFormDe(original), username: 'lucia.q', rolId: '4' };
+      const form = { ...usuarioFormDe(original), username: 'lucia.q', rolIds: ['4'] };
       service.editar(original, form, true).subscribe();
 
       http.expectOne({ method: 'PATCH', url: `${URL}/u-1` }).flush(makeUsuarioDto());
