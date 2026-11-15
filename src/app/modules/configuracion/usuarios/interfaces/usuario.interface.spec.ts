@@ -130,7 +130,14 @@ describe('etiquetaDeRol', () => {
 describe('usuarioFormDe', () => {
   it('arma el formulario de edición con la contraseña vacía y todos sus roles', () => {
     const form = usuarioFormDe(
-      toUsuario(makeUsuarioDto({ roles: [{ id: 2, nombre: 'ventas' }, { id: 4, nombre: 'inventario' }] })),
+      toUsuario(
+        makeUsuarioDto({
+          roles: [
+            { id: 2, nombre: 'ventas' },
+            { id: 4, nombre: 'inventario' },
+          ],
+        }),
+      ),
     );
 
     expect(form).toMatchObject({
