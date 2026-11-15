@@ -81,7 +81,7 @@ export class UsuariosService {
     if (rolCambio) {
       pasos.push(
         this.http.put<UsuarioInternoDto>(`${USUARIOS_URL}/${original.id}/roles`, {
-          rol_ids: [Number(form.rolId)],
+          rol_ids: form.rolIds.map(Number),
         }),
       );
     }

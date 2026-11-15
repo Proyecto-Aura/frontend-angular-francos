@@ -79,8 +79,8 @@ export interface UsuarioForm {
   email: string;
   username: string;
   contrasena: string;
-  /** id del rol, como texto porque así lo maneja el select. */
-  rolId: string;
+  /** ids de los roles, como texto porque así los maneja el switch de cada uno. */
+  rolIds: string[];
   activo: boolean;
 }
 
@@ -95,7 +95,7 @@ export const USUARIO_FORM_VACIO: UsuarioForm = {
   email: '',
   username: '',
   contrasena: '',
-  rolId: '',
+  rolIds: [],
   activo: true,
 };
 
@@ -125,9 +125,16 @@ export function usuarioFormDe(usuario: Usuario): UsuarioForm {
     email: usuario.email,
     username: usuario.username,
     contrasena: '',
-    rolId: usuario.roles[0] ? String(usuario.roles[0].id) : '',
+    rolIds: usuario.roles.map((rol) => String(rol.id)),
     activo: usuario.activo,
   };
+}
+
+/** Compara sin importar el orden: para saber si hay que reasignar roles al editar. */
+export function mismosRoles(a: string[], b: string[]): boolean {
+  if (a.length !== b.length) return false;
+  const ordenB = new Set(b);
+  return a.every((id) => ordenB.has(id));
 }
 
 /**
@@ -183,7 +190,7 @@ export function validarUsuario(form: UsuarioForm, modo: 'nuevo' | 'editar'): Usu
     errores.contrasena = 'Mínimo 8 caracteres';
   }
 
-  if (!form.rolId) errores.rolId = 'Seleccionar un rol';
+  if (form.rolIds.length === 0) errores.rolIds = 'Seleccionar al menos un rol';
 
   return errores;
 }

@@ -28,6 +28,7 @@ import {
   UsuarioErrores,
   UsuarioForm,
   conflictoDeCampo,
+  mismosRoles,
   usuarioFormDe,
   validarUsuario,
 } from '../../interfaces/usuario.interface';
@@ -65,9 +66,6 @@ export class UsuarioFormModal {
 
   protected readonly modo = computed<'nuevo' | 'editar'>(() =>
     this.usuario() ? 'editar' : 'nuevo',
-  );
-  protected readonly opcionesRol = computed<SelectOption[]>(() =>
-    this.roles().map((rol) => ({ value: String(rol.id), label: rol.etiqueta })),
   );
 
   protected readonly errores = computed<UsuarioErrores>(() => ({
@@ -108,6 +106,16 @@ export class UsuarioFormModal {
     this.cambiar('tipoDocumento', valor as TipoDocumentoDto);
   }
 
+  protected tieneRol(rolId: number): boolean {
+    return this.form().rolIds.includes(String(rolId));
+  }
+
+  protected alternarRol(rolId: number, activo: boolean): void {
+    const id = String(rolId);
+    const actuales = this.form().rolIds;
+    this.cambiar('rolIds', activo ? [...actuales, id] : actuales.filter((r) => r !== id));
+  }
+
   protected cerrar(): void {
     this.closed.emit();
   }
@@ -121,7 +129,11 @@ export class UsuarioFormModal {
 
     const original = this.usuario();
     const peticion = original
-      ? this.usuariosService.editar(original, form, form.rolId !== usuarioFormDe(original).rolId)
+      ? this.usuariosService.editar(
+          original,
+          form,
+          !mismosRoles(form.rolIds, usuarioFormDe(original).rolIds),
+        )
       : this.usuariosService.crear(form);
 
     this.guardando.set(true);

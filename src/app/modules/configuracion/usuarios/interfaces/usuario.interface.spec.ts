@@ -3,6 +3,7 @@ import {
   UsuarioForm,
   conflictoDeCampo,
   etiquetaDeRol,
+  mismosRoles,
   usuarioFormDe,
   validarUsuario,
 } from './usuario.interface';
@@ -19,7 +20,7 @@ function formValido(overrides: Partial<UsuarioForm> = {}): UsuarioForm {
     email: 'lucia@francos.test',
     username: 'lquispe',
     contrasena: 'Clave1234',
-    rolId: '2',
+    rolIds: ['2'],
     ...overrides,
   };
 }
@@ -40,7 +41,7 @@ describe('validarUsuario', () => {
       email: 'Email inválido',
       username: 'Username inválido',
       contrasena: 'Ingresar una contraseña',
-      rolId: 'Seleccionar un rol',
+      rolIds: 'Seleccionar al menos un rol',
     });
   });
 
@@ -127,8 +128,17 @@ describe('etiquetaDeRol', () => {
 });
 
 describe('usuarioFormDe', () => {
-  it('arma el formulario de edición con la contraseña vacía y el primer rol', () => {
-    const form = usuarioFormDe(toUsuario(makeUsuarioDto()));
+  it('arma el formulario de edición con la contraseña vacía y todos sus roles', () => {
+    const form = usuarioFormDe(
+      toUsuario(
+        makeUsuarioDto({
+          roles: [
+            { id: 2, nombre: 'ventas' },
+            { id: 4, nombre: 'inventario' },
+          ],
+        }),
+      ),
+    );
 
     expect(form).toMatchObject({
       nombres: 'Lucia',
@@ -137,7 +147,18 @@ describe('usuarioFormDe', () => {
       email: 'lucia@francos.test',
       username: 'lquispe',
       contrasena: '',
-      rolId: '2',
+      rolIds: ['2', '4'],
     });
+  });
+});
+
+describe('mismosRoles', () => {
+  it('es true cuando tienen los mismos ids, sin importar el orden', () => {
+    expect(mismosRoles(['2', '4'], ['4', '2'])).toBe(true);
+  });
+
+  it('es false si cambió la cantidad o algún id', () => {
+    expect(mismosRoles(['2'], ['2', '4'])).toBe(false);
+    expect(mismosRoles(['2'], ['4'])).toBe(false);
   });
 });

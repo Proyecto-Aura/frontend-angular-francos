@@ -65,7 +65,7 @@ export function toCrearUsuarioRequest(form: UsuarioForm): CrearUsuarioRequestDto
     username: form.username.trim(),
     contrasena: form.contrasena,
     estado: form.activo,
-    rol_ids: [Number(form.rolId)],
+    rol_ids: form.rolIds.map(Number),
   };
 }
 

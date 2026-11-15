@@ -18,7 +18,7 @@ const form: UsuarioForm = {
   email: ' Lucia@Francos.TEST ',
   username: ' lquispe ',
   contrasena: 'Clave1234',
-  rolId: '2',
+  rolIds: ['2'],
   activo: false,
 };
 
