@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { permisoGuard } from '../../core/guards/permiso.guard';
+import { primerHijoPermitidoGuard } from '../../core/guards/primer-hijo-permitido.guard';
 
 // path = nombre que manda el backend en /rutas/mi-menu (uq_ruta_nombre es
 // unico global, no por modulo) — por eso "produccion-solicitudes" y
@@ -35,12 +36,18 @@ export const PRODUCCION_ROUTES: Routes = [
       },
       {
         path: '',
-        redirectTo: 'produccion-solicitudes',
         pathMatch: 'full',
+        canActivate: [
+          primerHijoPermitidoGuard('produccion', { preferido: 'produccion-solicitudes' }),
+        ],
+        children: [],
       },
       {
         path: '**',
-        redirectTo: 'produccion-solicitudes',
+        canActivate: [
+          primerHijoPermitidoGuard('produccion', { preferido: 'produccion-solicitudes' }),
+        ],
+        children: [],
       },
     ],
   },

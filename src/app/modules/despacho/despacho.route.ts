@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { permisoGuard } from '../../core/guards/permiso.guard';
+import { primerHijoPermitidoGuard } from '../../core/guards/primer-hijo-permitido.guard';
 
 // Despachos (HU-A-023): modulo de primer nivel (confirmado por el backend,
 // el `nombre` de su ruta "despacho-pedidos" cuelga de parent_id=NULL, no de
@@ -26,12 +27,18 @@ export const DESPACHO_ROUTES: Routes = [
       },
       {
         path: '',
-        redirectTo: 'gestion-despachos',
         pathMatch: 'full',
+        canActivate: [
+          primerHijoPermitidoGuard('despacho-pedidos', { preferido: 'gestion-despachos' }),
+        ],
+        children: [],
       },
       {
         path: '**',
-        redirectTo: 'gestion-despachos',
+        canActivate: [
+          primerHijoPermitidoGuard('despacho-pedidos', { preferido: 'gestion-despachos' }),
+        ],
+        children: [],
       },
     ],
   },

@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { permisoGuard } from '../../core/guards/permiso.guard';
+import { primerHijoPermitidoGuard } from '../../core/guards/primer-hijo-permitido.guard';
 
 export const CONFIGURACION_ROUTES: Routes = [
   {
@@ -49,12 +50,18 @@ export const CONFIGURACION_ROUTES: Routes = [
       },
       {
         path: '',
-        redirectTo: 'empresa',
         pathMatch: 'full',
+        canActivate: [
+          primerHijoPermitidoGuard('configuracion', { preferido: 'empresa', fallback: 'perfil' }),
+        ],
+        children: [],
       },
       {
         path: '**',
-        redirectTo: 'empresa',
+        canActivate: [
+          primerHijoPermitidoGuard('configuracion', { preferido: 'empresa', fallback: 'perfil' }),
+        ],
+        children: [],
       },
     ],
   },

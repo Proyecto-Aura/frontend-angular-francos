@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { permisoGuard } from '../../core/guards/permiso.guard';
+import { primerHijoPermitidoGuard } from '../../core/guards/primer-hijo-permitido.guard';
 
 // Inventario = productos terminados (Insumos se separo en su propio modulo
 // de primer nivel, ver insumos/insumos.route.ts). Los hijos ya son paginas
@@ -42,12 +43,14 @@ export const INVENTARIO_ROUTES: Routes = [
       },
       {
         path: '',
-        redirectTo: 'stock-productos',
         pathMatch: 'full',
+        canActivate: [primerHijoPermitidoGuard('inventario', { preferido: 'stock-productos' })],
+        children: [],
       },
       {
         path: '**',
-        redirectTo: 'stock-productos',
+        canActivate: [primerHijoPermitidoGuard('inventario', { preferido: 'stock-productos' })],
+        children: [],
       },
     ],
   },
