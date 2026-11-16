@@ -59,6 +59,14 @@ export const routes: Routes = [
     loadChildren: () => import('./modules/despacho/despacho.route').then((m) => m.DESPACHO_ROUTES),
   },
   {
+    // Modulo de primer nivel (ver insumos.route.ts), separado de Inventario
+    // — mismo criterio que despacho-pedidos: el guard de permiso real vive
+    // un nivel mas adentro, sobre cada pagina, no aca.
+    path: 'insumos',
+    canActivate: [authGuard],
+    loadChildren: () => import('./modules/insumos/insumos.route').then((m) => m.INSUMOS_ROUTES),
+  },
+  {
     path: 'ds-showcase',
     loadComponent: () => import('./ds-showcase/ds-showcase').then((c) => c.DsShowcase),
   },
