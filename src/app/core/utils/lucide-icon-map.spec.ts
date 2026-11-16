@@ -3,6 +3,7 @@ import {
   LucideBoxes,
   LucideBuilding2,
   LucideHandshake,
+  LucideSlidersHorizontal,
   LucideStore,
   LucideTruck,
 } from '@lucide/angular';
@@ -27,6 +28,10 @@ describe('resolveLucideIcon', () => {
 
   it('resolves the truck icon used by the Despachos screen', () => {
     expect(resolveLucideIcon('truck')).toBe(LucideTruck);
+  });
+
+  it('resolves the sliders-horizontal icon used by Parámetros de ventas', () => {
+    expect(resolveLucideIcon('sliders-horizontal')).toBe(LucideSlidersHorizontal);
   });
 
   it('returns undefined for an unknown name instead of throwing', () => {
