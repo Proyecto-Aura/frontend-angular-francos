@@ -15,30 +15,37 @@ function leaf(nombre: string): RutaNodo {
 }
 
 describe('existeNombreEnArbol', () => {
+  // Menu de un usuario con rol "insumos": modulo de primer nivel con sus
+  // paginas como hojas directas.
   const arbol: RutaNodo[] = [
     {
       id: 1,
-      nombre: 'inventario',
-      etiqueta: 'Inventario',
+      nombre: 'insumos',
+      etiqueta: 'Insumos',
       icono: 'package',
-      descripcion: 'Control de stock y productos',
+      descripcion: 'Gestión de insumos y su stock',
       estado: true,
       parent_id: null,
-      children: [
-        { ...leaf('insumos'), children: [leaf('stock-insumos'), leaf('solicitudes-insumos')] },
-      ],
+      children: [leaf('stock-insumos'), leaf('solicitudes-insumos')],
     },
   ];
 
   it('finds the root node', () => {
-    expect(existeNombreEnArbol(arbol, 'inventario')).toBe(true);
+    expect(existeNombreEnArbol(arbol, 'insumos')).toBe(true);
   });
 
-  it('finds a deeply nested leaf node', () => {
+  it('finds a leaf under a top-level module', () => {
     expect(existeNombreEnArbol(arbol, 'stock-insumos')).toBe(true);
   });
 
   it('returns false for a nombre not permitted (not in the filtered tree)', () => {
     expect(existeNombreEnArbol(arbol, 'stock-productos')).toBe(false);
+  });
+
+  it('finds a node nested several levels deep', () => {
+    const profundo: RutaNodo[] = [
+      { ...leaf('a'), parent_id: null, children: [{ ...leaf('b'), children: [leaf('c')] }] },
+    ];
+    expect(existeNombreEnArbol(profundo, 'c')).toBe(true);
   });
 });

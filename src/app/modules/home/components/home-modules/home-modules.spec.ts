@@ -155,6 +155,46 @@ describe('HomeModules', () => {
     });
   });
 
+  it('shows the Insumos card when the API returns it, ordered between Inventario and Gestión Estratégica', () => {
+    const fixture = create();
+    httpMock.expectOne(TREE_URL).flush([
+      nodo({ nombre: 'estrategico', etiqueta: 'Gestión Estratégica' }),
+      nodo({
+        nombre: 'insumos',
+        etiqueta: 'Insumos',
+        descripcion: 'Gestión de insumos y su stock',
+      }),
+      nodo({ nombre: 'ventas', etiqueta: 'Ventas' }),
+      nodo({ nombre: 'inventario', etiqueta: 'Inventario' }),
+    ]);
+    fixture.detectChanges();
+
+    const modules = fixture.componentInstance['modules']();
+    expect(modules.map((m: { title: string }) => m.title)).toEqual([
+      'Ventas',
+      'Inventario',
+      'Insumos',
+      'Gestión Estratégica',
+    ]);
+    expect(modules[2]).toEqual({
+      icon: '/icons/module_insumos.svg',
+      title: 'Insumos',
+      description: 'Gestión de insumos y su stock',
+      routerLink: '/insumos',
+    });
+  });
+
+  it('shows only the Insumos card for a user whose menu has no Inventario', () => {
+    const fixture = create();
+    httpMock.expectOne(TREE_URL).flush([nodo({ nombre: 'insumos', etiqueta: 'Insumos' })]);
+    fixture.detectChanges();
+
+    const modules = fixture.componentInstance['modules']();
+    expect(modules).toHaveLength(1);
+    expect(modules[0].title).toBe('Insumos');
+    expect(modules[0].routerLink).toBe('/insumos');
+  });
+
   it('filters out a module the API returns that has no known MODULE_CARD_INFO entry (no real page yet)', () => {
     const fixture = create();
     httpMock
