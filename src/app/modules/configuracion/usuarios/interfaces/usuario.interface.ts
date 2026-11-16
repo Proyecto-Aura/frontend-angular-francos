@@ -54,6 +54,8 @@ const ETIQUETAS_ROL: Record<string, string> = {
   admin: 'Admin',
   ventas: 'Ventas',
   inventario: 'Inventario',
+  inventario_insumos: 'Inventario de insumos',
+  inventario_productos_terminados: 'Inventario de productos terminados',
   produccion: 'Producción',
   estrategico: 'Estratégico',
   despacho: 'Despacho',

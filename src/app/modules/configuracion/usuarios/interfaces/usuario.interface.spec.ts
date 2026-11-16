@@ -125,6 +125,13 @@ describe('etiquetaDeRol', () => {
     expect(etiquetaDeRol('estrategico')).toBe('Estratégico');
     expect(etiquetaDeRol('nuevo-rol')).toBe('Nuevo-rol');
   });
+
+  it('da una etiqueta legible a los roles en que se dividió inventario', () => {
+    expect(etiquetaDeRol('inventario_insumos')).toBe('Inventario de insumos');
+    expect(etiquetaDeRol('inventario_productos_terminados')).toBe(
+      'Inventario de productos terminados',
+    );
+  });
 });
 
 describe('usuarioFormDe', () => {
