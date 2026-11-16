@@ -30,6 +30,10 @@ const MODULE_CARD_INFO: Record<string, { icon: string; routerLink: string }> = {
   // todavia, pedido explicito del usuario mientras tanto), reemplazar en
   // public/icons/module_despacho.svg cuando llegue el definitivo.
   'despacho-pedidos': { icon: '/icons/module_despacho.svg', routerLink: '/despacho-pedidos' },
+  // Separado de Inventario en su propio rol — mismo caso que Despacho:
+  // public/icons/module_insumos.svg es un placeholder propio, reemplazar
+  // cuando llegue el arte de marca.
+  insumos: { icon: '/icons/module_insumos.svg', routerLink: '/insumos' },
 };
 
 // Fallback mientras responde /rutas/mi-menu (o si falla) — solo los modulos
@@ -56,13 +60,15 @@ const FALLBACK_MODULES: ModuleCard[] = [
   },
 ];
 
-// Orden pedido a mano: Ventas, Inventario, Gestion Estrategica, Produccion,
-// Despacho, Configuracion. Todos son nombres reales de la BD (confirmado
-// por el backend) — "despacho-pedidos" (HU-A-023) ya es el nombre real
-// confirmado, no un supuesto (se verifico contra /rutas/mi-menu en vivo).
+// Orden pedido a mano: Ventas, Inventario, Insumos, Gestion Estrategica,
+// Produccion, Despacho, Configuracion. Todos son nombres reales de la BD
+// (confirmado por el backend) — "despacho-pedidos" (HU-A-023) ya es el
+// nombre real confirmado, no un supuesto (se verifico contra /rutas/mi-menu
+// en vivo).
 const MODULE_ORDER = [
   'ventas',
   'inventario',
+  'insumos',
   'estrategico',
   'produccion',
   'despacho-pedidos',

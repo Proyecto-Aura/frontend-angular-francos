@@ -5,36 +5,37 @@ import { permisoGuard } from './permiso.guard';
 import { MenuService } from '../services/menu.service';
 import { RutaNodo } from '../interfaces/ruta-nodo.interface';
 
+// Menu de un usuario con rol "insumos": Insumos es modulo de primer nivel
+// con sus paginas como hijos directos (ya no cuelga de Inventario).
 const TREE: RutaNodo[] = [
   {
     id: 1,
-    nombre: 'inventario',
-    etiqueta: 'Inventario',
-    icono: 'package',
-    descripcion: 'Control de stock y productos',
+    nombre: 'insumos',
+    etiqueta: 'Insumos',
+    icono: 'box',
+    descripcion: 'Gestión de insumos y su stock',
     estado: true,
     parent_id: null,
     children: [
       {
         id: 2,
-        nombre: 'insumos',
-        etiqueta: 'Insumos',
-        icono: 'box',
+        nombre: 'stock-insumos',
+        etiqueta: 'Stock',
+        icono: 'boxes',
         descripcion: null,
         estado: true,
         parent_id: 1,
-        children: [
-          {
-            id: 3,
-            nombre: 'stock-insumos',
-            etiqueta: 'Stock',
-            icono: 'boxes',
-            descripcion: null,
-            estado: true,
-            parent_id: 2,
-            children: [],
-          },
-        ],
+        children: [],
+      },
+      {
+        id: 3,
+        nombre: 'solicitudes-insumos',
+        etiqueta: 'Solicitudes',
+        icono: 'boxes',
+        descripcion: null,
+        estado: true,
+        parent_id: 1,
+        children: [],
       },
     ],
   },
@@ -58,6 +59,12 @@ describe('permisoGuard', () => {
 
   it('allows navigation when the route path is permitted in the menu tree', async () => {
     const { result$ } = run('stock-insumos', { getTree: () => of(TREE) });
+    const result = await toPromise(result$);
+    expect(result).toBe(true);
+  });
+
+  it('allows every page of the insumos module', async () => {
+    const { result$ } = run('solicitudes-insumos', { getTree: () => of(TREE) });
     const result = await toPromise(result$);
     expect(result).toBe(true);
   });

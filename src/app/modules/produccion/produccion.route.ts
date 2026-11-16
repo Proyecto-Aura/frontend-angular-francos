@@ -5,7 +5,7 @@ import { permisoGuard } from '../../core/guards/permiso.guard';
 // unico global, no por modulo) — por eso "produccion-solicitudes" y
 // "produccion-solicitudes-insumos" en vez de "solicitudes-produccion"/
 // "solicitudes-insumos": esos nombres ya los usan las paginas de Inventario
-// (ver productos-terminados.route.ts / insumos.route.ts), asi que el
+// e Insumos (ver inventario.route.ts / insumos.route.ts), asi que el
 // backend creo nombres distintos para este modulo nuevo (confirmado por el
 // backend, OFT0-263).
 export const PRODUCCION_ROUTES: Routes = [

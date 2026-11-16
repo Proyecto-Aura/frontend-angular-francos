@@ -8,7 +8,7 @@ import { permisoGuard } from '../../core/guards/permiso.guard';
 // sidebar), y "gestion-despachos" es el nombre de su unica pagina real
 // (hijo de despacho-pedidos en el arbol, agregado a pedido del usuario para
 // que el sidebar no quede vacio) — mismo patron de 2 niveles que
-// productos-terminados/pedidos-por-preparar dentro de Inventario.
+// pedidos-por-preparar dentro de Inventario.
 export const DESPACHO_ROUTES: Routes = [
   {
     path: '',

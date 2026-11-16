@@ -2,7 +2,7 @@ import { Routes } from '@angular/router';
 import { permisoGuard } from '../../../core/guards/permiso.guard';
 
 // path = nombre que manda el backend en /rutas/mi-menu, ver nota en
-// inventario/insumos/insumos.route.ts
+// insumos/insumos.route.ts
 export const MIS_PEDIDOS_ROUTES: Routes = [
   {
     path: 'gestion-pedidos',
