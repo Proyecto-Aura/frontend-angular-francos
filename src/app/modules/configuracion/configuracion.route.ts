@@ -34,6 +34,14 @@ export const CONFIGURACION_ROUTES: Routes = [
           ),
       },
       {
+        path: 'parametros-ventas',
+        canActivate: [permisoGuard],
+        loadComponent: () =>
+          import('./parametros/pages/parametros-ventas/parametros-ventas').then(
+            (c) => c.GestionarParametrosVentas,
+          ),
+      },
+      {
         // Pantalla del propio usuario: no es un permiso de menú, basta con estar logueado.
         path: 'perfil',
         loadComponent: () =>

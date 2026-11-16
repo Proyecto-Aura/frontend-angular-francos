@@ -1,0 +1,50 @@
+<app-ds-card
+  title="Promociones del catálogo"
+  subtitle="Activar o desactivar todas las promociones a la vez"
+>
+  <div class="flex flex-col gap-5">
+    <div class="flex flex-col gap-1">
+      <app-ds-switch
+        [label]="activas() ? 'Promociones activas' : 'Promociones desactivadas'"
+        [checked]="activas()"
+        (checkedChange)="activasChange.emit($event)"
+      />
+      <p class="text-ds-sm text-muted-foreground">
+        @if (activas()) {
+          {{ vigentes() }}
+          {{
+            vigentes() === 1 ? 'promoción vigente se muestra' : 'promociones vigentes se muestran'
+          }}
+          en el portal del cliente
+        } @else {
+          Ninguna promoción se muestra en el portal del cliente
+        }
+      </p>
+    </div>
+
+    @if (cargando()) {
+      <p
+        class="rounded-lg border border-border bg-card p-8 text-center text-ds-base text-muted-foreground"
+      >
+        Cargando promociones…
+      </p>
+    } @else if (errorCarga()) {
+      <div
+        class="flex flex-col items-center gap-3 rounded-lg border border-border bg-card p-8 text-center"
+      >
+        <p class="text-ds-base text-muted-foreground">{{ errorCarga() }}</p>
+        <app-ds-button variant="secondary" (clicked)="cargar()">Reintentar</app-ds-button>
+      </div>
+    } @else {
+      <app-ds-data-table [columns]="columns()" [rows]="filas()" empty="No hay promociones" />
+    }
+  </div>
+</app-ds-card>
+
+<ng-template #promocionCell let-f>
+  <app-ds-cell-stack [primary]="f.nombre" [secondary]="f.vigencia" />
+</ng-template>
+
+<ng-template #estadoCell let-f>
+  <app-ds-badge [tone]="f.estadoTono" [dot]="true">{{ f.estadoTexto }}</app-ds-badge>
+</ng-template>

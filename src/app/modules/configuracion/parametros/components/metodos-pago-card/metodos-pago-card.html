@@ -1,0 +1,37 @@
+<app-ds-card
+  title="Métodos de pago del portal"
+  subtitle="Qué formas de pago puede elegir el cliente al comprar"
+>
+  <div class="flex flex-col gap-4">
+    <div class="flex items-start justify-between gap-4">
+      <div class="flex flex-col gap-0.5">
+        <span class="text-ds-base font-medium text-foreground">Culqi</span>
+        <span class="text-ds-sm text-muted-foreground">Tarjeta de crédito y débito en línea</span>
+      </div>
+      <app-ds-switch
+        [checked]="culqi()"
+        aria-label="Pago con Culqi"
+        (checkedChange)="culqiChange.emit($event)"
+      />
+    </div>
+
+    <div class="flex items-start justify-between gap-4 border-t border-border pt-4">
+      <div class="flex flex-col gap-0.5">
+        <span class="text-ds-base font-medium text-foreground">Efectivo</span>
+        <span class="text-ds-sm text-muted-foreground">
+          Pago contra entrega al recibir el pedido. Se guarda la preferencia; el portal lo ofrecerá
+          cuando ese flujo de pago esté habilitado.
+        </span>
+      </div>
+      <app-ds-switch
+        [checked]="efectivo()"
+        aria-label="Pago en efectivo"
+        (checkedChange)="efectivoChange.emit($event)"
+      />
+    </div>
+
+    @if (error()) {
+      <p role="alert" class="text-ds-sm font-medium text-destructive">{{ error() }}</p>
+    }
+  </div>
+</app-ds-card>
