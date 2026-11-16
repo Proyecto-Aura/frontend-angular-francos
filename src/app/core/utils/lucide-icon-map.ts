@@ -24,6 +24,7 @@ import {
   LucideReceipt,
   LucideHandshake,
   LucideTruck,
+  LucideSlidersHorizontal,
 } from '@lucide/angular';
 
 // El backend manda el icono como texto kebab-case (ver RutaNodo.icono) — van
@@ -54,6 +55,7 @@ const ICON_MAP: Record<string, Type<unknown>> = {
   receipt: LucideReceipt,
   handshake: LucideHandshake,
   truck: LucideTruck,
+  'sliders-horizontal': LucideSlidersHorizontal,
 };
 
 // undefined para un nombre desconocido en vez de tirar error — un icono que

@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { HomeCards } from '../home-cards/home-cards';
 import { MenuService } from '../../../../core/services/menu.service';
@@ -36,30 +36,6 @@ const MODULE_CARD_INFO: Record<string, { icon: string; routerLink: string }> = {
   insumos: { icon: '/icons/module_insumos.svg', routerLink: '/insumos' },
 };
 
-// Fallback mientras responde /rutas/mi-menu (o si falla) — solo los modulos
-// que todo usuario del portal puede ver. Configuracion no va aqui: es solo
-// del admin y aparece cuando el backend se lo devuelve.
-const FALLBACK_MODULES: ModuleCard[] = [
-  {
-    icon: MODULE_CARD_INFO['ventas'].icon,
-    title: 'Ventas',
-    description: 'Gestión de ventas y pedidos',
-    routerLink: '/ventas',
-  },
-  {
-    icon: MODULE_CARD_INFO['inventario'].icon,
-    title: 'Inventario',
-    description: 'Control de stock y productos',
-    routerLink: '/inventario',
-  },
-  {
-    icon: MODULE_CARD_INFO['estrategico'].icon,
-    title: 'Gestión Estratégica',
-    description: 'Planeamiento y seguimiento estratégico',
-    routerLink: '/gestion-estrategica',
-  },
-];
-
 // Orden pedido a mano: Ventas, Inventario, Insumos, Gestion Estrategica,
 // Produccion, Despacho, Configuracion. Todos son nombres reales de la BD
 // (confirmado por el backend) — "despacho-pedidos" (HU-A-023) ya es el
@@ -87,16 +63,25 @@ function ordenDe(nombre: string): number {
 })
 export class HomeModules {
   private menuService = inject(MenuService);
+  private destroyRef = inject(DestroyRef);
 
-  // Arranca con el fallback (asi el home no aparece vacio mientras responde
-  // la API) y se reemplaza con lo que el usuario realmente puede ver segun
-  // /rutas/mi-menu — ya filtrado por rol server-side.
-  protected readonly modules = signal<ModuleCard[]>(FALLBACK_MODULES);
+  // Siempre el estado real de /rutas/mi-menu (ya filtrado por rol
+  // server-side), sin tarjetas de respaldo: mostrar accesos que despues
+  // rebotan a /home confundia a usuarios sin esos permisos (o sin ninguno).
+  protected readonly modules = signal<ModuleCard[]>([]);
+  protected readonly estado = signal<'cargando' | 'listo' | 'error'>('cargando');
 
   constructor() {
+    this.cargar();
+  }
+
+  // Tambien lo usa el boton "Reintentar": MenuService vuelve a pedir el
+  // arbol tras un error (shareReplay se reinicia al fallar).
+  protected cargar(): void {
+    this.estado.set('cargando');
     this.menuService
       .getTree()
-      .pipe(takeUntilDestroyed())
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (tree) => {
           const cards = tree
@@ -111,9 +96,13 @@ export class HomeModules {
                 routerLink: info.routerLink,
               };
             });
-          if (cards.length > 0) this.modules.set(cards);
+          this.modules.set(cards);
+          this.estado.set('listo');
         },
-        error: () => undefined,
+        error: () => {
+          this.modules.set([]);
+          this.estado.set('error');
+        },
       });
   }
 }

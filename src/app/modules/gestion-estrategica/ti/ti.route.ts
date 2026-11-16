@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { permisoGuard } from '../../../core/guards/permiso.guard';
+import { primerHijoPermitidoGuard } from '../../../core/guards/primer-hijo-permitido.guard';
 
 // path = nombre que manda el backend en /rutas/mi-menu. TiLayout no forma
 // parte de ese contrato: solo agrega la barra de plan seleccionado al outlet.
@@ -56,12 +57,22 @@ export const TI_ROUTES: Routes = [
       },
       {
         path: '',
-        redirectTo: 'objetivos-estrategicos-ti',
         pathMatch: 'full',
+        canActivate: [
+          primerHijoPermitidoGuard('gestion-estrategica-ti', {
+            preferido: 'objetivos-estrategicos-ti',
+          }),
+        ],
+        children: [],
       },
       {
         path: '**',
-        redirectTo: 'objetivos-estrategicos-ti',
+        canActivate: [
+          primerHijoPermitidoGuard('gestion-estrategica-ti', {
+            preferido: 'objetivos-estrategicos-ti',
+          }),
+        ],
+        children: [],
       },
     ],
   },

@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { permisoGuard } from '../../core/guards/permiso.guard';
+import { primerHijoPermitidoGuard } from '../../core/guards/primer-hijo-permitido.guard';
 
 // Insumos: modulo de primer nivel (antes vivia anidado dentro de Inventario;
 // se separo en su propio rol "insumos", mismo patron que Despacho HU-A-023)
@@ -35,12 +36,14 @@ export const INSUMOS_ROUTES: Routes = [
       },
       {
         path: '',
-        redirectTo: 'stock-insumos',
         pathMatch: 'full',
+        canActivate: [primerHijoPermitidoGuard('insumos', { preferido: 'stock-insumos' })],
+        children: [],
       },
       {
         path: '**',
-        redirectTo: 'stock-insumos',
+        canActivate: [primerHijoPermitidoGuard('insumos', { preferido: 'stock-insumos' })],
+        children: [],
       },
     ],
   },

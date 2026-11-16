@@ -37,11 +37,24 @@ describe('HomeModules', () => {
 
   afterEach(() => httpMock.verify());
 
-  it('renders the fallback modules (Ventas, Inventario, Gestión Estratégica) before the API responds', () => {
+  it('shows a loading state and no module cards before the API responds', () => {
     const fixture = create();
-    const cards = fixture.nativeElement.querySelectorAll('app-home-cards');
-    expect(cards.length).toBe(3);
+    expect(fixture.nativeElement.querySelectorAll('app-home-cards').length).toBe(0);
+    expect(fixture.nativeElement.textContent).toContain('Cargando módulos…');
     httpMock.expectOne(TREE_URL).flush([]);
+  });
+
+  it('shows the empty state and a 0 counter when the menu is empty (user without permissions)', () => {
+    const fixture = create();
+    httpMock.expectOne(TREE_URL).flush([]);
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance['modules']()).toEqual([]);
+    expect(fixture.nativeElement.querySelectorAll('app-home-cards').length).toBe(0);
+    expect(fixture.nativeElement.textContent).toContain(
+      'Aún no tienes módulos asignados. Contacta al administrador.',
+    );
+    expect(fixture.nativeElement.textContent).toContain('0 módulos');
   });
 
   it('replaces the cards with what the API returns, using etiqueta/descripcion', () => {
@@ -208,19 +221,43 @@ describe('HomeModules', () => {
     expect(fixture.componentInstance['modules']()).toHaveLength(1);
   });
 
-  it('keeps the fallback when the API returns nothing matching a known module', () => {
+  it('shows the empty state when the API returns only modules the front does not know', () => {
     const fixture = create();
     httpMock.expectOne(TREE_URL).flush([nodo({ nombre: 'un-modulo-que-no-existe-en-el-front' })]);
     fixture.detectChanges();
 
-    expect(fixture.componentInstance['modules']().length).toBe(3);
+    expect(fixture.nativeElement.querySelectorAll('app-home-cards').length).toBe(0);
+    expect(fixture.nativeElement.textContent).toContain(
+      'Aún no tienes módulos asignados. Contacta al administrador.',
+    );
   });
 
-  it('keeps the fallback when the API call fails', () => {
+  it('shows the error state with a retry button when the API call fails', () => {
     const fixture = create();
     httpMock.expectOne(TREE_URL).flush('error', { status: 500, statusText: 'Server Error' });
     fixture.detectChanges();
 
-    expect(fixture.componentInstance['modules']().length).toBe(3);
+    expect(fixture.nativeElement.querySelectorAll('app-home-cards').length).toBe(0);
+    expect(fixture.nativeElement.textContent).toContain('No se pudieron cargar tus módulos.');
+    const boton: HTMLButtonElement | null = fixture.nativeElement.querySelector('button');
+    expect(boton?.textContent?.trim()).toBe('Reintentar');
+  });
+
+  it('retries /rutas/mi-menu when clicking Reintentar and then shows the cards', () => {
+    const fixture = create();
+    httpMock.expectOne(TREE_URL).flush('error', { status: 500, statusText: 'Server Error' });
+    fixture.detectChanges();
+
+    fixture.nativeElement.querySelector('button').click();
+    httpMock
+      .expectOne(TREE_URL)
+      .flush([
+        nodo({ nombre: 'ventas', etiqueta: 'Ventas' }),
+        nodo({ nombre: 'inventario', etiqueta: 'Inventario' }),
+      ]);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelectorAll('app-home-cards').length).toBe(2);
+    expect(fixture.nativeElement.textContent).not.toContain('No se pudieron cargar tus módulos.');
   });
 });
