@@ -169,8 +169,6 @@ describe('EditarStockModal', () => {
         { status: 500, statusText: 'Server Error' },
       );
 
-    expect(component.toast()?.title).toBe(
-      'No se pudo actualizar el stock. Intente nuevamente.',
-    );
+    expect(component.toast()?.title).toBe('No se pudo actualizar el stock. Intente nuevamente.');
   });
 });

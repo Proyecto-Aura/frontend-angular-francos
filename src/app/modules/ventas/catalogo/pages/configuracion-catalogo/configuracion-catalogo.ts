@@ -308,11 +308,7 @@ export class ConfiguracionCatalogo implements OnInit, OnDestroy {
   protected guardar() {
     const err = this.catalogoService.validarCfg(this.tab(), this.selId(), this.cf());
     if (err.length) {
-      this.mostrarToast(
-        'warning',
-        'Faltan campos por completar',
-        `Revisa: ${err.join(', ')}.`,
-      );
+      this.mostrarToast('warning', 'Faltan campos por completar', `Revisa: ${err.join(', ')}.`);
       return;
     }
 
@@ -336,10 +332,7 @@ export class ConfiguracionCatalogo implements OnInit, OnDestroy {
           this.cerrarForm();
         },
         error: (e: unknown) =>
-          this.mostrarToast(
-            'error',
-            mensajeDeError(e, 'No se pudo guardar. Inténtalo de nuevo.'),
-          ),
+          this.mostrarToast('error', mensajeDeError(e, 'No se pudo guardar. Inténtalo de nuevo.')),
       });
   }
 

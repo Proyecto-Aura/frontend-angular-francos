@@ -120,14 +120,21 @@ describe('GestionPedidos', () => {
 
     pagina$.pedidoRegistrado({ tono: 'ok', mensaje: 'Pedido PED-000009 registrado' });
 
-    expect(pagina$.toast()).toMatchObject({ tone: 'success', title: 'Pedido PED-000009 registrado' });
+    expect(pagina$.toast()).toMatchObject({
+      tone: 'success',
+      title: 'Pedido PED-000009 registrado',
+    });
     esperarListado().flush(pagina([makeResumenDto({ id: 9, codigo: 'PED-000009' })]));
   });
 
   it('shows the bold title and the code below it when the notice carries one', () => {
     esperarListado().flush(pagina([]));
 
-    pagina$.pedidoRegistrado({ tono: 'ok', titulo: 'Nuevo pedido registrado', mensaje: 'PED-000066' });
+    pagina$.pedidoRegistrado({
+      tono: 'ok',
+      titulo: 'Nuevo pedido registrado',
+      mensaje: 'PED-000066',
+    });
 
     expect(pagina$.toast()).toMatchObject({
       tone: 'success',

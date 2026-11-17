@@ -1,11 +1,4 @@
-import {
-  AfterViewInit,
-  Component,
-  OnDestroy,
-  TemplateRef,
-  ViewChild,
-  signal,
-} from '@angular/core';
+import { AfterViewInit, Component, OnDestroy, TemplateRef, ViewChild, signal } from '@angular/core';
 import {
   LucideBarChart3,
   LucideBell,

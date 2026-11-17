@@ -5,14 +5,20 @@ describe('Alert', () => {
   let fixture: ComponentFixture<Alert>;
 
   function crear(
-    overrides: { tone?: AlertTone; description?: string; linkLabel?: string; closable?: boolean } = {},
+    overrides: {
+      tone?: AlertTone;
+      description?: string;
+      linkLabel?: string;
+      closable?: boolean;
+    } = {},
   ): HTMLElement {
     fixture = TestBed.createComponent(Alert);
     fixture.componentRef.setInput('title', 'Mensaje');
     if (overrides.tone) fixture.componentRef.setInput('tone', overrides.tone);
     if (overrides.description) fixture.componentRef.setInput('description', overrides.description);
     if (overrides.linkLabel) fixture.componentRef.setInput('linkLabel', overrides.linkLabel);
-    if (overrides.closable !== undefined) fixture.componentRef.setInput('closable', overrides.closable);
+    if (overrides.closable !== undefined)
+      fixture.componentRef.setInput('closable', overrides.closable);
     fixture.detectChanges();
     return fixture.nativeElement as HTMLElement;
   }

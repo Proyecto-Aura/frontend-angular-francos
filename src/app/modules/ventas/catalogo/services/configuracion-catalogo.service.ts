@@ -148,7 +148,8 @@ export class ConfiguracionCatalogoService {
       tab === 'presentaciones'
         ? etiquetaPresentacion(Number(cf.cantidad), cf.unidad as UnidadCfg)
         : cf.nombre.trim();
-    const aviso = selId === null ? `${etiqueta} ${nombre} registrada.` : `${etiqueta} ${nombre} actualizada.`;
+    const aviso =
+      selId === null ? `${etiqueta} ${nombre} registrada.` : `${etiqueta} ${nombre} actualizada.`;
 
     if (tab === 'categorias') {
       const cuerpo = { nombre: cf.nombre.trim(), descripcion: cf.descripcion.trim() };

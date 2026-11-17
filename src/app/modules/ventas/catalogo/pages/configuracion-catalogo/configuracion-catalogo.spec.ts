@@ -387,7 +387,10 @@ describe('ConfiguracionCatalogo', () => {
       req.flush({ ...PRESENTACIONES_CFG_DTO[3], estado: true });
 
       expect(service.presentacionesCfg()[3].estado).toBe('Activo');
-      expect(page.toast()).toMatchObject({ tone: 'success', title: 'Presentación 1 kg reactivada.' });
+      expect(page.toast()).toMatchObject({
+        tone: 'success',
+        title: 'Presentación 1 kg reactivada.',
+      });
     });
   });
 });
