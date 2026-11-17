@@ -3,6 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { Signal, WritableSignal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Observable, of, throwError } from 'rxjs';
+import { AlertTone } from '../../../../../shared/ds/alert/alert';
 import { PedidoFormModel, ResultadoGuardado } from '../../interfaces/pedido.interface';
 import { CulqiCheckoutService } from '../../services/culqi-checkout.service';
 import {
@@ -16,8 +17,7 @@ import { PedidoForm } from './pedido-form';
 
 interface PedidoFormApi {
   pf: WritableSignal<PedidoFormModel>;
-  errores: Signal<string[]>;
-  errorApi: Signal<string>;
+  toast: Signal<{ tone: AlertTone; title: string; description?: string } | null>;
   total: Signal<number>;
   setCliente(id: string): void;
   guardar(): void;
@@ -78,7 +78,8 @@ describe('PedidoForm', () => {
   it('does not submit an incomplete order', () => {
     form.guardar();
 
-    expect(form.errores()).toContain('cliente');
+    expect(form.toast()).toMatchObject({ tone: 'warning', title: 'Faltan campos por completar' });
+    expect(form.toast()?.description).toContain('cliente');
     httpMock.expectNone(`${API}/pedidos`);
   });
 
@@ -100,7 +101,8 @@ describe('PedidoForm', () => {
     req.flush(makeDetalleDto({ codigo: 'PED-000042' }));
 
     expect(registrados[0].tono).toBe('ok');
-    expect(registrados[0].mensaje).toContain('PED-000042');
+    expect(registrados[0].titulo).toBe('Nuevo pedido registrado');
+    expect(registrados[0].mensaje).toBe('PED-000042');
     expect(cerrado).toBe(true);
   });
 
@@ -130,7 +132,10 @@ describe('PedidoForm', () => {
         { status: 402, statusText: 'Payment Required' },
       );
 
-    expect(form.errorApi()).toBe('Tu tarjeta no tiene fondos suficientes.');
+    expect(form.toast()).toMatchObject({
+      tone: 'error',
+      title: 'Tu tarjeta no tiene fondos suficientes.',
+    });
     expect(registrados).toEqual([]);
     expect(cerrado).toBe(false);
   });
@@ -140,7 +145,10 @@ describe('PedidoForm', () => {
     form.pf.set(makeFormValido({ metodoPago: 'culqi' }));
     form.guardar();
 
-    expect(form.errorApi()).toBe('Culqi no pudo procesar el pago.');
+    expect(form.toast()).toMatchObject({
+      tone: 'error',
+      title: 'Culqi no pudo procesar el pago.',
+    });
     httpMock.expectNone(`${API}/pedidos`);
   });
 

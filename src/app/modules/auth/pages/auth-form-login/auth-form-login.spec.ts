@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { submit } from '@angular/forms/signals';
@@ -13,17 +13,23 @@ describe('AuthFormLogin', () => {
   let router: { navigateByUrl: ReturnType<typeof vi.fn> };
   let httpMock: HttpTestingController;
 
-  beforeEach(() => {
+  function configure(query: Record<string, string> = {}) {
     router = { navigateByUrl: vi.fn() };
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: Router, useValue: router },
+        {
+          provide: ActivatedRoute,
+          useValue: { snapshot: { queryParamMap: convertToParamMap(query) } },
+        },
       ],
     });
     httpMock = TestBed.inject(HttpTestingController);
-  });
+  }
+
+  beforeEach(() => configure());
 
   afterEach(() => httpMock.verify());
 
@@ -35,6 +41,23 @@ describe('AuthFormLogin', () => {
 
   it('creates', () => {
     expect(create().componentInstance).toBeTruthy();
+  });
+
+  it('"¿Has olvidado tu contraseña?" navigates to /auth/forgot-password', () => {
+    create().componentInstance.onForgotPassword();
+    expect(router.navigateByUrl).toHaveBeenCalledWith('/auth/forgot-password');
+  });
+
+  it('does not show the "password updated" notice by default', () => {
+    const fixture = create();
+    expect(fixture.nativeElement.querySelector('[role="status"]')).toBeNull();
+  });
+
+  it('shows the "password updated" notice when arriving with ?restablecida=1', () => {
+    TestBed.resetTestingModule();
+    configure({ restablecida: '1' });
+    const notice = create().nativeElement.querySelector('[role="status"]');
+    expect(notice?.textContent).toContain('Ya puedes iniciar sesión');
   });
 
   it('marks username and password as invalid when empty', () => {
@@ -50,7 +73,8 @@ describe('AuthFormLogin', () => {
     expect(component.loginForm.password().invalid()).toBe(false);
   });
 
-  it('on successful login, clears loginError and navigates to /home', async () => {
+  it('on successful login, shows a green success toast and navigates to /home shortly after', async () => {
+    vi.useFakeTimers();
     const { componentInstance: component } = create();
     component.loginModel.set({ username: 'admin', password: 'admin123' });
 
@@ -65,11 +89,16 @@ describe('AuthFormLogin', () => {
     } satisfies LoginResponseDto);
     await submission;
 
-    expect(component.loginError()).toBeNull();
+    expect(component.toast()).toMatchObject({ tone: 'success', title: 'Inicio de sesión exitoso' });
+    expect(router.navigateByUrl).not.toHaveBeenCalled();
+
+    vi.advanceTimersByTime(700);
     expect(router.navigateByUrl).toHaveBeenCalledWith('/home');
+    vi.useRealTimers();
   });
 
-  it('on failed login, shows the backend message and does not navigate', async () => {
+  it('on failed login, shows a red error toast with the backend message and does not navigate', async () => {
+    vi.useFakeTimers();
     const { componentInstance: component } = create();
     component.loginModel.set({ username: 'admin', password: 'wrong' });
 
@@ -81,11 +110,13 @@ describe('AuthFormLogin', () => {
     );
     await submission;
 
-    expect(component.loginError()).toBe('Credenciales inválidas');
+    expect(component.toast()).toMatchObject({ tone: 'error', title: 'Credenciales inválidas' });
     expect(router.navigateByUrl).not.toHaveBeenCalled();
+    vi.useRealTimers();
   });
 
-  it('on a network/unexpected error, falls back to a generic message', async () => {
+  it('on a network/unexpected error, shows an error toast with the generic fallback message', async () => {
+    vi.useFakeTimers();
     const { componentInstance: component } = create();
     component.loginModel.set({ username: 'admin', password: 'admin123' });
 
@@ -94,6 +125,41 @@ describe('AuthFormLogin', () => {
     req.error(new ProgressEvent('error'));
     await submission;
 
-    expect(component.loginError()).toBe('No se pudo iniciar sesión. Intenta de nuevo.');
+    expect(component.toast()).toMatchObject({
+      tone: 'error',
+      title: 'No se pudo iniciar sesión. Intenta de nuevo.',
+    });
+    vi.useRealTimers();
+  });
+
+  it('attempting to submit with empty fields shows a yellow warning toast, marks the fields touched and does not call the backend', async () => {
+    vi.useFakeTimers();
+    const fixture = create();
+    const component = fixture.componentInstance;
+
+    await submit(component.loginForm);
+    fixture.detectChanges();
+
+    expect(component.toast()).toMatchObject({
+      tone: 'warning',
+      title: 'Faltan campos por completar',
+    });
+    expect(fixture.nativeElement.textContent).toContain('El usuario es obligatorio');
+    expect(fixture.nativeElement.textContent).toContain('La contraseña es obligatoria');
+    httpMock.expectNone(LOGIN_URL);
+    vi.useRealTimers();
+  });
+
+  it('closing the toast hides it', async () => {
+    vi.useFakeTimers();
+    const { componentInstance: component } = create();
+
+    await submit(component.loginForm);
+    expect(component.toast()).not.toBeNull();
+
+    component.cerrarToast();
+    vi.advanceTimersByTime(300);
+    expect(component.toast()).toBeNull();
+    vi.useRealTimers();
   });
 });

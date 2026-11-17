@@ -2,6 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { AlertTone } from '../../../../../shared/ds/alert/alert';
 import { SelectOption } from '../../../../../shared/ds/select/select';
 import {
   PresentacionForm,
@@ -15,8 +16,7 @@ import { ProductoForm } from './producto-form';
 // Los miembros del componente son `protected`: el spec los consulta mediante esta vista tipada.
 interface ProductoFormApi {
   pf: { (): ProductoFormModel; set(v: ProductoFormModel): void };
-  errores: Signal<string[]>;
-  errorApi: Signal<string>;
+  toast: Signal<{ tone: AlertTone; title: string; description?: string } | null>;
   guardando: Signal<boolean>;
   titulo: Signal<string>;
   categoriaOptions: Signal<SelectOption[]>;
@@ -93,8 +93,7 @@ describe('ProductoForm', () => {
     expect(api().pf().nombre).toBe('');
     expect(api().pf().categoriaId).toBe('1');
     expect(api().pf().presentaciones).toHaveLength(1);
-    expect(api().errores()).toEqual([]);
-    expect(api().errorApi()).toBe('');
+    expect(api().toast()).toBeNull();
   });
 
   it('loads the product to edit', () => {
@@ -173,7 +172,8 @@ describe('ProductoForm', () => {
 
     api().guardar();
 
-    expect(api().errores()).toContain('nombre del producto');
+    expect(api().toast()).toMatchObject({ tone: 'warning', title: 'Faltan campos por completar' });
+    expect(api().toast()?.description).toContain('nombre del producto');
     expect(guardados).toEqual([]);
     expect(cierres).toBe(0);
     httpMock.expectNone(API.productos);
@@ -195,7 +195,8 @@ describe('ProductoForm', () => {
     expect(api().guardando()).toBe(false);
     expect(guardados).toHaveLength(1);
     expect(guardados[0].tono).toBe('ok');
-    expect(guardados[0].mensaje).toContain('Producto registrado · SKU FR-P8-PR1');
+    expect(guardados[0].titulo).toBe('Nuevo producto registrado');
+    expect(guardados[0].mensaje).toBe('Chifles BBQ (100 gr).');
     expect(cierres).toBe(1);
   });
 
@@ -225,7 +226,8 @@ describe('ProductoForm', () => {
     expect(guardados).toEqual([
       {
         tono: 'ok',
-        mensaje: 'Producto actualizado · el SKU y el slug se mantienen sin cambios.',
+        titulo: 'Producto actualizado',
+        mensaje: 'Chifles clásicos XL',
       },
     ]);
     expect(cierres).toBe(1);
@@ -243,7 +245,10 @@ describe('ProductoForm', () => {
         { status: 409, statusText: 'Conflict' },
       );
 
-    expect(api().errorApi()).toBe('Ya existe un producto registrado con ese nombre');
+    expect(api().toast()).toMatchObject({
+      tone: 'error',
+      title: 'Ya existe un producto registrado con ese nombre',
+    });
     expect(api().guardando()).toBe(false);
     expect(guardados).toEqual([]);
     expect(cierres).toBe(0);
@@ -258,7 +263,10 @@ describe('ProductoForm', () => {
       .expectOne(API.productos)
       .flush({ statusCode: 403, message: 'Forbidden' }, { status: 403, statusText: 'Forbidden' });
 
-    expect(api().errorApi()).toBe('No tiene permisos para gestionar el catálogo de productos.');
+    expect(api().toast()).toMatchObject({
+      tone: 'error',
+      title: 'No tiene permisos para gestionar el catálogo de productos.',
+    });
   });
 
   it('closes without saving', () => {
@@ -315,7 +323,9 @@ describe('ProductoForm', () => {
 
       api().guardar();
 
-      expect(api().errores()).toContain('la imagen debe ser JPG, PNG o WEBP (presentación 1)');
+      expect(api().toast()?.description).toContain(
+        'la imagen debe ser JPG, PNG o WEBP (presentación 1)',
+      );
       httpMock.expectNone(API.productos);
       expect(cierres).toBe(0);
     });

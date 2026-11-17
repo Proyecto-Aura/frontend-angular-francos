@@ -4,10 +4,16 @@ import { Router } from '@angular/router';
 import { catchError, switchMap, throwError } from 'rxjs';
 import { AuthService } from '../../modules/auth/services/auth.service';
 
-// No se les agrega el Bearer (login/logout no lo necesitan; refresh usa la
-// cookie httpOnly) ni se reintenta un refresh si estas mismas son las que fallan
-// con 401 — eso causaria un loop infinito.
-const AUTH_ENDPOINTS = ['/auth/login', '/auth/refresh', '/auth/logout'];
+// No se les agrega el Bearer (login/logout y la recuperacion de contraseña no lo
+// necesitan; refresh usa la cookie httpOnly) ni se reintenta un refresh si estas
+// mismas son las que fallan con 401 — eso causaria un loop infinito.
+const AUTH_ENDPOINTS = [
+  '/auth/login',
+  '/auth/refresh',
+  '/auth/logout',
+  '/auth/forgot-password',
+  '/auth/reset-password',
+];
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const authService = inject(AuthService);

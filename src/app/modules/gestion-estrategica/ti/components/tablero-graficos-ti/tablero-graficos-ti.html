@@ -1,0 +1,155 @@
+@if (errorCarga()) {
+  <app-ds-card>
+    <div class="flex flex-col items-center gap-3 py-10 text-center">
+      <p class="text-muted-foreground">No se pudieron cargar los gráficos.</p>
+      <app-ds-button variant="secondary" (clicked)="cargar()">Reintentar</app-ds-button>
+    </div>
+  </app-ds-card>
+} @else if (cargando()) {
+  <app-ds-card [padded]="false">
+    <div class="p-12 text-center text-muted-foreground">Cargando…</div>
+  </app-ds-card>
+} @else if (datos(); as seguimiento) {
+  @if (filas().length === 0) {
+    <app-ds-card>
+      <div class="py-10 text-center text-muted-foreground">Este plan no registra KPIs.</div>
+    </app-ds-card>
+  } @else {
+    <app-ds-card [padded]="false">
+      <div
+        class="flex flex-col justify-between gap-4 border-b border-border px-5 py-4 sm:flex-row sm:items-center"
+      >
+        <div>
+          <h2 class="text-ds-lg font-medium text-foreground">Cumplimiento por perspectiva</h2>
+          <p class="mt-0.5 text-ds-sm text-muted-foreground">
+            Promedio del último valor de cada KPI frente a la meta de su año
+          </p>
+        </div>
+        <div class="shrink-0 text-left sm:text-right">
+          <span class="block text-ds-3xl font-semibold tabular-nums text-foreground">
+            {{ textoPorcentaje(seguimiento.cumplimientoGeneral.porcentaje) }}
+          </span>
+          <span class="text-ds-sm text-muted-foreground">cumplimiento general</span>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))]">
+        @for (perspectiva of seguimiento.perspectivas; track perspectiva.id; let indice = $index) {
+          <div class="px-5 py-5" [class.border-l]="indice > 0" [class.border-border]="indice > 0">
+            <div class="flex items-center gap-2">
+              <span
+                class="h-2.5 w-2.5 shrink-0 rounded-full"
+                [class]="clasePuntoPerspectiva(perspectiva.orden)"
+              ></span>
+              <span class="font-semibold" [class]="claseTextoPerspectiva(perspectiva.orden)">
+                {{ perspectiva.nombre }}
+              </span>
+              <span class="ml-auto font-semibold tabular-nums text-foreground">
+                {{ textoPorcentaje(perspectiva.cumplimiento.porcentaje) }}
+              </span>
+            </div>
+
+            <div
+              class="mt-3 h-2 overflow-hidden rounded-full bg-muted"
+              role="progressbar"
+              aria-valuemin="0"
+              aria-valuemax="100"
+              [attr.aria-valuenow]="perspectiva.cumplimiento.porcentaje"
+            >
+              <div
+                class="h-full rounded-full transition-[width]"
+                [class]="claseCumplimiento(perspectiva.cumplimiento.porcentaje)"
+                [style.width.%]="anchoCumplimiento(perspectiva.cumplimiento.porcentaje)"
+              ></div>
+            </div>
+
+            <div class="mt-4 grid grid-cols-2 gap-x-3 gap-y-2 text-ds-sm text-muted-foreground">
+              @for (
+                conteo of conteosCumplimiento(perspectiva.cumplimiento);
+                track conteo.etiqueta
+              ) {
+                <span class="flex items-center gap-1.5">
+                  <span class="h-1.5 w-1.5 shrink-0 rounded-full" [class]="conteo.clase"></span>
+                  {{ conteo.n }} {{ conteo.etiqueta }}
+                </span>
+              }
+            </div>
+          </div>
+        }
+      </div>
+    </app-ds-card>
+
+    <div class="mt-5 flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+      <h2 class="text-ds-xl font-medium text-foreground">Tendencia por KPI</h2>
+      <div class="flex flex-wrap items-center gap-4 text-ds-sm text-muted-foreground">
+        <span class="flex items-center gap-2">
+          <span class="h-0.5 w-6 bg-primary"></span>Valor registrado
+        </span>
+        <span class="flex items-center gap-2">
+          <span class="w-6 border-t-2 border-dashed border-muted-foreground"></span>Meta del año
+        </span>
+      </div>
+    </div>
+
+    <div class="mt-3 grid grid-cols-[repeat(auto-fill,minmax(380px,1fr))] gap-4">
+      @for (fila of filas(); track fila.kpi.kpiId) {
+        <app-ds-card>
+          <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0">
+              <div
+                class="mb-2 flex items-center gap-2 text-ds-sm"
+                [class]="claseTextoPerspectiva(fila.perspectiva.orden)"
+              >
+                <span
+                  class="h-2 w-2 shrink-0 rounded-full"
+                  [class]="clasePuntoPerspectiva(fila.perspectiva.orden)"
+                ></span>
+                <span class="font-medium">{{ fila.perspectiva.nombre }}</span>
+              </div>
+              <h3 class="font-semibold text-foreground">{{ fila.kpi.nombre }}</h3>
+              <p class="mt-1 text-ds-sm text-muted-foreground">
+                {{ fila.kpi.codigo }} · {{ fila.kpi.frecuenciaNombre }}
+              </p>
+            </div>
+            @if (fila.kpi.ultimoValor?.color; as color) {
+              <app-ds-badge [tone]="tonoSemaforo(color)" [dot]="true">
+                {{ nombreSemaforo(color) }}
+              </app-ds-badge>
+            } @else {
+              <app-ds-badge tone="neutral" [dot]="true">Sin dato</app-ds-badge>
+            }
+          </div>
+
+          <div class="my-4 grid grid-cols-3 border-y border-border py-3">
+            @let ultimo = descripcionUltimoValor(fila.kpi);
+            @let meta = descripcionMeta(fila.kpi);
+            <div class="pr-3">
+              <span class="block text-ds-xs text-muted-foreground">{{ ultimo.etiqueta }}</span>
+              <span class="mt-1 block font-semibold tabular-nums text-foreground">
+                {{ ultimo.valor }}
+              </span>
+            </div>
+            <div class="border-l border-border px-3">
+              <span class="block text-ds-xs text-muted-foreground">{{ meta.etiqueta }}</span>
+              <span class="mt-1 block font-semibold tabular-nums text-foreground">
+                {{ meta.valor }}
+              </span>
+            </div>
+            <div class="border-l border-border pl-3">
+              <span class="block text-ds-xs text-muted-foreground">Cumplimiento</span>
+              <span class="mt-1 block font-semibold tabular-nums text-foreground">
+                {{ textoPorcentaje(fila.kpi.avancePct) }}
+              </span>
+            </div>
+          </div>
+
+          <app-kpi-tendencia-chart
+            [serie]="fila.kpi.serie"
+            [unidadSimbolo]="fila.kpi.unidadSimbolo"
+            [descripcion]="descripcionGrafico(fila.kpi)"
+          />
+        </app-ds-card>
+      }
+    </div>
+  }
+}

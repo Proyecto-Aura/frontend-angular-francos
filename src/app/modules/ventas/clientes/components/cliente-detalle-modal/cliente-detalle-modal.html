@@ -1,0 +1,119 @@
+<app-ds-modal
+  [open]="cliente() !== null"
+  [title]="titulo()"
+  [hasIcon]="true"
+  [hasFooter]="true"
+  [width]="760"
+  (closed)="cerrar()"
+>
+  <span
+    icon
+    class="flex h-9 w-9 items-center justify-center rounded-md bg-[rgba(255,255,255,0.18)]"
+  >
+    <app-ds-icon [img]="LucideEye" [size]="18" />
+  </span>
+
+  @if (cliente(); as c) {
+    <div class="flex flex-col gap-5">
+      <!-- Resumen del cliente -->
+      <div class="flex flex-col gap-6 rounded-lg border border-border bg-muted p-5">
+        <div class="flex flex-wrap gap-x-8 gap-y-6">
+          @for (campo of filaPrincipal(); track campo.label) {
+            <div class="min-w-0">
+              <div class="text-[13px] text-muted-foreground">{{ campo.label }}</div>
+              <div class="mt-1 break-words text-ds-base font-medium text-foreground">
+                {{ campo.value }}
+              </div>
+            </div>
+          }
+        </div>
+        <div class="flex flex-wrap items-center gap-x-8 gap-y-6">
+          @for (campo of filaSecundaria(); track campo.label) {
+            <div class="min-w-0">
+              <div class="text-[13px] text-muted-foreground">{{ campo.label }}</div>
+              <div class="mt-1 break-words text-ds-base font-medium text-foreground">
+                {{ campo.value }}
+              </div>
+            </div>
+          }
+          <span class="ml-auto">
+            <app-ds-badge [tone]="c.estado ? 'success' : 'neutral'" [dot]="true" size="md">
+              {{ c.estado ? 'Activo' : 'Inactivo' }}
+            </app-ds-badge>
+          </span>
+        </div>
+      </div>
+
+      @if (esEmpresa()) {
+        <section
+          class="overflow-hidden rounded-lg border border-border bg-card"
+          aria-label="Datos del contacto"
+        >
+          <h4
+            class="border-b border-border bg-table-header px-5 py-3 text-ds-sm font-normal text-muted-foreground"
+          >
+            Datos del contacto
+          </h4>
+          <div class="flex flex-wrap gap-x-8 gap-y-4 px-5 py-4">
+            @for (campo of camposContacto(); track campo.label) {
+              <div class="min-w-0">
+                <div class="text-[13px] text-muted-foreground">{{ campo.label }}</div>
+                <div class="mt-1 break-words text-ds-base font-medium text-foreground">
+                  {{ campo.value }}
+                </div>
+              </div>
+            }
+          </div>
+        </section>
+      }
+
+      <!-- Historial de pedidos finalizados -->
+      <section
+        class="overflow-hidden rounded-lg border border-border bg-card"
+        aria-label="Historial de pedidos finalizados"
+      >
+        <h4
+          class="border-b border-border bg-table-header px-5 py-3 text-ds-sm font-normal text-muted-foreground"
+        >
+          Historial de pedidos finalizados
+        </h4>
+
+        @if (cargandoPedidos()) {
+          <p class="px-5 py-6 text-center text-ds-base text-muted-foreground">Cargando pedidos…</p>
+        } @else if (errorPedidos()) {
+          <p role="alert" class="px-5 py-6 text-center text-ds-base text-muted-foreground">
+            No se pudo cargar el historial de pedidos.
+          </p>
+        } @else if (pedidos().length === 0) {
+          <p class="px-5 py-6 text-center text-ds-base text-muted-foreground">
+            Sin pedidos finalizados
+          </p>
+        } @else {
+          <ul>
+            @for (p of pedidos(); track p.id) {
+              <li
+                class="flex flex-wrap items-center gap-x-6 gap-y-1 px-5 py-3.5 not-last:border-b not-last:border-border"
+              >
+                <span class="w-28 font-semibold text-foreground">{{ p.codigo }}</span>
+                <span class="w-28 text-ds-base text-muted-foreground">{{ p.fecha }}</span>
+                <span class="min-w-0 flex-1 text-ds-base text-muted-foreground">{{
+                  p.tipoEntrega
+                }}</span>
+                <span class="font-semibold tabular-nums text-foreground">{{ p.total }}</span>
+                <app-ds-badge [tone]="p.tono" [dot]="true">{{ p.estado }}</app-ds-badge>
+              </li>
+            }
+          </ul>
+        }
+      </section>
+    </div>
+  }
+
+  <span footer class="flex gap-2">
+    <app-ds-button variant="secondary" (clicked)="cerrar()">Cerrar</app-ds-button>
+    <app-ds-button (clicked)="editar()">
+      <span icon><app-ds-icon [img]="LucidePencil" [size]="16" /></span>
+      Editar cliente
+    </app-ds-button>
+  </span>
+</app-ds-modal>

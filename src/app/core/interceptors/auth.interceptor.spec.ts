@@ -45,6 +45,22 @@ describe('authInterceptor', () => {
     req.flush({});
   });
 
+  it('does not attach the Bearer token to the password recovery endpoints (public)', () => {
+    authService.session.set({
+      accessToken: 'abc',
+      roles: [],
+      emailVerificado: false,
+      debeCambiarContrasena: false,
+    });
+
+    for (const path of ['forgot-password', 'reset-password']) {
+      http.post(`${AUTH_BASE}/${path}`, {}).subscribe();
+      const req = httpMock.expectOne(`${AUTH_BASE}/${path}`);
+      expect(req.request.headers.has('Authorization')).toBe(false);
+      req.flush({});
+    }
+  });
+
   it('does not attach a header when there is no session', () => {
     http.get(PROTECTED_URL).subscribe();
     const req = httpMock.expectOne(PROTECTED_URL);

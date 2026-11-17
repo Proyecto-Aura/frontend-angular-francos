@@ -84,8 +84,8 @@ describe('ModuleLayout', () => {
         children: [
           {
             id: 2,
-            nombre: 'insumos',
-            etiqueta: 'Insumos',
+            nombre: 'stock-productos',
+            etiqueta: 'Stock de productos',
             icono: 'package',
             descripcion: null,
             estado: true,
@@ -100,7 +100,115 @@ describe('ModuleLayout', () => {
 
     expect(fixture.componentInstance.sectionLabel()).toBe('Gestión de Inventario (API)');
     expect(fixture.componentInstance.links()).toEqual([
-      { label: 'Insumos', icon: LucidePackage, path: 'insumos' },
+      { label: 'Stock de productos', icon: LucidePackage, path: 'stock-productos' },
+    ]);
+  });
+
+  it('builds the Insumos sidebar from the top-level insumos module', () => {
+    const fixture = create({
+      sidebarLinks: [{ label: 'fallback', path: 'x' }],
+      moduleNombre: 'insumos',
+    });
+
+    const tree: RutaNodo[] = [
+      {
+        id: 1,
+        nombre: 'insumos',
+        etiqueta: 'Gestión de Insumos',
+        icono: 'package',
+        descripcion: 'Gestión de insumos y su stock',
+        estado: true,
+        parent_id: null,
+        children: [
+          {
+            id: 2,
+            nombre: 'stock-insumos',
+            etiqueta: 'Stock de insumos',
+            icono: 'package',
+            descripcion: null,
+            estado: true,
+            parent_id: 1,
+            children: [],
+          },
+          {
+            id: 3,
+            nombre: 'solicitudes-insumos',
+            etiqueta: 'Solicitudes de insumos',
+            icono: 'package',
+            descripcion: null,
+            estado: true,
+            parent_id: 1,
+            children: [],
+          },
+        ],
+      },
+    ];
+    httpMock.expectOne(TREE_URL).flush(tree);
+    httpMock.expectOne(ME_URL).flush(makeMe());
+
+    expect(fixture.componentInstance.sectionLabel()).toBe('Gestión de Insumos');
+    expect(fixture.componentInstance.links()).toEqual([
+      { label: 'Stock de insumos', icon: LucidePackage, path: 'stock-insumos' },
+      { label: 'Solicitudes de insumos', icon: LucidePackage, path: 'solicitudes-insumos' },
+    ]);
+  });
+
+  it('only uses the node of its own module when the menu has both Inventario and Insumos', () => {
+    const fixture = create({
+      sidebarLinks: [{ label: 'fallback', path: 'x' }],
+      moduleNombre: 'insumos',
+    });
+
+    const tree: RutaNodo[] = [
+      {
+        id: 1,
+        nombre: 'inventario',
+        etiqueta: 'Gestión de Inventario',
+        icono: 'package',
+        descripcion: 'Control de stock y productos',
+        estado: true,
+        parent_id: null,
+        children: [
+          {
+            id: 2,
+            nombre: 'stock-productos',
+            etiqueta: 'Stock de productos',
+            icono: 'package',
+            descripcion: null,
+            estado: true,
+            parent_id: 1,
+            children: [],
+          },
+        ],
+      },
+      {
+        id: 3,
+        nombre: 'insumos',
+        etiqueta: 'Gestión de Insumos',
+        icono: 'package',
+        descripcion: 'Gestión de insumos y su stock',
+        estado: true,
+        parent_id: null,
+        children: [
+          {
+            id: 4,
+            nombre: 'stock-insumos',
+            etiqueta: 'Stock de insumos',
+            icono: 'package',
+            descripcion: null,
+            estado: true,
+            parent_id: 3,
+            children: [],
+          },
+        ],
+      },
+    ];
+    httpMock.expectOne(TREE_URL).flush(tree);
+    httpMock.expectOne(ME_URL).flush(makeMe());
+
+    expect(fixture.componentInstance.sectionLabel()).toBe('Gestión de Insumos');
+    expect(fixture.componentInstance.links()).toEqual([
+      { label: 'Stock de insumos', icon: LucidePackage, path: 'stock-insumos' },
     ]);
   });
 

@@ -1,3 +1,5 @@
+import { Alert } from '../../../../../shared/ds/alert/alert';
+import { crearAlertaTemporal } from '../../../../../shared/ds/alert/alerta-temporal';
 import { HttpErrorResponse } from '@angular/common/http';
 import {
   Component,
@@ -25,7 +27,7 @@ import {
 import { ObjetivoEstrategicoService } from '../../services/objetivo-estrategico.service';
 
 @Component({
-  imports: [Button, Icon, Modal],
+  imports: [Alert, Button, Icon, Modal],
   selector: 'app-objetivo-estrategico-estado-modal',
   templateUrl: './objetivo-estrategico-estado-modal.html',
 })
@@ -59,13 +61,24 @@ export class ObjetivoEstrategicoEstadoModal {
     return estado === 'CUMPLIDO' || estado === 'CANCELADO';
   });
 
+  private alertas = crearAlertaTemporal(() => this.errorGeneral.set(null));
+  toast = this.alertas.toast;
+  private mostrarErrorAlerta(mensaje: string | null): void {
+    if (!mensaje) {
+      this.alertas.limpiar();
+      return;
+    }
+    this.alertas.mostrar('error', mensaje);
+    this.errorGeneral.set(mensaje);
+  }
+
   constructor() {
     effect(() => {
       const estaAbierto = this.open();
       if (estaAbierto && !this.estabaAbierto) {
         this.estadoSeleccionado.set(this.objetivo()?.estadoCodigo ?? null);
         this.guardando.set(false);
-        this.errorGeneral.set(null);
+        this.mostrarErrorAlerta(null);
       }
       this.estabaAbierto = estaAbierto;
     });
@@ -92,7 +105,7 @@ export class ObjetivoEstrategicoEstadoModal {
     if (!objetivo || !estado || !this.puedeGuardar()) return;
 
     this.guardando.set(true);
-    this.errorGeneral.set(null);
+    this.mostrarErrorAlerta(null);
     this.objetivoService
       .cambiarEstado(objetivo.id, estado)
       .pipe(
@@ -130,12 +143,12 @@ export class ObjetivoEstrategicoEstadoModal {
 
   private manejarError(error: unknown): void {
     if (!(error instanceof HttpErrorResponse)) {
-      this.errorGeneral.set('No se pudo cambiar el estado. Intente nuevamente.');
+      this.mostrarErrorAlerta('No se pudo cambiar el estado. Intente nuevamente.');
       return;
     }
 
     if (error.status === 401 || error.status === 403) {
-      this.errorGeneral.set('No tiene permisos para cambiar el estado del objetivo.');
+      this.mostrarErrorAlerta('No tiene permisos para cambiar el estado del objetivo.');
       return;
     }
 
@@ -147,12 +160,12 @@ export class ObjetivoEstrategicoEstadoModal {
         : [];
 
     if (error.status === 409) {
-      this.errorGeneral.set(
+      this.mostrarErrorAlerta(
         mensajes.join(' ') || 'No se pudo cambiar el estado. Intente nuevamente.',
       );
       return;
     }
 
-    this.errorGeneral.set('No se pudo cambiar el estado. Intente nuevamente.');
+    this.mostrarErrorAlerta('No se pudo cambiar el estado. Intente nuevamente.');
   }
 }

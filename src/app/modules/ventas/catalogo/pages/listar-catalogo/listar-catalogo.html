@@ -6,7 +6,19 @@
     </p>
   </div>
 
-  <app-aviso-banner [texto]="aviso().mensaje" [tono]="aviso().tono" (closed)="cerrarAviso()" />
+  @if (toast(); as t) {
+    <div
+      class="fixed top-6 right-6 z-50 w-full max-w-md transition-transform duration-300 ease-out"
+      [class]="toastVisible() ? 'translate-x-0' : 'translate-x-[120%]'"
+    >
+      <app-ds-alert
+        [tone]="t.tone"
+        [title]="t.title"
+        [description]="t.description ?? null"
+        [closable]="false"
+      />
+    </div>
+  }
 
   <app-ds-filter-bar [hasSearch]="true" [hasActions]="true">
     <app-ds-input
@@ -258,7 +270,7 @@
       <app-ds-icon [img]="LucidePencil" [size]="16" />
     </app-ds-icon-button>
     <app-ds-icon-button
-      [label]="f.estado === 'Activo' ? 'Desactivar' : 'Reactivar'"
+      [label]="f.estado === 'Activo' ? 'Desactivar' : 'Activar'"
       variant="secondary"
       size="sm"
       (clicked)="alternarEstado(f)"
@@ -275,6 +287,7 @@
 <app-producto-form
   [modo]="formModo()"
   [producto]="productoEnEdicion()"
+  [soloPresentacion]="formModo() === 'editar'"
   (closed)="cerrarForm()"
   (guardado)="mostrarAviso($event)"
 />

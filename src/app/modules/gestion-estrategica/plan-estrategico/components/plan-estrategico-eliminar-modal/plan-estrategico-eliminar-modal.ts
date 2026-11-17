@@ -1,3 +1,5 @@
+import { Alert } from '../../../../../shared/ds/alert/alert';
+import { crearAlertaTemporal } from '../../../../../shared/ds/alert/alerta-temporal';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, DestroyRef, effect, inject, input, output, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -9,7 +11,7 @@ import { PlanEstrategico } from '../../interfaces/plan-estrategico.interface';
 import { PlanEstrategicoService } from '../../services/plan-estrategico.service';
 
 @Component({
-  imports: [Button, Modal],
+  imports: [Alert, Button, Modal],
   selector: 'app-plan-estrategico-eliminar-modal',
   templateUrl: './plan-estrategico-eliminar-modal.html',
 })
@@ -26,12 +28,23 @@ export class PlanEstrategicoEliminarModal {
   eliminando = signal(false);
   errorGeneral = signal<string | null>(null);
 
+  private alertas = crearAlertaTemporal(() => this.errorGeneral.set(null));
+  toast = this.alertas.toast;
+  private mostrarErrorAlerta(mensaje: string | null): void {
+    if (!mensaje) {
+      this.alertas.limpiar();
+      return;
+    }
+    this.alertas.mostrar('error', mensaje);
+    this.errorGeneral.set(mensaje);
+  }
+
   constructor() {
     effect(() => {
       const estaAbierto = this.open();
       if (estaAbierto && !this.estabaAbierto) {
         this.eliminando.set(false);
-        this.errorGeneral.set(null);
+        this.mostrarErrorAlerta(null);
       }
       this.estabaAbierto = estaAbierto;
     });
@@ -46,7 +59,7 @@ export class PlanEstrategicoEliminarModal {
     if (!plan) return;
 
     this.eliminando.set(true);
-    this.errorGeneral.set(null);
+    this.mostrarErrorAlerta(null);
     this.planService
       .eliminar(plan.id)
       .pipe(
@@ -64,12 +77,12 @@ export class PlanEstrategicoEliminarModal {
 
   private manejarError(error: unknown): void {
     if (!(error instanceof HttpErrorResponse)) {
-      this.errorGeneral.set('No se pudo eliminar el plan. Intente nuevamente.');
+      this.mostrarErrorAlerta('No se pudo eliminar el plan. Intente nuevamente.');
       return;
     }
 
     if (error.status === 401 || error.status === 403) {
-      this.errorGeneral.set('No tiene permisos para eliminar planes estratégicos.');
+      this.mostrarErrorAlerta('No tiene permisos para eliminar planes estratégicos.');
       return;
     }
 
@@ -81,12 +94,12 @@ export class PlanEstrategicoEliminarModal {
         : [];
 
     if (error.status === 409) {
-      this.errorGeneral.set(
+      this.mostrarErrorAlerta(
         mensajes.join(' ') || 'No se pudo eliminar el plan. Intente nuevamente.',
       );
       return;
     }
 
-    this.errorGeneral.set('No se pudo eliminar el plan. Intente nuevamente.');
+    this.mostrarErrorAlerta('No se pudo eliminar el plan. Intente nuevamente.');
   }
 }

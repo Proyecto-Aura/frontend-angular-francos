@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { permisoGuard } from '../../core/guards/permiso.guard';
+import { primerHijoPermitidoGuard } from '../../core/guards/primer-hijo-permitido.guard';
 
 // Sin sidebarLinks/sidebarTitle hardcodeados a proposito — moduleNombre solo
 // alcanza para que ModuleLayout arme el sidebar entero desde /rutas/mi-menu
@@ -32,12 +33,14 @@ export const GESTION_ESTRATEGICA_ROUTES: Routes = [
       },
       {
         path: '',
-        redirectTo: 'plan-estrategico',
         pathMatch: 'full',
+        canActivate: [primerHijoPermitidoGuard('estrategico', { preferido: 'plan-estrategico' })],
+        children: [],
       },
       {
         path: '**',
-        redirectTo: 'plan-estrategico',
+        canActivate: [primerHijoPermitidoGuard('estrategico', { preferido: 'plan-estrategico' })],
+        children: [],
       },
     ],
   },

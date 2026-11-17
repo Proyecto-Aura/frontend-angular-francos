@@ -2,6 +2,9 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Signal, WritableSignal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
+import { ProductoForm } from '../../components/producto-form/producto-form';
+import { AlertTone } from '../../../../../shared/ds/alert/alert';
 import { FilaCatalogo, Producto, ResultadoGuardado } from '../../interfaces/producto.interface';
 import { CatalogoService } from '../../services/catalogo.service';
 import { API, catalogoDto, flushCatalogo } from '../../testing/catalogo.fixtures';
@@ -19,7 +22,7 @@ interface ListarCatalogoApi {
   formModo: Signal<'nuevo' | 'editar' | null>;
   productoEnEdicion: Signal<Producto | null>;
   filaDetalle: Signal<FilaCatalogo | null>;
-  aviso: Signal<ResultadoGuardado>;
+  toast: Signal<{ tone: AlertTone; title: string; description?: string } | null>;
   cargando: Signal<boolean>;
   errorCarga: Signal<boolean>;
   hayProductos: Signal<boolean>;
@@ -38,7 +41,7 @@ interface ListarCatalogoApi {
   cerrarForm(): void;
   verProducto(f: FilaCatalogo): void;
   mostrarAviso(resultado: ResultadoGuardado): void;
-  cerrarAviso(): void;
+  cerrarToast(): void;
   alternarEstado(f: FilaCatalogo): void;
 }
 
@@ -276,11 +279,44 @@ describe('ListarCatalogo', () => {
 
     it('opens the form to edit the product of the selected row and closes the detail', () => {
       page.verProducto(makeFila());
-      page.editarProducto(makeFila({ productoId: 2, presentacionId: 1, sku: 'FR-P2-PR1' }));
+      page.editarProducto(
+        makeFila({
+          productoId: 2,
+          productoPresentacionId: 21,
+          presentacionId: 1,
+          sku: 'FR-P2-PR1',
+        }),
+      );
 
       expect(page.formModo()).toBe('editar');
       expect(page.productoEnEdicion()?.nombre).toBe('Chifles picantes');
       expect(page.filaDetalle()).toBeNull();
+    });
+
+    it('edits and saves only the selected presentation without changing the product or its sibling', () => {
+      const fila = service.filas().find((f) => f.productoPresentacionId === 12)!;
+      page.editarProducto(fila);
+      fixture.detectChanges();
+
+      expect(page.productoEnEdicion()?.presentaciones.map((p) => p.productoPresentacionId)).toEqual(
+        [12],
+      );
+      expect(service.productos().find((p) => p.id === 1)?.presentaciones).toHaveLength(2);
+      const modal = fixture.debugElement.query(By.directive(ProductoForm));
+      const form = modal.componentInstance as { soloPresentacion(): boolean; guardar(): void };
+      expect(form.soloPresentacion()).toBe(true);
+      expect(modal.nativeElement.textContent).not.toContain('Agregar presentación');
+
+      form.guardar();
+      httpMock.expectNone(`${API.productos}/1`);
+      const request = httpMock.expectOne(`${API.productoPresentaciones}/12`);
+      expect(request.request.method).toBe('PATCH');
+      request.flush({});
+      httpMock.expectNone(`${API.productoPresentaciones}/11`);
+      httpMock.expectNone(`${API.promociones}/91`);
+      flushCatalogo(httpMock);
+
+      expect(page.formModo()).toBeNull();
     });
 
     it('closes the form', () => {
@@ -293,11 +329,28 @@ describe('ListarCatalogo', () => {
     });
 
     it('shows and dismisses the notice returned by the form', () => {
+      vi.useFakeTimers();
       page.mostrarAviso({ mensaje: 'Producto registrado', tono: 'ok' });
-      expect(page.aviso()).toEqual({ mensaje: 'Producto registrado', tono: 'ok' });
+      expect(page.toast()).toMatchObject({ tone: 'success', title: 'Producto registrado' });
 
-      page.cerrarAviso();
-      expect(page.aviso().mensaje).toBe('');
+      page.cerrarToast();
+      vi.advanceTimersByTime(300);
+      expect(page.toast()).toBeNull();
+      vi.useRealTimers();
+    });
+
+    it('shows the bold title and the name below it when the notice carries one', () => {
+      page.mostrarAviso({
+        tono: 'ok',
+        titulo: 'Producto registrado',
+        mensaje: 'Chifles BBQ (1 presentación registrada).',
+      });
+
+      expect(page.toast()).toMatchObject({
+        tone: 'success',
+        title: 'Producto registrado',
+        description: 'Chifles BBQ (1 presentación registrada).',
+      });
     });
 
     it('resolves the detail by SKU so it reflects later changes', () => {
@@ -323,9 +376,9 @@ describe('ListarCatalogo', () => {
       filas[0] = { ...filas[0], estado: false };
       flushCatalogo(httpMock, filas);
 
-      expect(page.aviso()).toEqual({
-        mensaje: 'Presentación FR-P1-PR1 desactivada de forma lógica.',
-        tono: 'ok',
+      expect(page.toast()).toMatchObject({
+        tone: 'success',
+        title: 'Presentación FR-P1-PR1 desactivada.',
       });
       expect(page.filasFiltradas().find((f) => f.sku === 'FR-P1-PR1')?.estado).toBe('Inactivo');
     });
@@ -341,9 +394,9 @@ describe('ListarCatalogo', () => {
         { status: 409, statusText: 'Conflict' },
       );
 
-      expect(page.aviso()).toEqual({
-        mensaje: 'No se puede desactivar la presentación: todavía tiene stock disponible',
-        tono: 'error',
+      expect(page.toast()).toMatchObject({
+        tone: 'error',
+        title: 'No se puede desactivar la presentación: todavía tiene stock disponible',
       });
       expect(page.filasFiltradas().find((f) => f.sku === 'FR-P1-PR1')?.estado).toBe('Activo');
     });

@@ -4,21 +4,48 @@
       <span class="h-6 w-1 rounded bg-[#dc2626]"></span>
       <span class="text-2xl font-bold text-[#101828]">Accesos</span>
     </div>
-    <span
-      class="rounded-2xl bg-white px-4 py-1.5 text-sm font-semibold text-[#101828] shadow-[0_2px_4px_rgba(0,0,0,0.02)]"
-    >
-      {{ modules().length }} módulos
-    </span>
-  </div>
-
-  <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-    @for (module of modules(); track module.title) {
-      <app-home-cards
-        [icon]="module.icon"
-        [title]="module.title"
-        [description]="module.description"
-        [routerLink]="module.routerLink"
-      />
+    @if (estado() === 'listo') {
+      <span
+        class="rounded-2xl bg-white px-4 py-1.5 text-sm font-semibold text-[#101828] shadow-[0_2px_4px_rgba(0,0,0,0.02)]"
+      >
+        {{ modules().length }} módulos
+      </span>
     }
   </div>
+
+  @switch (estado()) {
+    @case ('cargando') {
+      <p class="text-sm text-[#6a7282]">Cargando módulos…</p>
+    }
+    @case ('error') {
+      <div class="flex flex-col items-start gap-3">
+        <p class="text-sm text-[#6a7282]">No se pudieron cargar tus módulos.</p>
+        <button
+          type="button"
+          class="rounded-2xl bg-white px-4 py-1.5 text-sm font-semibold text-[#101828] shadow-[0_2px_4px_rgba(0,0,0,0.02)]"
+          (click)="cargar()"
+        >
+          Reintentar
+        </button>
+      </div>
+    }
+    @default {
+      @if (modules().length === 0) {
+        <p class="text-sm text-[#6a7282]">
+          Aún no tienes módulos asignados. Contacta al administrador.
+        </p>
+      } @else {
+        <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          @for (module of modules(); track module.title) {
+            <app-home-cards
+              [icon]="module.icon"
+              [title]="module.title"
+              [description]="module.description"
+              [routerLink]="module.routerLink"
+            />
+          }
+        </div>
+      }
+    }
+  }
 </div>

@@ -1,3 +1,5 @@
+import { Alert } from '../../../../../shared/ds/alert/alert';
+import { crearAlertaTemporal } from '../../../../../shared/ds/alert/alerta-temporal';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, DestroyRef, effect, inject, input, output, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -15,7 +17,7 @@ import { IniciativaService } from '../../services/iniciativa.service';
 import { tonoEstado, validarMotivoCancelacion } from '../iniciativa-form-modal/iniciativa.reglas';
 
 @Component({
-  imports: [Badge, Button, Field, Icon, Modal, Textarea],
+  imports: [Alert, Badge, Button, Field, Icon, Modal, Textarea],
   selector: 'app-iniciativa-cancelar-modal',
   templateUrl: './iniciativa-cancelar-modal.html',
 })
@@ -28,7 +30,7 @@ export class IniciativaCancelarModal {
   open = input(false);
   iniciativa = input<Iniciativa | null>(null);
   closed = output<void>();
-  cancelled = output<void>();
+  cancelled = output<boolean>();
 
   readonly LucideArrowRight = LucideArrowRight;
   readonly guardando = signal(false);
@@ -37,6 +39,17 @@ export class IniciativaCancelarModal {
   readonly errorGeneral = signal<string | null>(null);
   readonly tonoEstado = tonoEstado;
 
+  private alertas = crearAlertaTemporal(() => this.errorGeneral.set(null));
+  toast = this.alertas.toast;
+  private mostrarErrorAlerta(mensaje: string | null): void {
+    if (!mensaje) {
+      this.alertas.limpiar();
+      return;
+    }
+    this.alertas.mostrar('error', mensaje);
+    this.errorGeneral.set(mensaje);
+  }
+
   constructor() {
     effect(() => {
       const estaAbierto = this.open();
@@ -44,7 +57,7 @@ export class IniciativaCancelarModal {
         this.guardando.set(false);
         this.motivo.set('');
         this.errorMotivo.set(null);
-        this.errorGeneral.set(null);
+        this.mostrarErrorAlerta(null);
         this.recargarAlCerrar = false;
       }
       this.estabaAbierto = estaAbierto;
@@ -54,7 +67,7 @@ export class IniciativaCancelarModal {
   cerrar(): void {
     if (this.recargarAlCerrar) {
       this.recargarAlCerrar = false;
-      this.cancelled.emit();
+      this.cancelled.emit(false);
     }
     this.closed.emit();
   }
@@ -64,7 +77,7 @@ export class IniciativaCancelarModal {
     if (!iniciativa || this.guardando()) return;
     const errorMotivo = validarMotivoCancelacion(this.motivo());
     this.errorMotivo.set(errorMotivo);
-    this.errorGeneral.set(null);
+    this.mostrarErrorAlerta(null);
     if (errorMotivo) return;
 
     this.guardando.set(true);
@@ -76,7 +89,7 @@ export class IniciativaCancelarModal {
       )
       .subscribe({
         next: () => {
-          this.cancelled.emit();
+          this.cancelled.emit(true);
           this.closed.emit();
         },
         error: (error: unknown) => this.manejarError(error),
@@ -85,7 +98,7 @@ export class IniciativaCancelarModal {
 
   private manejarError(error: unknown): void {
     if (!(error instanceof HttpErrorResponse)) {
-      this.errorGeneral.set('No se pudo actualizar el estado. Intente nuevamente.');
+      this.mostrarErrorAlerta('No se pudo actualizar el estado. Intente nuevamente.');
       return;
     }
     const apiError = error.error as Partial<IniciativaApiErrorDto> | null;
@@ -97,16 +110,16 @@ export class IniciativaCancelarModal {
           : []
     ).join(' ');
     if (error.status === 404) {
-      this.errorGeneral.set('La iniciativa ya no existe.');
+      this.mostrarErrorAlerta('La iniciativa ya no existe.');
       this.recargarAlCerrar = true;
     } else if (error.status === 409) {
-      this.errorGeneral.set(mensaje || 'No se pudo actualizar el estado. Intente nuevamente.');
+      this.mostrarErrorAlerta(mensaje || 'No se pudo actualizar el estado. Intente nuevamente.');
     } else if (error.status === 400) {
-      this.errorGeneral.set(mensaje || 'No se pudo actualizar el estado. Intente nuevamente.');
+      this.mostrarErrorAlerta(mensaje || 'No se pudo actualizar el estado. Intente nuevamente.');
     } else if (error.status === 401 || error.status === 403) {
-      this.errorGeneral.set('No tiene permisos para gestionar iniciativas.');
+      this.mostrarErrorAlerta('No tiene permisos para gestionar iniciativas.');
     } else {
-      this.errorGeneral.set('No se pudo actualizar el estado. Intente nuevamente.');
+      this.mostrarErrorAlerta('No se pudo actualizar el estado. Intente nuevamente.');
     }
   }
 }

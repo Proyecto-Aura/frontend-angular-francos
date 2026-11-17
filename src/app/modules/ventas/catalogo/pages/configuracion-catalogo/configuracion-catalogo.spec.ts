@@ -2,6 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { AlertTone } from '../../../../../shared/ds/alert/alert';
 import { DsColumn } from '../../../../../shared/ds/data-table/data-table';
 import { DsTab } from '../../../../../shared/ds/tabs/tabs';
 import { CfgFormModel, CfgTab, RegistroCfg } from '../../interfaces/producto.interface';
@@ -23,9 +24,7 @@ interface ConfiguracionCatalogoApi {
   tab: Signal<CfgTab>;
   query: { set(v: string): void };
   estadoFiltro: { set(v: string): void };
-  aviso: Signal<string>;
-  avisoTono: Signal<'ok' | 'error'>;
-  errorApi: Signal<string>;
+  toast: Signal<{ tone: AlertTone; title: string; description?: string } | null>;
   filas: Signal<RegistroCfg[]>;
   todas: Signal<RegistroCfg[]>;
   subtitulo: Signal<string>;
@@ -33,7 +32,6 @@ interface ConfiguracionCatalogoApi {
   columns: Signal<DsColumn[]>;
   modo: Signal<'nuevo' | 'editar' | null>;
   cf: Signal<CfgFormModel>;
-  errores: Signal<string[]>;
   confirmaId: Signal<number | null>;
   textoConfirma: Signal<string>;
   cambiarTab(id: string): void;
@@ -133,17 +131,21 @@ describe('ConfiguracionCatalogo', () => {
     });
   });
 
-  it('does not save an invalid record and lists what is missing', () => {
+  it('does not save an invalid record and lists what is missing in a warning toast', () => {
     page.nuevo();
 
     page.guardar();
 
-    expect(page.errores()).toEqual(['nombre', 'descripción']);
+    expect(page.toast()).toMatchObject({
+      tone: 'warning',
+      title: 'Faltan campos por completar',
+      description: 'Revisa: nombre, descripción.',
+    });
     expect(page.modo()).toBe('nuevo');
     expect(service.categoriasCfg()).toHaveLength(7);
   });
 
-  it('saves a valid record through the API, shows the notice and closes the form', () => {
+  it('saves a valid record through the API, shows a success toast and closes the form', () => {
     page.nuevo();
     page.setCampo('nombre', 'Panadería');
     page.setCampo('descripcion', 'Productos de panadería.');
@@ -157,14 +159,33 @@ describe('ConfiguracionCatalogo', () => {
     });
 
     expect(service.categoriasCfg()).toHaveLength(8);
-    expect(page.aviso()).toBe(
-      'Categoría Panadería registrada · disponible en los selectores de producto.',
-    );
-    expect(page.avisoTono()).toBe('ok');
+    expect(page.toast()).toMatchObject({
+      tone: 'success',
+      title: 'Nueva categoría registrada',
+      description: 'Panadería',
+    });
     expect(page.modo()).toBeNull();
   });
 
-  it('keeps the form open and shows the API error when the name is rejected', () => {
+  it('edits a category through the API and shows the updated-title toast with its name', () => {
+    const chifles = service.categoriasCfg()[0];
+    page.editar(chifles);
+    page.setCampo('descripcion', 'Nueva descripción.');
+
+    page.guardar();
+    httpMock
+      .expectOne(`${API.categorias}/1`)
+      .flush({ ...CATEGORIAS_CFG_DTO[0], descripcion: 'Nueva descripción.' });
+
+    expect(page.toast()).toMatchObject({
+      tone: 'success',
+      title: 'Categoría actualizada',
+      description: 'Chifles',
+    });
+    expect(page.modo()).toBeNull();
+  });
+
+  it('keeps the form open and shows the API error in a toast when the name is rejected', () => {
     page.nuevo();
     page.setCampo('nombre', 'Panadería');
     page.setCampo('descripcion', 'Productos.');
@@ -178,7 +199,10 @@ describe('ConfiguracionCatalogo', () => {
       );
 
     expect(page.modo()).toBe('nuevo');
-    expect(page.errorApi()).toBe('Ya existe una categoria con este nombre');
+    expect(page.toast()).toMatchObject({
+      tone: 'error',
+      title: 'Ya existe una categoria con este nombre',
+    });
     expect(service.categoriasCfg()).toHaveLength(7);
   });
 
@@ -218,18 +242,18 @@ describe('ConfiguracionCatalogo', () => {
 
     expect(service.categoriasCfg()[0].estado).toBe('Inactivo');
     expect(service.categoriasCfg()).toHaveLength(7);
-    expect(page.aviso()).toContain('Categoría Chifles desactivada');
+    expect(page.toast()?.title).toContain('Categoría Chifles desactivada');
     expect(page.confirmaId()).toBeNull();
   });
 
-  it('shows an error notice when the API refuses the state change', () => {
+  it('shows an error toast when the API refuses the state change', () => {
     page.alternar(service.categoriasCfg()[0]);
     httpMock
       .expectOne(`${API.categorias}/1`)
       .flush({ message: 'x' }, { status: 403, statusText: 'Forbidden' });
 
-    expect(page.avisoTono()).toBe('error');
-    expect(page.aviso()).toContain('No tiene permisos');
+    expect(page.toast()?.tone).toBe('error');
+    expect(page.toast()?.title).toContain('No tiene permisos');
     expect(service.categoriasCfg()[0].estado).toBe('Activo');
   });
 
@@ -276,12 +300,16 @@ describe('ConfiguracionCatalogo', () => {
       });
     });
 
-    it('lists what is missing before calling the API', () => {
+    it('lists what is missing before calling the API, in a warning toast', () => {
       page.nuevo();
 
       page.guardar();
 
-      expect(page.errores()).toEqual(['cantidad (entero entre 1 y 1.000.000)', 'descripción']);
+      expect(page.toast()).toMatchObject({
+        tone: 'warning',
+        title: 'Faltan campos por completar',
+        description: 'Revisa: cantidad (entero entre 1 y 1.000.000), descripción.',
+      });
       expect(page.modo()).toBe('nuevo');
     });
 
@@ -308,14 +336,15 @@ describe('ConfiguracionCatalogo', () => {
       });
 
       expect(service.presentacionesCfg().map((p) => p.nombre)).toContain('750 gr');
-      expect(page.aviso()).toBe(
-        'Presentación 750 gr registrada · disponible en los selectores de producto.',
-      );
-      expect(page.avisoTono()).toBe('ok');
+      expect(page.toast()).toMatchObject({
+        tone: 'success',
+        title: 'Nueva presentación registrada',
+        description: '750 gr',
+      });
       expect(page.modo()).toBeNull();
     });
 
-    it('keeps the form open and shows the API error when the combination already exists', () => {
+    it('keeps the form open and shows the API error in a toast when the combination already exists', () => {
       page.nuevo();
       page.setCampo('cantidad', '600');
       page.setCampo('descripcion', 'Otra bolsa.');
@@ -329,9 +358,10 @@ describe('ConfiguracionCatalogo', () => {
         );
 
       expect(page.modo()).toBe('nuevo');
-      expect(page.errorApi()).toBe(
-        'Ya existe una presentacion con esta cantidad y unidad de medida',
-      );
+      expect(page.toast()).toMatchObject({
+        tone: 'error',
+        title: 'Ya existe una presentacion con esta cantidad y unidad de medida',
+      });
       expect(service.presentacionesCfg()).toHaveLength(4);
     });
 
@@ -346,7 +376,7 @@ describe('ConfiguracionCatalogo', () => {
         .flush({ ...PRESENTACIONES_CFG_DTO[0], estado: false });
 
       expect(service.presentacionesCfg()[0].estado).toBe('Inactivo');
-      expect(page.aviso()).toContain('Presentación 100 gr desactivada');
+      expect(page.toast()?.title).toContain('Presentación 100 gr desactivada');
       expect(page.confirmaId()).toBeNull();
     });
 
@@ -357,7 +387,10 @@ describe('ConfiguracionCatalogo', () => {
       req.flush({ ...PRESENTACIONES_CFG_DTO[3], estado: true });
 
       expect(service.presentacionesCfg()[3].estado).toBe('Activo');
-      expect(page.aviso()).toBe('Presentación 1 kg reactivada.');
+      expect(page.toast()).toMatchObject({
+        tone: 'success',
+        title: 'Presentación 1 kg reactivada.',
+      });
     });
   });
 });

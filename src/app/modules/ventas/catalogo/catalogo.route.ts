@@ -1,8 +1,9 @@
 import { Routes } from '@angular/router';
 import { permisoGuard } from '../../../core/guards/permiso.guard';
+import { primerHijoPermitidoGuard } from '../../../core/guards/primer-hijo-permitido.guard';
 
 // path = nombre que manda el backend en /rutas/mi-menu, ver nota en
-// inventario/insumos/insumos.route.ts
+// insumos/insumos.route.ts
 export const CATALOGO_ROUTES: Routes = [
   {
     path: 'gestion-productos',
@@ -20,11 +21,13 @@ export const CATALOGO_ROUTES: Routes = [
   },
   {
     path: '',
-    redirectTo: 'gestion-productos',
     pathMatch: 'full',
+    canActivate: [primerHijoPermitidoGuard('catalogo', { preferido: 'gestion-productos' })],
+    children: [],
   },
   {
     path: '**',
-    redirectTo: 'gestion-productos',
+    canActivate: [primerHijoPermitidoGuard('catalogo', { preferido: 'gestion-productos' })],
+    children: [],
   },
 ];

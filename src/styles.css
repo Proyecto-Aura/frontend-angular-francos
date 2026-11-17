@@ -1,5 +1,6 @@
 /* You can add global styles to this file, and also import other style files */
 @import 'tailwindcss';
+@import '@angular/cdk/overlay-prebuilt.css';
 
 /*
  * Franco's Portal Empresarial - Design System tokens, ported verbatim from the

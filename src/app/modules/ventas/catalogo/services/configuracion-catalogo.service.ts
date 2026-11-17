@@ -149,9 +149,7 @@ export class ConfiguracionCatalogoService {
         ? etiquetaPresentacion(Number(cf.cantidad), cf.unidad as UnidadCfg)
         : cf.nombre.trim();
     const aviso =
-      selId === null
-        ? `${etiqueta} ${nombre} registrada · disponible en los selectores de producto.`
-        : `${etiqueta} ${nombre} actualizada.`;
+      selId === null ? `${etiqueta} ${nombre} registrada.` : `${etiqueta} ${nombre} actualizada.`;
 
     if (tab === 'categorias') {
       const cuerpo = { nombre: cf.nombre.trim(), descripcion: cf.descripcion.trim() };
@@ -189,7 +187,7 @@ export class ConfiguracionCatalogoService {
     if (!reg) return of('');
     const activo = reg.estado === 'Activo';
     const aviso = activo
-      ? `${etiqueta} ${reg.nombre} desactivada · ya no aparece en nuevos registros y se mantiene en los productos existentes.`
+      ? `${etiqueta} ${reg.nombre} desactivada.`
       : `${etiqueta} ${reg.nombre} reactivada.`;
 
     if (tab === 'categorias') {

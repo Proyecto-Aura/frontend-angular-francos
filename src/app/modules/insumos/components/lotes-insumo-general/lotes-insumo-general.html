@@ -1,0 +1,117 @@
+<app-ds-filter-bar [hasSearch]="true" [hasActions]="true">
+  <app-ds-input
+    search
+    [value]="search()"
+    (valueChange)="setSearch($event)"
+    placeholder="Código de lote, insumo o SKU…"
+    [hasIcon]="true"
+  >
+    <span icon><app-ds-icon [img]="LucideSearch" [size]="16" /></span>
+  </app-ds-input>
+
+  <div filters class="w-[210px]">
+    <label for="lotes-insumo" class="sr-only">Insumo</label>
+    <app-ds-select
+      id="lotes-insumo"
+      [value]="insumoFiltro()"
+      (valueChange)="setInsumo($event)"
+      [options]="insumoOptions()"
+      placeholder="Todos los insumos"
+    />
+  </div>
+
+  <div filters class="w-[160px]">
+    <label for="lotes-estado" class="sr-only">Estado</label>
+    <app-ds-select
+      id="lotes-estado"
+      [value]="estadoFiltro()"
+      (valueChange)="setEstado($event)"
+      [options]="estadoOptions"
+      placeholder="Todos los estados"
+    />
+  </div>
+
+  <div filters class="flex items-center gap-2 text-ds-sm text-muted-foreground">
+    <label for="lotes-vence-desde">Vence desde</label>
+    <span class="w-[160px]">
+      <app-ds-input
+        id="lotes-vence-desde"
+        type="date"
+        [value]="venceDesde()"
+        (valueChange)="setVenceDesde($event)"
+        [invalid]="rangoInvalido()"
+      />
+    </span>
+  </div>
+
+  <div filters class="flex items-center gap-2 text-ds-sm text-muted-foreground">
+    <label for="lotes-vence-hasta">Vence hasta</label>
+    <span class="w-[160px]">
+      <app-ds-input
+        id="lotes-vence-hasta"
+        type="date"
+        [value]="venceHasta()"
+        (valueChange)="setVenceHasta($event)"
+        [invalid]="rangoInvalido()"
+      />
+    </span>
+  </div>
+
+  <span actions>
+    @if (hayFiltros()) {
+      <app-ds-button variant="ghost" size="sm" (clicked)="limpiarFiltros()">Limpiar</app-ds-button>
+    }
+  </span>
+</app-ds-filter-bar>
+
+@if (rangoInvalido()) {
+  <p class="mt-2 text-ds-sm text-destructive">
+    "Vence desde" no puede ser posterior a "Vence hasta".
+  </p>
+}
+
+<app-ds-card [padded]="false" [hasFooter]="totalPaginas() > 1" class="mt-4 block">
+  @if (cargando()) {
+    <div class="p-12 text-center text-muted-foreground">Cargando…</div>
+  } @else if (errorCarga()) {
+    <div class="flex flex-col items-center gap-3 p-12 text-center">
+      <p class="text-muted-foreground">No se pudieron cargar los lotes.</p>
+      <app-ds-button variant="secondary" (clicked)="cargarLotes()">Reintentar</app-ds-button>
+    </div>
+  } @else {
+    <app-ds-data-table [columns]="columnas()" [rows]="lotes()" empty="Sin lotes registrados" />
+  }
+
+  @if (totalPaginas() > 1) {
+    <div footer>
+      <app-ds-pagination
+        [page]="pagina()"
+        [pageCount]="totalPaginas()"
+        [total]="total()"
+        [pageSize]="tamanioPagina"
+        (changed)="cambiarPagina($event)"
+      />
+    </div>
+  }
+</app-ds-card>
+
+<ng-template #insumoCell let-fila>
+  <app-ds-cell-stack [primary]="fila.insumoNombre" [secondary]="fila.insumoSku" />
+</ng-template>
+
+<ng-template #vencimientoCell let-fila>
+  <div class="flex flex-col gap-1.5 py-0.5">
+    <span>{{ fila.fechaVencimientoMostrada }}</span>
+    @if (fila.estado === 'por_vencer' && fila.diasParaVencer !== null) {
+      <app-ds-badge tone="warning">
+        Vence en {{ fila.diasParaVencer }} día{{ fila.diasParaVencer === 1 ? '' : 's' }}
+      </app-ds-badge>
+    }
+  </div>
+</ng-template>
+
+<ng-template #estadoCell let-fila>
+  <app-ds-badge [tone]="estadoTone(fila.estado)" [dot]="true">
+    {{ estadoLabel(fila.estado) }}
+  </app-ds-badge>
+</ng-template>

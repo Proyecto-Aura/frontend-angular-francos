@@ -1,0 +1,78 @@
+@if (toast(); as t) {
+  <div class="fixed top-6 right-6 z-50 w-full max-w-md">
+    <app-ds-alert
+      [tone]="t.tone"
+      [title]="t.title"
+      [description]="t.description ?? null"
+      [closable]="false"
+    />
+  </div>
+}
+<div class="flex flex-col gap-5 p-(--page-padding)">
+  <app-ds-breadcrumb [items]="migas" />
+
+  <div class="flex items-start justify-between gap-4">
+    <div>
+      <h1 class="text-ds-2xl font-semibold text-foreground">Gestionar parámetros de ventas</h1>
+      <p class="mt-1 text-ds-base text-muted-foreground">
+        Umbral mayorista, promociones y métodos de pago del portal del cliente
+      </p>
+    </div>
+    @if (editado()) {
+      <div class="flex shrink-0 items-center gap-3">
+        @if (guardadoA() && !hayCambios()) {
+          <app-ds-badge tone="success" [dot]="true">Guardado {{ guardadoA() }}</app-ds-badge>
+        }
+        <app-ds-button
+          variant="secondary"
+          [disabled]="!hayCambios() || guardando()"
+          (clicked)="descartar()"
+        >
+          Descartar
+        </app-ds-button>
+        <app-ds-button [disabled]="!hayCambios() || guardando()" (clicked)="guardar()">
+          {{ guardando() ? 'Guardando…' : 'Guardar cambios' }}
+        </app-ds-button>
+      </div>
+    }
+  </div>
+
+  @if (cargando()) {
+    <p
+      class="rounded-lg border border-border bg-card p-8 text-center text-ds-base text-muted-foreground"
+    >
+      Cargando parámetros…
+    </p>
+  } @else if (errorCarga()) {
+    <div
+      class="flex flex-col items-center gap-3 rounded-lg border border-border bg-card p-8 text-center"
+    >
+      <p class="text-ds-base text-muted-foreground">{{ errorCarga() }}</p>
+      <app-ds-button variant="secondary" (clicked)="cargar()">Reintentar</app-ds-button>
+    </div>
+  } @else if (editado(); as parametros) {
+    <app-umbral-mayorista-card
+      [umbral]="umbralTexto()"
+      [porProducto]="parametros.umbralPorProducto"
+      [errorUmbral]="errores().umbral ?? null"
+      [ediciones]="ediciones()"
+      [recarga]="recarga()"
+      (umbralChange)="cambiarUmbral($event)"
+      (porProductoChange)="cambiar({ umbralPorProducto: $event })"
+      (edicionChange)="editarUmbralPropio($event)"
+    />
+
+    <app-promociones-card
+      [activas]="parametros.promocionesActivas"
+      (activasChange)="cambiar({ promocionesActivas: $event })"
+    />
+
+    <app-metodos-pago-card
+      [culqi]="parametros.culqiActivo"
+      [efectivo]="parametros.efectivoActivo"
+      [error]="errores().pagos ?? null"
+      (culqiChange)="cambiar({ culqiActivo: $event })"
+      (efectivoChange)="cambiar({ efectivoActivo: $event })"
+    />
+  }
+</div>

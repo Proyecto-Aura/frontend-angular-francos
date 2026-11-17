@@ -1,10 +1,17 @@
-import { Routes } from '@angular/router';
+import { inject } from '@angular/core';
+import { Router, Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
 
 export const routes: Routes = [
   {
     path: 'auth',
     loadChildren: () => import('./modules/auth/auth.route').then((c) => c.AUTH_ROUTES),
+  },
+  {
+    // Enlace del correo de recuperación (lo arma el backend): /reset-password?token=…
+    path: 'reset-password',
+    // Una redirección simple descartaría el ?token=; se pasa tal cual.
+    redirectTo: ({ queryParams }) => inject(Router).createUrlTree(['/auth/reset'], { queryParams }),
   },
   {
     path: 'home',
@@ -29,6 +36,35 @@ export const routes: Routes = [
     canActivate: [authGuard],
     loadChildren: () =>
       import('./modules/inventario/inventario.route').then((m) => m.INVENTARIO_ROUTES),
+  },
+  {
+    path: 'produccion',
+    canActivate: [authGuard],
+    loadChildren: () =>
+      import('./modules/produccion/produccion.route').then((m) => m.PRODUCCION_ROUTES),
+  },
+  {
+    path: 'configuracion',
+    canActivate: [authGuard],
+    loadChildren: () =>
+      import('./modules/configuracion/configuracion.route').then((m) => m.CONFIGURACION_ROUTES),
+  },
+  {
+    // HU-A-023, modulo de primer nivel (ver despacho.route.ts) — mismo
+    // criterio que ventas/inventario/produccion de arriba: el guard de
+    // permiso real vive un nivel mas adentro, sobre la pagina "gestion-
+    // despachos" (su propio nombre en el backend), no aca.
+    path: 'despacho-pedidos',
+    canActivate: [authGuard],
+    loadChildren: () => import('./modules/despacho/despacho.route').then((m) => m.DESPACHO_ROUTES),
+  },
+  {
+    // Modulo de primer nivel (ver insumos.route.ts), separado de Inventario
+    // — mismo criterio que despacho-pedidos: el guard de permiso real vive
+    // un nivel mas adentro, sobre cada pagina, no aca.
+    path: 'insumos',
+    canActivate: [authGuard],
+    loadChildren: () => import('./modules/insumos/insumos.route').then((m) => m.INSUMOS_ROUTES),
   },
   {
     path: 'ds-showcase',

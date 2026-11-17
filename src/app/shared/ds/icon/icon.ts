@@ -10,6 +10,12 @@ import { NgComponentOutlet } from '@angular/common';
   imports: [NgComponentOutlet],
   selector: 'app-ds-icon',
   templateUrl: './icon.html',
+  // Junto a texto (botones, badges, inputs) el host queda en flujo inline y
+  // Angular no fuerza su display, asi que por defecto se alinea a la linea
+  // base del texto en vez del centro visual — vertical-align lo corrige.
+  // Donde el icono ya vive dentro de un contenedor flex con items-center
+  // (kpi-card, icon-button) esta propiedad simplemente no aplica.
+  host: { style: 'vertical-align: middle;' },
 })
 export class Icon {
   img = input.required<Type<unknown>>();

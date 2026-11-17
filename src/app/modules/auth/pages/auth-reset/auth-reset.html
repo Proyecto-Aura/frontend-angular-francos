@@ -1,1 +1,75 @@
-<p>auth-reset works!</p>
+<div
+  class="flex w-full max-w-120 flex-col gap-10 rounded-[25px] bg-white px-7.5 py-12.5 shadow-[0_0_30px_10px_rgba(0,0,0,0.15)]"
+>
+  <div class="flex flex-col gap-2.5">
+    <h1 class="font-heading text-4xl font-extrabold tracking-tight text-black">Nueva contraseña</h1>
+    <p class="font-body text-[15px] font-medium text-[#616161]">
+      Escribe tu nueva contraseña y confírmala para volver a ingresar a tu cuenta.
+    </p>
+  </div>
+
+  @if (!token) {
+    <p class="text-sm font-medium text-[#d22b2b]" role="alert">
+      El enlace no es válido. Pide uno nuevo para restablecer tu contraseña.
+    </p>
+    <a
+      routerLink="/auth/forgot-password"
+      class="font-body w-fit text-sm font-medium text-[#d22b2b] hover:underline"
+      >Pedir un nuevo enlace</a
+    >
+  } @else {
+    <form [formRoot]="resetForm" class="flex flex-col gap-10">
+      <div class="flex flex-col gap-5">
+        <div class="flex flex-col gap-1">
+          <app-auth-input
+            label="Nueva contraseña"
+            placeholder="••••••••"
+            type="password"
+            [formField]="resetForm.password"
+          />
+          <span class="text-xs font-medium text-[#616161]">Mínimo {{ minLength }} caracteres</span>
+          @if (resetForm.password().invalid() && resetForm.password().touched()) {
+            @for (error of resetForm.password().errors(); track error.kind) {
+              <span class="text-xs font-medium text-[#d22b2b]">{{ error.message }}</span>
+            }
+          }
+        </div>
+
+        <div class="flex flex-col gap-1">
+          <app-auth-input
+            label="Confirmar contraseña"
+            placeholder="••••••••"
+            type="password"
+            [formField]="resetForm.confirm"
+          />
+          @if (resetForm.confirm().invalid() && resetForm.confirm().touched()) {
+            @for (error of resetForm.confirm().errors(); track error.kind) {
+              <span class="text-xs font-medium text-[#d22b2b]">{{ error.message }}</span>
+            }
+          }
+        </div>
+      </div>
+
+      @if (resetError()) {
+        <div class="-mt-4 flex flex-col gap-1" role="alert">
+          <p class="text-sm font-medium text-[#d22b2b]">{{ resetError() }}</p>
+          <a
+            routerLink="/auth/forgot-password"
+            class="font-body w-fit text-sm font-medium text-[#d22b2b] hover:underline"
+            >Pedir un nuevo enlace</a
+          >
+        </div>
+      }
+
+      <app-ds-button type="submit" [fullWidth]="true" [disabled]="resetForm().submitting()">{{
+        resetForm().submitting() ? 'Guardando…' : 'Cambiar contraseña'
+      }}</app-ds-button>
+    </form>
+  }
+
+  <a
+    routerLink="/auth/login"
+    class="font-body w-fit text-sm font-medium text-[#d22b2b] hover:underline"
+    >Volver a iniciar sesión</a
+  >
+</div>

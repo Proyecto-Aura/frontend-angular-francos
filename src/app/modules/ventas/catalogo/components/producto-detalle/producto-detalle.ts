@@ -68,7 +68,11 @@ export class ProductoDetalle {
           ? `-${f.promo.pct}% del ${fechaCorta(f.promo.ini)} al ${fechaCorta(f.promo.fin)}`
           : 'Sin promoción',
       },
-      { label: 'Visible en Portal B', value: f.visible ? 'Activado' : 'Desactivado' },
+      // Un solo interruptor: Activo = se ve en el Portal B (HU-A-008).
+      {
+        label: 'Visible en Portal B',
+        value: f.estado === 'Activo' ? 'Activado' : 'Desactivado',
+      },
       { label: 'Slug', value: f.slug || '—' },
     ];
   });

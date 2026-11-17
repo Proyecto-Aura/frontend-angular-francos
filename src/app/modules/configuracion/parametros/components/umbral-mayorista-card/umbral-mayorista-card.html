@@ -1,0 +1,120 @@
+<app-ds-card
+  title="Umbral mayorista"
+  subtitle="Desde cuántas unidades del mismo producto se cobra el precio mayorista"
+>
+  <div class="flex flex-col gap-5">
+    <div class="max-w-[320px]">
+      <app-ds-field
+        label="Umbral global"
+        [required]="true"
+        [hint]="rango"
+        [error]="errorUmbral()"
+        htmlFor="umbral-global"
+      >
+        <app-ds-input
+          id="umbral-global"
+          size="lg"
+          [value]="umbral()"
+          [invalid]="!!errorUmbral()"
+          placeholder="24"
+          (valueChange)="umbralChange.emit($event)"
+        />
+      </app-ds-field>
+    </div>
+
+    <p class="text-ds-base text-muted-foreground">
+      Un pedido de más de {{ umbral() || '—' }} unidades del mismo producto se cotiza a precio
+      mayorista, siempre que la presentación tenga un precio mayorista.
+    </p>
+
+    <div class="flex flex-col gap-1 border-t border-border pt-5">
+      <app-ds-switch
+        label="Umbral por producto"
+        [checked]="porProducto()"
+        (checkedChange)="porProductoChange.emit($event)"
+      />
+      <p class="text-ds-sm text-muted-foreground">
+        @if (porProducto()) {
+          Las presentaciones con umbral propio usan ese valor; el resto toma el global
+        } @else {
+          Todas las presentaciones usan el umbral global
+        }
+      </p>
+    </div>
+
+    @if (porProducto()) {
+      <div class="flex flex-col gap-3">
+        <div class="max-w-[360px]">
+          <app-ds-input
+            [value]="busqueda()"
+            (valueChange)="cambiarBusqueda($event)"
+            placeholder="Buscar producto o SKU…"
+            [hasIcon]="true"
+          >
+            <span icon><app-ds-icon [img]="LucideSearch" [size]="16" /></span>
+          </app-ds-input>
+        </div>
+
+        <p class="text-ds-sm text-muted-foreground">
+          Deja el umbral vacío para usar el global ({{ umbral() || '—' }}). Solo aparecen las
+          presentaciones con precio mayorista.
+        </p>
+
+        @if (cargando()) {
+          <p
+            class="rounded-lg border border-border bg-card p-8 text-center text-ds-base text-muted-foreground"
+          >
+            Cargando productos…
+          </p>
+        } @else if (errorCarga()) {
+          <div
+            class="flex flex-col items-center gap-3 rounded-lg border border-border bg-card p-8 text-center"
+          >
+            <p class="text-ds-base text-muted-foreground">{{ errorCarga() }}</p>
+            <app-ds-button variant="secondary" (clicked)="cargar()">Reintentar</app-ds-button>
+          </div>
+        } @else {
+          <app-ds-data-table
+            [columns]="columns()"
+            [rows]="filas()"
+            empty="Ninguna presentación tiene precio mayorista"
+          />
+          <app-ds-pagination
+            [page]="pagina()"
+            [pageCount]="totalPaginas()"
+            [total]="total()"
+            [pageSize]="tamanioPagina"
+            (changed)="cambiarPagina($event)"
+          />
+        }
+      </div>
+    }
+  </div>
+</app-ds-card>
+
+<ng-template #productoCell let-f>
+  <app-ds-cell-stack [primary]="f.producto" [secondary]="f.detalle" />
+</ng-template>
+
+<ng-template #umbralCell let-f>
+  <div class="flex flex-col items-end gap-1">
+    <div class="w-28">
+      <app-ds-input
+        [value]="f.valor"
+        [placeholder]="umbral()"
+        [invalid]="!!f.error"
+        [name]="'umbral-' + f.id"
+        (valueChange)="editar(f, $event)"
+      />
+    </div>
+    @if (f.error) {
+      <span role="alert" class="text-ds-sm text-destructive">{{ f.error }}</span>
+    }
+  </div>
+</ng-template>
+
+<ng-template #aplicaCell let-f>
+  <app-ds-badge [tone]="f.propio ? 'info' : 'neutral'">
+    {{ f.propio ? 'Umbral propio' : 'Umbral global' }}
+  </app-ds-badge>
+</ng-template>

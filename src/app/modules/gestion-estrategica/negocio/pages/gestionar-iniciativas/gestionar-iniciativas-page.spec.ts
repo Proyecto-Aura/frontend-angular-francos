@@ -337,9 +337,9 @@ describe('GestionarIniciativasPage', () => {
     const remove = fixture.debugElement.query(By.directive(IniciativaEliminarModal))
       .componentInstance as IniciativaEliminarModal;
     form.saved.emit(makeIniciativa());
-    state.changed.emit();
-    cancel.cancelled.emit();
-    remove.deleted.emit();
+    state.changed.emit(true);
+    cancel.cancelled.emit(true);
+    remove.deleted.emit(true);
 
     expect(component.modalActivo()).toBeNull();
     expect(component.iniciativaSeleccionada()).toBeNull();

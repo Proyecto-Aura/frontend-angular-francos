@@ -3,9 +3,12 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, finalize, shareReplay, tap } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import {
+  ForgotPasswordRequestDto,
   LoginRequestDto,
   LoginResponseDto,
   MeResponseDto,
+  MessageResponseDto,
+  ResetPasswordRequestDto,
 } from '../interfaces/usuario-dto.interface';
 
 export interface AuthSession {
@@ -43,6 +46,16 @@ export class AuthService {
           this.me$ = null;
         }),
       );
+  }
+
+  // Endpoints publicos: no llevan Bearer ni cookie.
+  forgotPassword(email: string) {
+    const body: ForgotPasswordRequestDto = { email };
+    return this.http.post<MessageResponseDto>(`${AUTH_BASE}/forgot-password`, body);
+  }
+
+  resetPassword(body: ResetPasswordRequestDto) {
+    return this.http.post<MessageResponseDto>(`${AUTH_BASE}/reset-password`, body);
   }
 
   getCurrentUser(): Observable<MeResponseDto> {

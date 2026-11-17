@@ -4,7 +4,7 @@ export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'destructive' | 
 export type ButtonSize = 'sm' | 'md' | 'lg';
 
 const BASE =
-  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md border border-transparent font-medium transition-[background,border-color,color] duration-[120ms] ease-linear enabled:cursor-pointer disabled:cursor-not-allowed disabled:opacity-45';
+  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md border font-medium transition-[background,border-color,color] duration-[120ms] ease-linear enabled:cursor-pointer disabled:cursor-not-allowed disabled:opacity-45';
 
 const SIZES: Record<ButtonSize, string> = {
   sm: 'h-(--control-height-sm) px-[10px] text-ds-sm',
@@ -12,13 +12,19 @@ const SIZES: Record<ButtonSize, string> = {
   lg: 'h-(--control-height-lg) px-[18px] text-ds-base',
 };
 
+// El color de borde vive solo aca (nunca en BASE) para que cada variante
+// tenga una unica clase border-* — si BASE y una variante aportan dos
+// clases border-* a la vez (p.ej. border-transparent + border-border), cual
+// gana depende del orden en que Tailwind genera el CSS, no del orden en el
+// string de clases, y terminaba ocultando el borde del boton secondary.
 const VARIANTS: Record<ButtonVariant, string> = {
-  primary: 'bg-primary text-primary-foreground enabled:hover:bg-primary-hover',
+  primary: 'bg-primary text-primary-foreground border-transparent enabled:hover:bg-primary-hover',
   secondary: 'bg-card text-foreground border-border enabled:hover:bg-muted',
   ghost:
-    'bg-transparent text-foreground enabled:hover:bg-accent enabled:hover:text-accent-foreground',
-  destructive: 'bg-destructive text-destructive-foreground enabled:hover:bg-[#CE322F]',
-  link: 'bg-transparent text-primary !h-auto !p-0 enabled:hover:underline',
+    'bg-transparent text-foreground border-transparent enabled:hover:bg-accent enabled:hover:text-accent-foreground',
+  destructive:
+    'bg-destructive text-destructive-foreground border-transparent enabled:hover:bg-[#CE322F]',
+  link: 'bg-transparent text-primary border-transparent !h-auto !p-0 enabled:hover:underline',
 };
 
 @Component({

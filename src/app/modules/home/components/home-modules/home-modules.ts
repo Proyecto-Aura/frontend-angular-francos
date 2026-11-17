@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { HomeCards } from '../home-cards/home-cards';
 import { MenuService } from '../../../../core/services/menu.service';
@@ -23,45 +23,31 @@ const MODULE_CARD_INFO: Record<string, { icon: string; routerLink: string }> = {
     icon: '/icons/module-gestion-estrategica.png',
     routerLink: '/gestion-estrategica',
   },
+  configuracion: { icon: '/icons/module_configuracion.svg', routerLink: '/configuracion' },
+  produccion: { icon: '/icons/module_produccion.svg', routerLink: '/produccion' },
+  // "despacho-pedidos" es el nombre real (HU-A-023, confirmado por el
+  // backend) — el icono es un SVG placeholder propio (no hay arte de marca
+  // todavia, pedido explicito del usuario mientras tanto), reemplazar en
+  // public/icons/module_despacho.svg cuando llegue el definitivo.
+  'despacho-pedidos': { icon: '/icons/module_despacho.svg', routerLink: '/despacho-pedidos' },
+  // Separado de Inventario en su propio rol — mismo caso que Despacho:
+  // public/icons/module_insumos.svg es un placeholder propio, reemplazar
+  // cuando llegue el arte de marca.
+  insumos: { icon: '/icons/module_insumos.svg', routerLink: '/insumos' },
 };
 
-// Fallback mientras responde /rutas/mi-menu (o si falla) — solo los modulos
-// que hoy tienen pagina real detras, ya no la lista vieja con Produccion /
-// Configuracion, que nunca tuvieron ruta ni pantalla.
-const FALLBACK_MODULES: ModuleCard[] = [
-  {
-    icon: MODULE_CARD_INFO['ventas'].icon,
-    title: 'Ventas',
-    description: 'Gestión de ventas y pedidos',
-    routerLink: '/ventas',
-  },
-  {
-    icon: MODULE_CARD_INFO['inventario'].icon,
-    title: 'Inventario',
-    description: 'Control de stock y productos',
-    routerLink: '/inventario',
-  },
-  {
-    icon: MODULE_CARD_INFO['estrategico'].icon,
-    title: 'Gestión Estratégica',
-    description: 'Planeamiento y seguimiento estratégico',
-    routerLink: '/gestion-estrategica',
-  },
-];
-
-// Orden pedido a mano: Ventas, Inventario, Gestion Estrategica, Produccion,
-// Despacho, Configuracion. Los primeros 3 nombres son reales (confirmados
-// contra el backend); produccion/despacho/configuracion todavia no existen
-// en la BD, asi que son nombres SUPUESTOS — si el backend los crea con otro
-// nombre cuando los carguen, hay que ajustar esta lista para que el orden
-// siga funcionando (mientras tanto no tienen efecto: MODULE_CARD_INFO ni
-// los conoce, asi que ni aparecen).
+// Orden pedido a mano: Ventas, Inventario, Insumos, Gestion Estrategica,
+// Produccion, Despacho, Configuracion. Todos son nombres reales de la BD
+// (confirmado por el backend) — "despacho-pedidos" (HU-A-023) ya es el
+// nombre real confirmado, no un supuesto (se verifico contra /rutas/mi-menu
+// en vivo).
 const MODULE_ORDER = [
   'ventas',
   'inventario',
+  'insumos',
   'estrategico',
   'produccion',
-  'despacho',
+  'despacho-pedidos',
   'configuracion',
 ];
 
@@ -77,16 +63,25 @@ function ordenDe(nombre: string): number {
 })
 export class HomeModules {
   private menuService = inject(MenuService);
+  private destroyRef = inject(DestroyRef);
 
-  // Arranca con el fallback (asi el home no aparece vacio mientras responde
-  // la API) y se reemplaza con lo que el usuario realmente puede ver segun
-  // /rutas/mi-menu — ya filtrado por rol server-side.
-  protected readonly modules = signal<ModuleCard[]>(FALLBACK_MODULES);
+  // Siempre el estado real de /rutas/mi-menu (ya filtrado por rol
+  // server-side), sin tarjetas de respaldo: mostrar accesos que despues
+  // rebotan a /home confundia a usuarios sin esos permisos (o sin ninguno).
+  protected readonly modules = signal<ModuleCard[]>([]);
+  protected readonly estado = signal<'cargando' | 'listo' | 'error'>('cargando');
 
   constructor() {
+    this.cargar();
+  }
+
+  // Tambien lo usa el boton "Reintentar": MenuService vuelve a pedir el
+  // arbol tras un error (shareReplay se reinicia al fallar).
+  protected cargar(): void {
+    this.estado.set('cargando');
     this.menuService
       .getTree()
-      .pipe(takeUntilDestroyed())
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (tree) => {
           const cards = tree
@@ -101,9 +96,13 @@ export class HomeModules {
                 routerLink: info.routerLink,
               };
             });
-          if (cards.length > 0) this.modules.set(cards);
+          this.modules.set(cards);
+          this.estado.set('listo');
         },
-        error: () => undefined,
+        error: () => {
+          this.modules.set([]);
+          this.estado.set('error');
+        },
       });
   }
 }

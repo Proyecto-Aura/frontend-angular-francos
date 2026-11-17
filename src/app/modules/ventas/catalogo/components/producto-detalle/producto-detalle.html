@@ -55,7 +55,7 @@
         <span icon
           ><app-ds-icon [img]="f.estado === 'Activo' ? LucideBan : LucideRotateCcw" [size]="16"
         /></span>
-        {{ f.estado === 'Activo' ? 'Desactivar' : 'Reactivar' }}
+        {{ f.estado === 'Activo' ? 'Desactivar' : 'Activar' }}
       </app-ds-button>
       <app-ds-button (clicked)="editar.emit(f)">
         <span icon><app-ds-icon [img]="LucidePencil" [size]="16" /></span>

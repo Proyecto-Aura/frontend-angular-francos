@@ -16,6 +16,13 @@ export const AUTH_ROUTES: Routes = [
           import('./pages/auth-form-register/auth-form-register').then((c) => c.AuthFormRegister),
       },
       {
+        path: 'forgot-password',
+        loadComponent: () =>
+          import('./pages/auth-forgot-password/auth-forgot-password').then(
+            (c) => c.AuthForgotPassword,
+          ),
+      },
+      {
         path: 'reset',
         loadComponent: () => import('./pages/auth-reset/auth-reset').then((c) => c.AuthReset),
       },

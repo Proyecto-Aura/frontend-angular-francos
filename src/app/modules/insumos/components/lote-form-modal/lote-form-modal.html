@@ -1,0 +1,124 @@
+<app-ds-modal
+  [open]="open()"
+  title="Registrar lote"
+  [hasIcon]="true"
+  [hasFooter]="true"
+  [width]="640"
+  (closed)="cerrar()"
+>
+  <span
+    icon
+    class="flex h-9 w-9 items-center justify-center rounded-md bg-[rgba(255,255,255,0.18)]"
+  >
+    <app-ds-icon [img]="LucideLayers" [size]="18" />
+  </span>
+
+  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+    <app-ds-field
+      label="Código de lote"
+      [hint]="
+        codigoLote()
+          ? 'Generado automáticamente, no editable.'
+          : 'Selecciona un insumo para generarlo.'
+      "
+      htmlFor="lote-codigo"
+    >
+      <app-ds-input
+        id="lote-codigo"
+        [value]="generandoCodigo() ? 'Generando…' : codigoLote()"
+        placeholder="Se generará al elegir el insumo"
+        [disabled]="true"
+      />
+    </app-ds-field>
+
+    <app-ds-field
+      label="Insumo"
+      htmlFor="lote-insumo"
+      [required]="true"
+      [error]="errorDe('insumoId')"
+    >
+      <app-ds-combobox
+        id="lote-insumo"
+        [value]="insumoId()"
+        (valueChange)="seleccionarInsumo($event)"
+        [options]="insumosOptions()"
+        placeholder="Buscar insumo…"
+        emptyMessage="Sin insumos que coincidan."
+        [invalid]="!!errores().insumoId"
+      />
+    </app-ds-field>
+
+    <app-ds-field
+      label="Fecha de ingreso"
+      hint="Se registra automáticamente."
+      htmlFor="lote-fecha-ingreso"
+    >
+      <app-ds-input id="lote-fecha-ingreso" [value]="fechaIngresoMostrada()" [disabled]="true" />
+    </app-ds-field>
+
+    <app-ds-field
+      label="Fecha de vencimiento"
+      htmlFor="lote-fecha-vencimiento"
+      [required]="requiereFechaVencimiento()"
+      [hint]="requiereFechaVencimiento() ? null : 'No aplica para este tipo de insumo.'"
+      [error]="errorDe('fechaVencimiento')"
+    >
+      <app-ds-input
+        id="lote-fecha-vencimiento"
+        type="date"
+        [(value)]="fechaVencimiento"
+        [disabled]="!requiereFechaVencimiento()"
+        [invalid]="!!errores().fechaVencimiento"
+      />
+    </app-ds-field>
+
+    <app-ds-field
+      label="Cantidad"
+      htmlFor="lote-cantidad"
+      [required]="true"
+      [error]="errorDe('cantidadInicial')"
+    >
+      <app-ds-input
+        id="lote-cantidad"
+        [(value)]="cantidadInicial"
+        placeholder="0"
+        [invalid]="!!errores().cantidadInicial"
+      />
+    </app-ds-field>
+
+    <app-ds-field
+      label="Unidad de medida"
+      hint="Se completa según el insumo seleccionado."
+      htmlFor="lote-unidad"
+    >
+      <app-ds-input
+        id="lote-unidad"
+        [value]="unidadInsumo()"
+        placeholder="Selecciona un insumo"
+        [disabled]="true"
+      />
+    </app-ds-field>
+  </div>
+
+  @if (errorGeneral(); as mensaje) {
+    <app-ds-alert tone="error" [title]="mensaje" [closable]="false" />
+  } @else if (advertencia()) {
+    <app-ds-alert
+      tone="warning"
+      title="Faltan campos por completar"
+      description="Revisa los campos marcados antes de guardar."
+      [closable]="false"
+    />
+  }
+
+  <span footer class="flex gap-2">
+    <app-ds-button variant="secondary" (clicked)="cerrar()">Cancelar</app-ds-button>
+    <app-ds-button
+      variant="primary"
+      [disabled]="guardando() || generandoCodigo() || !codigoLote()"
+      (clicked)="guardar()"
+    >
+      {{ guardando() ? 'Registrando…' : 'Registrar lote' }}
+    </app-ds-button>
+  </span>
+</app-ds-modal>

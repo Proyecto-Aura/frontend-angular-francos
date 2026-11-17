@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { permisoGuard } from '../../../core/guards/permiso.guard';
+import { primerHijoPermitidoGuard } from '../../../core/guards/primer-hijo-permitido.guard';
 
 // path = nombre que manda el backend en /rutas/mi-menu, ver nota en
 // inventario/insumos/insumos.route.ts. NegocioLayout no es parte de ese
@@ -56,12 +57,22 @@ export const NEGOCIO_ROUTES: Routes = [
       },
       {
         path: '',
-        redirectTo: 'objetivos-estrategicos',
         pathMatch: 'full',
+        canActivate: [
+          primerHijoPermitidoGuard('gestion-estrategica-negocio', {
+            preferido: 'objetivos-estrategicos',
+          }),
+        ],
+        children: [],
       },
       {
         path: '**',
-        redirectTo: 'objetivos-estrategicos',
+        canActivate: [
+          primerHijoPermitidoGuard('gestion-estrategica-negocio', {
+            preferido: 'objetivos-estrategicos',
+          }),
+        ],
+        children: [],
       },
     ],
   },

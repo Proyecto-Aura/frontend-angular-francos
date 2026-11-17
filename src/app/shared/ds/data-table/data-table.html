@@ -52,6 +52,7 @@
               [class.text-left]="!col.align || col.align === 'left'"
               [class.text-muted-foreground]="col.muted"
               [class.text-foreground]="!col.muted"
+              [class.font-semibold]="col.strong"
               [class.tabular-nums]="col.align === 'right' || col.numeric"
               [class.whitespace-normal]="col.wrap"
               [class.whitespace-nowrap]="!col.wrap"

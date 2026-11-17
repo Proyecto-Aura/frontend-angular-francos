@@ -1,5 +1,11 @@
 import { Routes } from '@angular/router';
+import { permisoGuard } from '../../core/guards/permiso.guard';
+import { primerHijoPermitidoGuard } from '../../core/guards/primer-hijo-permitido.guard';
 
+// Inventario = productos terminados (Insumos se separo en su propio modulo
+// de primer nivel, ver insumos/insumos.route.ts). Los hijos ya son paginas
+// directas, sin modulo intermedio: path = nombre que manda el backend en
+// /rutas/mi-menu, ver nota en insumos.route.ts.
 export const INVENTARIO_ROUTES: Routes = [
   {
     path: '',
@@ -12,24 +18,39 @@ export const INVENTARIO_ROUTES: Routes = [
     },
     children: [
       {
-        path: 'insumos',
-        loadChildren: () => import('./insumos/insumos.route').then((m) => m.INSUMOS_ROUTES),
+        path: 'stock-productos',
+        canActivate: [permisoGuard],
+        loadComponent: () =>
+          import('./productos-terminados/pages/stock-productos/stock-productos').then(
+            (c) => c.StockProductos,
+          ),
       },
       {
-        path: 'productos-terminados',
-        loadChildren: () =>
-          import('./productos-terminados/productos-terminados.route').then(
-            (m) => m.PRODUCTOS_TERMINADOS_ROUTES,
+        path: 'pedidos-por-preparar',
+        canActivate: [permisoGuard],
+        loadComponent: () =>
+          import('./productos-terminados/pages/pedidos-por-preparar/pedidos-por-preparar').then(
+            (c) => c.PedidosPorPreparar,
+          ),
+      },
+      {
+        path: 'solicitudes-produccion',
+        canActivate: [permisoGuard],
+        loadComponent: () =>
+          import('./productos-terminados/pages/solicitudes-produccion/solicitudes-produccion').then(
+            (c) => c.SolicitudesProduccion,
           ),
       },
       {
         path: '',
-        redirectTo: 'insumos',
         pathMatch: 'full',
+        canActivate: [primerHijoPermitidoGuard('inventario', { preferido: 'stock-productos' })],
+        children: [],
       },
       {
         path: '**',
-        redirectTo: 'insumos',
+        canActivate: [primerHijoPermitidoGuard('inventario', { preferido: 'stock-productos' })],
+        children: [],
       },
     ],
   },

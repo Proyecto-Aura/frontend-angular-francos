@@ -129,8 +129,8 @@ describe('CatalogoService', () => {
       flushCatalogo(httpMock);
 
       expect(resultado?.tono).toBe('ok');
-      expect(resultado?.mensaje).toContain('Producto registrado · SKU FR-P8-PR1');
-      expect(resultado?.mensaje).toContain('visible en Portal B inicia desactivado');
+      expect(resultado?.titulo).toBe('Nuevo producto registrado');
+      expect(resultado?.mensaje).toBe('Chifles BBQ (100 gr).');
     });
 
     it('creates the promotion of each presentation that has one', () => {
@@ -202,7 +202,7 @@ describe('CatalogoService', () => {
       flushCatalogo(httpMock);
 
       expect(resultado?.tono).toBe('error');
-      expect(resultado?.mensaje).toContain('Producto registrado (SKU FR-P8-PR1)');
+      expect(resultado?.mensaje).toContain('Chifles BBQ (100 gr)');
       expect(resultado?.mensaje).toContain('la imagen de la presentación');
     });
 
@@ -227,7 +227,7 @@ describe('CatalogoService', () => {
       flushCatalogo(httpMock);
 
       expect(resultado?.tono).toBe('error');
-      expect(resultado?.mensaje).toContain('Producto registrado (SKU FR-P8-PR1)');
+      expect(resultado?.mensaje).toContain('Chifles BBQ (100 gr)');
       expect(resultado?.mensaje).toContain('Ya existe una promoción activa que se cruza');
     });
 
@@ -286,7 +286,8 @@ describe('CatalogoService', () => {
 
       expect(resultado).toEqual({
         tono: 'ok',
-        mensaje: 'Producto actualizado · el SKU y el slug se mantienen sin cambios.',
+        titulo: 'Producto actualizado',
+        mensaje: 'Chifles clásicos XL',
       });
     });
 
@@ -473,7 +474,7 @@ describe('CatalogoService', () => {
       req.flush({});
       flushCatalogo(httpMock);
 
-      expect(mensaje).toBe('Presentación FR-P1-PR1 desactivada de forma lógica.');
+      expect(mensaje).toBe('Presentación FR-P1-PR1 desactivada.');
     });
 
     it('reactivates an inactive presentation with PATCH /activate', () => {

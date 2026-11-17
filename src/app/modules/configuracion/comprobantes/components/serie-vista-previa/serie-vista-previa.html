@@ -1,0 +1,82 @@
+<app-ds-card title="Vista previa" [subtitle]="subtitulo()" [hasActions]="true">
+  <div actions class="w-[260px]">
+    <label class="sr-only" for="vp-serie">Serie de la vista previa</label>
+    <app-ds-select
+      id="vp-serie"
+      [value]="serieElegida()"
+      (valueChange)="elegir($event)"
+      [options]="opciones()"
+    />
+  </div>
+
+  <div class="flex flex-col gap-4 rounded-lg border border-border bg-card p-5">
+    <div class="flex items-start justify-between gap-4">
+      <div class="flex min-w-0 items-start gap-3">
+        @if (empresa()?.logoUrl; as logo) {
+          <img [src]="logo" alt="Logo de la empresa" class="size-12 rounded object-contain" />
+        }
+        <div class="flex min-w-0 flex-col gap-0.5">
+          <span class="text-ds-base font-semibold text-foreground">
+            {{ empresa()?.razonSocial || 'Razón social' }}
+          </span>
+          <span class="text-ds-sm text-muted-foreground">
+            {{ empresa()?.direccion || 'Dirección fiscal' }}
+          </span>
+          @if (contacto()) {
+            <span class="text-ds-sm text-muted-foreground">{{ contacto() }}</span>
+          }
+        </div>
+      </div>
+      <div
+        class="flex shrink-0 flex-col items-center gap-0.5 rounded-md border border-foreground px-3.5 py-2.5 text-center"
+      >
+        <span class="text-ds-sm font-semibold tabular-nums">RUC {{ empresa()?.ruc ?? '' }}</span>
+        <span class="text-ds-xs font-semibold">{{ titulo() }}</span>
+        <span class="text-ds-sm tabular-nums">{{ numero() }}</span>
+      </div>
+    </div>
+
+    @if (serie()) {
+      <div class="flex flex-col gap-3 border-t border-border pt-4">
+        <div class="grid grid-cols-1 gap-x-6 gap-y-1.5 text-ds-sm sm:grid-cols-2">
+          @for (dato of datos(); track dato.etiqueta) {
+            <div class="flex min-w-0 gap-2">
+              <span class="whitespace-nowrap text-muted-foreground">{{ dato.etiqueta }}</span>
+              <span class="tabular-nums [overflow-wrap:anywhere]">{{ dato.valor }}</span>
+            </div>
+          }
+        </div>
+
+        <div class="overflow-hidden rounded-md border border-border text-ds-sm">
+          <div
+            class="grid grid-cols-[48px_minmax(0,1fr)_96px] gap-3 bg-muted px-3 py-2 text-muted-foreground"
+          >
+            <span>Cant.</span>
+            <span>Descripción</span>
+            <span class="text-right">{{ etiquetaImporte() }}</span>
+          </div>
+          @for (linea of lineas(); track linea.descripcion) {
+            <div
+              class="grid grid-cols-[48px_minmax(0,1fr)_96px] gap-3 border-t border-border px-3 py-2"
+            >
+              <span class="tabular-nums">{{ linea.cantidad }}</span>
+              <span>{{ linea.descripcion }}</span>
+              <span class="text-right tabular-nums">{{ linea.importe }}</span>
+            </div>
+          }
+        </div>
+
+        <div class="flex min-w-[220px] flex-col gap-1 self-end text-ds-sm">
+          @for (total of totales(); track total.etiqueta) {
+            <div class="flex justify-between gap-4">
+              <span class="text-muted-foreground">{{ total.etiqueta }}</span>
+              <span class="tabular-nums" [class.font-semibold]="total.destacado">
+                {{ total.valor }}
+              </span>
+            </div>
+          }
+        </div>
+      </div>
+    }
+  </div>
+</app-ds-card>

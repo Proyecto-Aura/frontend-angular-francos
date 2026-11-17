@@ -30,6 +30,22 @@ describe('DataTable', () => {
     expect(fixture.componentInstance.cellValue({ name: 'Juan' }, 'name')).toBe('Juan');
   });
 
+  it('bolds a column marked strong (ej. un codigo que funciona como identificador de la fila)', () => {
+    const fixture = TestBed.createComponent(DataTable);
+    fixture.componentRef.setInput('columns', [
+      { key: 'codigoLote', header: 'Lote', strong: true },
+      { key: 'estado', header: 'Estado' },
+    ]);
+    fixture.componentRef.setInput('rows', [
+      { codigoLote: 'FR-LT-001-261026-INS242', estado: 'vencido' },
+    ]);
+    fixture.detectChanges();
+
+    const celdas = fixture.nativeElement.querySelectorAll('tbody td') as NodeListOf<HTMLElement>;
+    expect(celdas[0].classList.contains('font-semibold')).toBe(true);
+    expect(celdas[1].classList.contains('font-semibold')).toBe(false);
+  });
+
   it('onRowClick emits the row and index', () => {
     const fixture = create();
     fixture.detectChanges();
