@@ -149,6 +149,8 @@ export const pedidoFormVacio = (): PedidoFormModel => ({
 export interface ResultadoGuardado {
   mensaje: string;
   tono: 'ok' | 'error';
+  /** Si viene, se usa como título en negrita de la alerta y `mensaje` como su descripción. */
+  titulo?: string;
 }
 
 // ───────────── Reglas ─────────────

@@ -1,3 +1,4 @@
+import { Alert } from '../../../../shared/ds/alert/alert';
 import {
   AfterViewInit,
   Component,
@@ -57,6 +58,7 @@ const RESUMEN_VACIO: ResumenDespacho = { pendienteEntrega: 0, enCamino: 0, entre
 // cuentan los entregados en total, no "entregados hoy".
 @Component({
   imports: [
+    Alert,
     Avatar,
     Badge,
     Button,
@@ -77,6 +79,16 @@ const RESUMEN_VACIO: ResumenDespacho = { pendienteEntrega: 0, enCamino: 0, entre
 export class DespachoPedidos implements OnInit, AfterViewInit {
   private despachoService = inject(DespachoPedidoService);
   private destroyRef = inject(DestroyRef);
+  toast = signal<{ titulo: string; codigo: string } | null>(null);
+  private toastTimer: ReturnType<typeof setTimeout> | null = null;
+  constructor() {
+    this.destroyRef.onDestroy(() => this.cerrarToast());
+  }
+  cerrarToast(): void {
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    this.toastTimer = null;
+    this.toast.set(null);
+  }
 
   @ViewChild('pedidoCell', { static: true })
   pedidoCellTpl!: TemplateRef<{ $implicit: FilaDespacho; index: number }>;
@@ -198,7 +210,12 @@ export class DespachoPedidos implements OnInit, AfterViewInit {
     this.pedidoDetalleId.set(null);
   }
 
-  pedidoActualizado(): void {
+  pedidoActualizado(aviso?: { titulo: string; codigo: string }): void {
+    if (aviso) {
+      this.cerrarToast();
+      this.toast.set(aviso);
+      this.toastTimer = setTimeout(() => this.cerrarToast(), 4500);
+    }
     this.recargarTodo();
   }
 

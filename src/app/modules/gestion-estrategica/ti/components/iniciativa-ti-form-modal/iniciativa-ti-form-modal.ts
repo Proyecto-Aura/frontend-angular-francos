@@ -1,3 +1,5 @@
+import { Alert } from '../../../../../shared/ds/alert/alert';
+import { crearAlertaTemporal } from '../../../../../shared/ds/alert/alerta-temporal';
 import { HttpErrorResponse } from '@angular/common/http';
 import {
   Component,
@@ -29,7 +31,7 @@ import {
 } from '../../../negocio/components/iniciativa-form-modal/iniciativa.reglas';
 
 @Component({
-  imports: [Badge, Button, Field, Input, Modal, Select, Textarea],
+  imports: [Alert, Badge, Button, Field, Input, Modal, Select, Textarea],
   selector: 'app-iniciativa-ti-form-modal',
   templateUrl: './iniciativa-ti-form-modal.html',
 })
@@ -75,6 +77,26 @@ export class IniciativaTiFormModal {
   readonly fechaMinima = computed(() => `${this.plan().anioInicio}-01-01`);
   readonly fechaMaxima = computed(() => `${this.plan().anioFin}-12-31`);
 
+  private alertas = crearAlertaTemporal(() => this.errorGeneral.set(null));
+  toast = this.alertas.toast;
+  private mostrarErrorAlerta(mensaje: string | null): void {
+    if (!mensaje) {
+      this.alertas.limpiar();
+      return;
+    }
+    this.alertas.mostrar('error', mensaje);
+    this.errorGeneral.set(mensaje);
+  }
+  private advertirCampos(): void {
+    const mensaje = this.errorGeneral();
+    this.alertas.mostrar(
+      'warning',
+      'Faltan campos por completar',
+      'Revisa los campos marcados antes de guardar.',
+    );
+    this.errorGeneral.set(mensaje);
+  }
+
   constructor() {
     effect(() => {
       const estaAbierto = this.open();
@@ -93,8 +115,11 @@ export class IniciativaTiFormModal {
     const form = this.formActual();
     const errores = validarFormularioIniciativa(form, this.plan());
     this.errores.set(errores);
-    this.errorGeneral.set(null);
-    if (Object.keys(errores).length > 0) return;
+    this.mostrarErrorAlerta(null);
+    if (Object.keys(errores).length > 0) {
+      this.advertirCampos();
+      return;
+    }
 
     this.guardando.set(true);
     const iniciativa = this.iniciativa();
@@ -135,7 +160,7 @@ export class IniciativaTiFormModal {
     this.fechaFin.set(iniciativa?.fechaFin ?? '');
     this.guardando.set(false);
     this.errores.set({});
-    this.errorGeneral.set(null);
+    this.mostrarErrorAlerta(null);
   }
 
   private formActual(): IniciativaForm {
@@ -152,7 +177,7 @@ export class IniciativaTiFormModal {
 
   private manejarError(error: unknown): void {
     if (!(error instanceof HttpErrorResponse)) {
-      this.errorGeneral.set('No se pudo guardar la iniciativa. Intente nuevamente.');
+      this.mostrarErrorAlerta('No se pudo guardar la iniciativa. Intente nuevamente.');
       return;
     }
 
@@ -173,13 +198,13 @@ export class IniciativaTiFormModal {
       return;
     }
     if (error.status === 409 || error.status === 404 || error.status === 400) {
-      this.errorGeneral.set(mensaje || 'No se pudo guardar la iniciativa. Intente nuevamente.');
+      this.mostrarErrorAlerta(mensaje || 'No se pudo guardar la iniciativa. Intente nuevamente.');
       return;
     }
     if (error.status === 401 || error.status === 403) {
-      this.errorGeneral.set('No tiene permisos para gestionar iniciativas.');
+      this.mostrarErrorAlerta('No tiene permisos para gestionar iniciativas.');
       return;
     }
-    this.errorGeneral.set('No se pudo guardar la iniciativa. Intente nuevamente.');
+    this.mostrarErrorAlerta('No se pudo guardar la iniciativa. Intente nuevamente.');
   }
 }

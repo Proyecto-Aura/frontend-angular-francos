@@ -1,3 +1,4 @@
+import { Alert, AlertTone } from '../../../../../shared/ds/alert/alert';
 import {
   AfterViewInit,
   Component,
@@ -74,6 +75,7 @@ const RESUMEN_VACIO: ResumenSolicitudesInsumo = {
 // analogo.
 @Component({
   imports: [
+    Alert,
     Badge,
     Button,
     Card,
@@ -95,6 +97,22 @@ const RESUMEN_VACIO: ResumenSolicitudesInsumo = {
 export class SolicitudesInsumos implements OnInit, AfterViewInit {
   private solicitudService = inject(SolicitudInsumoService);
   private destroyRef = inject(DestroyRef);
+  constructor() {
+    this.destroyRef.onDestroy(() => this.cerrarToast());
+  }
+
+  toast = signal<{ tone: AlertTone; title: string; description?: string } | null>(null);
+  private toastTimer: ReturnType<typeof setTimeout> | null = null;
+  cerrarToast(): void {
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    this.toastTimer = null;
+    this.toast.set(null);
+  }
+  private mostrarToast(tone: AlertTone, title: string, description?: string): void {
+    this.cerrarToast();
+    this.toast.set({ tone, title, description });
+    this.toastTimer = setTimeout(() => this.cerrarToast(), 4500);
+  }
 
   @ViewChild('estadoCell', { static: true })
   estadoCellTpl!: TemplateRef<{ $implicit: FilaSolicitud; index: number }>;
@@ -249,7 +267,8 @@ export class SolicitudesInsumos implements OnInit, AfterViewInit {
     this.modalAbierto.set(false);
   }
 
-  solicitudCreada(): void {
+  solicitudCreada(solicitud?: SolicitudInsumo): void {
+    this.mostrarToast('success', 'Nueva solicitud registrada', solicitud?.codigo);
     this.cerrarForm();
     this.recargarTodo();
   }
@@ -282,6 +301,7 @@ export class SolicitudesInsumos implements OnInit, AfterViewInit {
       )
       .subscribe({
         next: () => {
+          this.mostrarToast('success', 'Solicitud cancelada', solicitud.codigo);
           this.solicitudes.update((filas) =>
             filas.map((fila) =>
               fila.solicitud.id === solicitud.id
@@ -301,6 +321,7 @@ export class SolicitudesInsumos implements OnInit, AfterViewInit {
               ? 'La solicitud ya no está pendiente. Se actualizará la lista.'
               : 'No se pudo cancelar la solicitud. Intenta nuevamente.',
           );
+          this.mostrarToast(error.status === 409 ? 'warning' : 'error', this.errorCancelacion());
           if (error.status === 409) this.recargarTodo();
         },
       });
@@ -316,7 +337,8 @@ export class SolicitudesInsumos implements OnInit, AfterViewInit {
     this.solicitudEditarId.set(null);
   }
 
-  solicitudEditada(): void {
+  solicitudEditada(codigo?: string): void {
+    this.mostrarToast('success', 'Solicitud actualizada', codigo);
     this.cerrarEditar();
     this.recargarTodo();
   }

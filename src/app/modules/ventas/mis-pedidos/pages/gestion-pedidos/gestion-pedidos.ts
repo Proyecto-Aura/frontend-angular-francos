@@ -1,6 +1,7 @@
 import {
   AfterViewInit,
   Component,
+  OnDestroy,
   OnInit,
   TemplateRef,
   ViewChild,
@@ -10,6 +11,7 @@ import {
 } from '@angular/core';
 import { LucideEye, LucidePlus } from '@lucide/angular';
 
+import { Alert, AlertTone } from '../../../../../shared/ds/alert/alert';
 import { Badge } from '../../../../../shared/ds/badge/badge';
 import { Button } from '../../../../../shared/ds/button/button';
 import { DataTable, DsColumn } from '../../../../../shared/ds/data-table/data-table';
@@ -19,7 +21,6 @@ import { IconButton } from '../../../../../shared/ds/icon-button/icon-button';
 import { Input } from '../../../../../shared/ds/input/input';
 import { Pagination } from '../../../../../shared/ds/pagination/pagination';
 import { Select, SelectOption } from '../../../../../shared/ds/select/select';
-import { AvisoBanner } from '../../../catalogo/components/aviso-banner/aviso-banner';
 import { PedidoDetalle } from '../../components/pedido-detalle/pedido-detalle';
 import { PedidoForm } from '../../components/pedido-form/pedido-form';
 import { EstadoPedidoDto, OrigenPedidoDto } from '../../interfaces/pedido-dto.interface';
@@ -38,18 +39,18 @@ import {
 import { PedidosService } from '../../services/pedidos.service';
 
 const POR_PAGINA = 10;
+const DEMORA_AUTOCIERRE_TOAST_MS = 4500;
+const DEMORA_SALIDA_TOAST_MS = 300;
 
 interface RowCtx {
   $implicit: PedidoFila;
   index: number;
 }
 
-const SIN_AVISO: ResultadoGuardado = { mensaje: '', tono: 'ok' };
-
 /** HU-A-009: listado de pedidos (RF-A030), filtros (RF-A037), detalle y registro manual. */
 @Component({
   imports: [
-    AvisoBanner,
+    Alert,
     Badge,
     Button,
     DataTable,
@@ -65,7 +66,7 @@ const SIN_AVISO: ResultadoGuardado = { mensaje: '', tono: 'ok' };
   selector: 'app-gestion-pedidos',
   templateUrl: './gestion-pedidos.html',
 })
-export class GestionPedidos implements AfterViewInit, OnInit {
+export class GestionPedidos implements AfterViewInit, OnInit, OnDestroy {
   private pedidosService = inject(PedidosService);
 
   @ViewChild('codigoCell', { static: true }) codigoCellTpl!: TemplateRef<RowCtx>;
@@ -128,7 +129,34 @@ export class GestionPedidos implements AfterViewInit, OnInit {
   // --- Modales ---
   protected formAbierto = signal(false);
   protected pedidoDetalleId = signal<number | null>(null);
-  protected aviso = signal<ResultadoGuardado>(SIN_AVISO);
+
+  // Toast flotante arriba a la derecha: éxito (verde) o error de la API (rojo).
+  protected toast = signal<{ tone: AlertTone; title: string; description?: string } | null>(null);
+  protected toastVisible = signal(false);
+  private toastTimer: ReturnType<typeof setTimeout> | null = null;
+  private toastSalidaTimer: ReturnType<typeof setTimeout> | null = null;
+
+  private mostrarToast(tone: AlertTone, title: string, description?: string): void {
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    if (this.toastSalidaTimer) clearTimeout(this.toastSalidaTimer);
+
+    this.toast.set({ tone, title, description });
+    this.toastVisible.set(false);
+    requestAnimationFrame(() => requestAnimationFrame(() => this.toastVisible.set(true)));
+
+    this.toastTimer = setTimeout(() => this.cerrarToast(), DEMORA_AUTOCIERRE_TOAST_MS);
+  }
+
+  protected cerrarToast(): void {
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    this.toastVisible.set(false);
+    this.toastSalidaTimer = setTimeout(() => this.toast.set(null), DEMORA_SALIDA_TOAST_MS);
+  }
+
+  ngOnDestroy(): void {
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    if (this.toastSalidaTimer) clearTimeout(this.toastSalidaTimer);
+  }
 
   ngOnInit(): void {
     this.cargar();
@@ -194,17 +222,15 @@ export class GestionPedidos implements AfterViewInit, OnInit {
 
   /** Tras registrar: aviso y listado recargado (el pedido nuevo aparece al final, por orden de llegada). */
   protected pedidoRegistrado(resultado: ResultadoGuardado) {
-    this.aviso.set(resultado);
+    const tono = resultado.tono === 'ok' ? 'success' : 'error';
+    if (resultado.titulo) this.mostrarToast(tono, resultado.titulo, resultado.mensaje);
+    else this.mostrarToast(tono, resultado.mensaje);
     this.cargar();
-  }
-
-  protected cerrarAviso() {
-    this.aviso.set(SIN_AVISO);
   }
 
   /** HU-A-010: aviso del cambio de estado hecho desde el detalle; si salió bien, el listado se recarga. */
   protected estadoCambiado(resultado: ResultadoGuardado) {
-    this.aviso.set(resultado);
+    this.mostrarToast(resultado.tono === 'ok' ? 'success' : 'error', resultado.mensaje);
     if (resultado.tono === 'ok') this.cargar();
   }
 }

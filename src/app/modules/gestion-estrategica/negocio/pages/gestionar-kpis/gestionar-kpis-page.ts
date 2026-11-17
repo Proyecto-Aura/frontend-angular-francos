@@ -1,3 +1,5 @@
+import { Alert } from '../../../../../shared/ds/alert/alert';
+import { crearAlertaTemporal } from '../../../../../shared/ds/alert/alerta-temporal';
 import { RouterLink } from '@angular/router';
 import {
   AfterViewInit,
@@ -38,6 +40,7 @@ import { ObjetivoEstrategicoService } from '../../services/objetivo-estrategico.
 
 @Component({
   imports: [
+    Alert,
     Badge,
     Button,
     Card,
@@ -77,6 +80,19 @@ export class GestionarKpisPage implements AfterViewInit {
   private objetivoService = inject(ObjetivoEstrategicoService);
   private kpiService = inject(KpiService);
   private destroyRef = inject(DestroyRef);
+  private alertas = crearAlertaTemporal();
+  toast = this.alertas.toast;
+  private notificarExito(
+    titulo: string,
+    entidad?: { codigo?: string; nombre?: string } | null,
+  ): void {
+    this.alertas.mostrar(
+      'success',
+      titulo,
+      entidad ? [entidad.codigo, entidad.nombre].filter(Boolean).join(' \u00b7 ') : undefined,
+    );
+  }
+
   private solicitudActual = 0;
 
   readonly planSeleccionado = inject(PlanSeleccionadoService);
@@ -227,17 +243,23 @@ export class GestionarKpisPage implements AfterViewInit {
     this.kpiSeleccionado.set(null);
   }
 
-  kpiGuardado(): void {
+  kpiGuardado(kpi?: Kpi): void {
+    this.notificarExito(
+      this.kpiSeleccionado() ? 'KPI actualizado' : 'Nuevo KPI registrado',
+      kpi ?? this.kpiSeleccionado(),
+    );
     this.cerrarModal();
     this.cargarKpis();
   }
 
-  kpiEliminado(): void {
+  kpiEliminado(notificar = true): void {
+    if (notificar) this.notificarExito('KPI eliminado', this.kpiSeleccionado());
     this.cerrarModal();
     this.cargarKpis();
   }
 
   valorGuardado(): void {
+    this.notificarExito('Valor de KPI registrado', this.kpiSeleccionado());
     this.cerrarModal();
     this.cargarKpis();
   }

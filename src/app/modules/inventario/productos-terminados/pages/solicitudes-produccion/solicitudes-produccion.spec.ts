@@ -281,9 +281,22 @@ describe('SolicitudesProduccion', () => {
     flushResumen();
 
     fixture.componentInstance.abrirNuevaSolicitud();
-    fixture.componentInstance.solicitudCreada();
+    fixture.componentInstance.solicitudCreada({
+      id: 99,
+      codigo: 'SOL-000099',
+      estado: 'pendiente',
+      fechaCreacion: '2026-10-01',
+      fechaLimite: null,
+      solicitadoPorNombre: 'Admin',
+      detalle: [],
+    });
 
     expect(fixture.componentInstance.modalAbierto()).toBe(false);
+    expect(fixture.componentInstance.toast()).toMatchObject({
+      tone: 'success',
+      title: 'Nueva solicitud registrada',
+      description: 'SOL-000099',
+    });
     flushPage(expectPageRequest((r) => r.params.get('page') === '1'));
     flushResumen();
   });
@@ -335,6 +348,11 @@ describe('SolicitudesProduccion', () => {
     req.flush(null, { status: 204, statusText: 'No Content' });
     expect(component.solicitudes()[0].estado).toBe('rechazado');
     expect(component.cancelandoId()).toBeNull();
+    expect(component.toast()).toMatchObject({
+      tone: 'success',
+      title: 'Solicitud cancelada',
+      description: 'SPR-0090',
+    });
     flushPage(expectPageRequest(), [makeSolicitudDto({ estado: 'rechazado' })]);
     flushResumen();
   });
@@ -371,7 +389,7 @@ describe('SolicitudesProduccion', () => {
     httpMock
       .expectOne(`${SOLICITUDES_BASE}/10/estado`)
       .flush('error', { status: 500, statusText: 'Server Error' });
-    expect(component.errorCancelacion()).toContain('No se pudo cancelar');
+    expect(component.toast()?.title).toContain('No se pudo cancelar');
     expect(component.cancelandoId()).toBeNull();
     expect(component.solicitudes()[0].estado).toBe('pendiente');
   });
@@ -390,8 +408,13 @@ describe('SolicitudesProduccion', () => {
     fixture.componentInstance.editarSolicitud(fila.solicitud);
     expect(fixture.componentInstance.solicitudEditarId()).toBe(10);
 
-    fixture.componentInstance.solicitudEditada();
+    fixture.componentInstance.solicitudEditada('SPR-0090');
     expect(fixture.componentInstance.solicitudEditarId()).toBeNull();
+    expect(fixture.componentInstance.toast()).toMatchObject({
+      tone: 'success',
+      title: 'Solicitud actualizada',
+      description: 'SPR-0090',
+    });
     flushPage(expectPageRequest((r) => r.params.get('page') === '1'));
     flushResumen();
   });

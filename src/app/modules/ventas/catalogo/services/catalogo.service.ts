@@ -160,7 +160,7 @@ export class CatalogoService {
         const pasos = [...imagenes, ...promociones];
 
         return this.ejecutar(pasos).pipe(
-          switchMap((fallo) => this.obtener().pipe(map(() => this.avisoRegistro(creado, fallo)))),
+          switchMap((fallo) => this.obtener().pipe(map(() => this.avisoRegistro(pf, fallo)))),
         );
       }),
     );
@@ -187,15 +187,32 @@ export class CatalogoService {
             fallo
               ? {
                   tono: 'error',
-                  mensaje: `Se guardaron los datos del producto, pero no se pudo guardar ${fallo}`,
+                  mensaje: `Se guardaron los datos del producto, pero no se pudo guardar ${fallo}.`,
                 }
               : {
                   tono: 'ok',
-                  mensaje: 'Producto actualizado · el SKU y el slug se mantienen sin cambios.',
+                  titulo: 'Producto actualizado',
+                  mensaje: pf.nombre.trim(),
                 },
           ),
         ),
       ),
+    );
+  }
+
+  /** Guarda solo la presentación elegida, sin modificar el producto ni sus otras presentaciones. */
+  actualizarPresentacion(
+    productoId: number,
+    presentacion: PresentacionForm,
+    nombre: string,
+  ): Observable<ResultadoGuardado> {
+    return this.guardarPresentacion(productoId, presentacion).pipe(
+      switchMap(() => this.obtener()),
+      map(() => ({
+        tono: 'ok' as const,
+        titulo: 'Producto actualizado',
+        mensaje: `${nombre} (${this.etiquetaDe(presentacion)})`,
+      })),
     );
   }
 
@@ -216,9 +233,7 @@ export class CatalogoService {
     return peticion.pipe(
       switchMap(() => this.obtener()),
       map(() =>
-        activar
-          ? `Presentación ${fila.sku} reactivada.`
-          : `Presentación ${fila.sku} desactivada de forma lógica.`,
+        activar ? `Presentación ${fila.sku} reactivada.` : `Presentación ${fila.sku} desactivada.`,
       ),
     );
   }
@@ -297,17 +312,19 @@ export class CatalogoService {
     return opcion ? opcion.nombre : (p.sku ?? '');
   }
 
-  private avisoRegistro(creado: ProductoCreadoDto, fallo: string | null): ResultadoGuardado {
-    const skus = creado.producto_presentaciones.map((pp) => pp.sku).join(', ');
+  private avisoRegistro(pf: ProductoFormModel, fallo: string | null): ResultadoGuardado {
+    const etiquetas = pf.presentaciones.map((p) => this.etiquetaDe(p)).join(', ');
+    const nombre = `${pf.nombre.trim()} (${etiquetas})`;
 
     return fallo
       ? {
           tono: 'error',
-          mensaje: `Producto registrado (SKU ${skus}), pero no se pudo guardar ${fallo}. Edita el producto para volver a intentarlo.`,
+          mensaje: `${nombre}, pero no se pudo guardar ${fallo}.`,
         }
       : {
           tono: 'ok',
-          mensaje: `Producto registrado · SKU ${skus} · producto terminado creado por presentación (stock actual 0, stock mínimo 1) · queda Desactivado: actívalo para que se vea en el Portal B.`,
+          titulo: 'Nuevo producto registrado',
+          mensaje: `${nombre}.`,
         };
   }
 }

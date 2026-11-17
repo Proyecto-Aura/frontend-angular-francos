@@ -1,3 +1,13 @@
+@if (toast(); as t) {
+  <div class="fixed top-6 right-6 z-50 w-full max-w-md">
+    <app-ds-alert
+      [tone]="t.tone"
+      [title]="t.title"
+      [description]="t.description ?? null"
+      [closable]="false"
+    />
+  </div>
+}
 <div class="flex flex-col gap-6 p-(--page-padding)">
   <div>
     <h1 class="text-ds-2xl font-medium text-foreground">Stock de insumos</h1>
@@ -121,7 +131,7 @@
     [open]="modalFormAbierto()"
     [insumo]="insumoEnEdicion()"
     (closed)="cerrarFormInsumo()"
-    (saved)="insumoGuardado()"
+    (saved)="insumoGuardado($event)"
   />
 
   <app-insumo-detalle-modal [insumo]="insumoEnDetalle()" (closed)="insumoEnDetalle.set(null)" />
@@ -129,14 +139,14 @@
   <app-lote-form-modal
     [open]="modalLoteAbierto()"
     (closed)="cerrarFormLote()"
-    (saved)="loteGuardado()"
+    (saved)="loteGuardado($event)"
   />
 
   <app-movimiento-form-modal
     [open]="modalMovimientoAbierto()"
     [insumoPreseleccionado]="insumoParaMovimiento()"
     (closed)="cerrarFormMovimiento()"
-    (saved)="movimientoGuardado()"
+    (saved)="movimientoGuardado($event)"
   />
 </div>
 

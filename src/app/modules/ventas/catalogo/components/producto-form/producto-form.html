@@ -6,31 +6,19 @@
   (closed)="cerrar()"
 >
   <div class="flex flex-col gap-4">
-    @if (errores().length) {
-      <div
-        class="flex items-start gap-3 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-ds-sm text-destructive"
-      >
-        <app-ds-icon [img]="LucideCircleAlert" [size]="17" />
-        <div class="min-w-0 flex-1">
-          <p class="font-semibold">Revisa los datos del formulario</p>
-          <p class="mt-1">Falta o es inválido: {{ errores().join(', ') }}.</p>
-        </div>
-      </div>
-    }
-
-    @if (errorApi()) {
-      <div
-        role="alert"
-        class="flex items-start gap-3 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-ds-sm text-destructive"
-      >
-        <app-ds-icon [img]="LucideCircleAlert" [size]="17" />
-        <p class="min-w-0 flex-1">{{ errorApi() }}</p>
-      </div>
+    @if (toast(); as t) {
+      <app-ds-alert
+        [tone]="t.tone"
+        [title]="t.title"
+        [description]="t.description ?? null"
+        [closable]="false"
+      />
     }
     <div class="grid grid-cols-2 gap-4">
       <app-ds-field label="Nombre del producto" [required]="true">
         <app-ds-input
           [value]="pf().nombre"
+          [disabled]="soloPresentacion()"
           (valueChange)="setCampo('nombre', $event)"
           placeholder="Ej. Chifles clásicos"
         />
@@ -38,6 +26,7 @@
       <app-ds-field label="Categoría" [required]="true">
         <app-ds-select
           [value]="pf().categoriaId"
+          [disabled]="soloPresentacion()"
           (valueChange)="setCampo('categoriaId', $event)"
           [options]="categoriaOptions()"
         />
@@ -48,6 +37,7 @@
             [rows]="2"
             placeholder="Descripción comercial del producto"
             [value]="pf().descripcion"
+            [disabled]="soloPresentacion()"
             (valueChange)="setCampo('descripcion', $event)"
           />
         </app-ds-field>
@@ -60,6 +50,7 @@
       <app-ds-switch
         label="Marcar como producto destacado"
         [checked]="pf().destacado"
+        [disabled]="soloPresentacion()"
         (checkedChange)="setDestacado($event)"
       />
       <span class="min-w-[220px] flex-1 text-ds-sm text-muted-foreground">{{ nota() }}</span>
@@ -190,12 +181,14 @@
         </div>
       }
 
-      <div class="bg-muted px-4 py-3">
-        <app-ds-button variant="secondary" size="sm" (clicked)="agregarPres()">
-          <span icon><app-ds-icon [img]="LucidePlus" [size]="16" /></span>
-          Agregar presentación
-        </app-ds-button>
-      </div>
+      @if (!soloPresentacion()) {
+        <div class="bg-muted px-4 py-3">
+          <app-ds-button variant="secondary" size="sm" (clicked)="agregarPres()">
+            <span icon><app-ds-icon [img]="LucidePlus" [size]="16" /></span>
+            Agregar presentación
+          </app-ds-button>
+        </div>
+      }
     </div>
   </div>
 

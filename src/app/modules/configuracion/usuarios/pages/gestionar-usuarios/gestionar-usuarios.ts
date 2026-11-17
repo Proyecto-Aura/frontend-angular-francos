@@ -21,7 +21,7 @@ import {
 import { catchError, debounceTime, distinctUntilChanged, finalize, of, switchMap, tap } from 'rxjs';
 
 import { AuthService } from '../../../../auth/services/auth.service';
-import { AvisoBanner } from '../../../../ventas/catalogo/components/aviso-banner/aviso-banner';
+import { Alert, AlertTone } from '../../../../../shared/ds/alert/alert';
 import { Avatar } from '../../../../../shared/ds/avatar/avatar';
 import { Badge, BadgeTone } from '../../../../../shared/ds/badge/badge';
 import { Breadcrumb, BreadcrumbItem } from '../../../../../shared/ds/breadcrumb/breadcrumb';
@@ -67,7 +67,7 @@ const FILTROS_INICIALES: FiltrosUsuarios = { busqueda: '', rol: '', estado: '', 
 
 @Component({
   imports: [
-    AvisoBanner,
+    Alert,
     Avatar,
     Badge,
     Breadcrumb,
@@ -93,6 +93,19 @@ export class GestionarUsuarios implements OnInit, AfterViewInit {
   private usuariosService = inject(UsuariosService);
   private authService = inject(AuthService);
   private destroyRef = inject(DestroyRef);
+
+  toast = signal<{ tone: AlertTone; title: string; description?: string } | null>(null);
+  private toastTimer: ReturnType<typeof setTimeout> | null = null;
+  cerrarToast(): void {
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    this.toastTimer = null;
+    this.toast.set(null);
+  }
+  private mostrarToast(tone: AlertTone, title: string, description?: string): void {
+    this.cerrarToast();
+    this.toast.set({ tone, title, description });
+    this.toastTimer = setTimeout(() => this.cerrarToast(), 4500);
+  }
 
   @ViewChild('usuarioCell', { static: true }) usuarioCellTpl!: TemplateRef<RowCtx>;
   @ViewChild('rolCell', { static: true }) rolCellTpl!: TemplateRef<RowCtx>;
@@ -166,6 +179,7 @@ export class GestionarUsuarios implements OnInit, AfterViewInit {
   protected readonly usuarioADesactivar = signal<Usuario | null>(null);
 
   constructor() {
+    this.destroyRef.onDestroy(() => this.cerrarToast());
     // La búsqueda espera a que se deje de escribir antes de consultar.
     toObservable(this.busqueda)
       .pipe(debounceTime(300), distinctUntilChanged(), takeUntilDestroyed())
@@ -316,12 +330,20 @@ export class GestionarUsuarios implements OnInit, AfterViewInit {
       modo === 'nuevo'
         ? `Usuario ${usuario.nombreCompleto} creado correctamente`
         : `Usuario ${usuario.nombreCompleto} actualizado`,
+      'ok',
+      modo === 'nuevo' ? 'Nuevo usuario registrado' : 'Usuario actualizado',
+      usuario.nombreCompleto,
     );
     this.recargar();
   }
 
   protected alDesactivar(usuario: Usuario): void {
-    this.mostrarAviso(`Usuario ${usuario.nombreCompleto} desactivado`);
+    this.mostrarAviso(
+      `Usuario ${usuario.nombreCompleto} desactivado`,
+      'ok',
+      'Usuario desactivado',
+      usuario.nombreCompleto,
+    );
     this.recargar();
   }
 
@@ -331,7 +353,12 @@ export class GestionarUsuarios implements OnInit, AfterViewInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (reactivado) => {
-          this.mostrarAviso(`Usuario ${reactivado.nombreCompleto} reactivado`);
+          this.mostrarAviso(
+            `Usuario ${reactivado.nombreCompleto} reactivado`,
+            'ok',
+            'Usuario reactivado',
+            reactivado.nombreCompleto,
+          );
           this.recargar();
         },
         error: (error: unknown) =>
@@ -342,11 +369,18 @@ export class GestionarUsuarios implements OnInit, AfterViewInit {
       });
   }
 
-  protected mostrarAviso(mensaje: string, tono: 'ok' | 'error' = 'ok'): void {
+  protected mostrarAviso(
+    mensaje: string,
+    tono: 'ok' | 'error' = 'ok',
+    titulo = mensaje,
+    descripcion?: string,
+  ): void {
     this.aviso.set({ mensaje, tono });
+    this.mostrarToast(tono === 'ok' ? 'success' : 'error', titulo, descripcion);
   }
 
   protected cerrarAviso(): void {
+    this.cerrarToast();
     this.aviso.set({ mensaje: '', tono: 'ok' });
   }
 

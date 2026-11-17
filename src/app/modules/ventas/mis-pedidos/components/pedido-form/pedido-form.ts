@@ -1,6 +1,7 @@
 import {
   Component,
   DestroyRef,
+  OnDestroy,
   computed,
   effect,
   inject,
@@ -10,9 +11,10 @@ import {
   untracked,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { LucideCircleAlert, LucidePlus, LucideTrash2 } from '@lucide/angular';
+import { LucidePlus, LucideTrash2 } from '@lucide/angular';
 import { Subscription, finalize } from 'rxjs';
 
+import { Alert, AlertTone } from '../../../../../shared/ds/alert/alert';
 import { Button } from '../../../../../shared/ds/button/button';
 import { Field } from '../../../../../shared/ds/field/field';
 import { Icon } from '../../../../../shared/ds/icon/icon';
@@ -20,6 +22,8 @@ import { IconButton } from '../../../../../shared/ds/icon-button/icon-button';
 import { Input } from '../../../../../shared/ds/input/input';
 import { Modal } from '../../../../../shared/ds/modal/modal';
 import { Select, SelectOption } from '../../../../../shared/ds/select/select';
+
+const DEMORA_AUTOCIERRE_TOAST_MS = 4500;
 import { MetodoPagoDto, TipoEntregaDto } from '../../interfaces/pedido-dto.interface';
 import {
   ClienteOpcion,
@@ -30,7 +34,6 @@ import {
   ResultadoGuardado,
   TIPOS_ENTREGA,
   itemVacio,
-  metodoPagoLabel,
   money,
   pedidoFormVacio,
   precioEstimado,
@@ -44,11 +47,11 @@ import { mensajeDeErrorPedido } from '../../utils/error-api';
 
 /** RF-A032: registro manual de un pedido por el operador de ventas. */
 @Component({
-  imports: [Button, Field, Icon, IconButton, Input, Modal, Select],
+  imports: [Alert, Button, Field, Icon, IconButton, Input, Modal, Select],
   selector: 'app-pedido-form',
   templateUrl: './pedido-form.html',
 })
-export class PedidoForm {
+export class PedidoForm implements OnDestroy {
   private pedidosService = inject(PedidosService);
   private culqiCheckout = inject(CulqiCheckoutService);
   private destroyRef = inject(DestroyRef);
@@ -60,7 +63,6 @@ export class PedidoForm {
 
   readonly LucidePlus = LucidePlus;
   readonly LucideTrash2 = LucideTrash2;
-  readonly LucideCircleAlert = LucideCircleAlert;
 
   protected readonly money = money;
   protected readonly culqiDisponible = this.culqiCheckout.disponible;
@@ -70,10 +72,21 @@ export class PedidoForm {
   protected presentaciones = signal<PresentacionOpcion[]>([]);
   protected cargandoOpciones = signal(false);
   protected errorOpciones = signal(false);
-  protected errores = signal<string[]>([]);
-  /** Mensaje de la API o de Culqi cuando no se pudo registrar (el formulario sigue abierto). */
-  protected errorApi = signal('');
   protected guardando = signal(false);
+
+  // Alerta dentro del propio modal: campos sin completar o error de la API/Culqi (el formulario sigue abierto).
+  protected toast = signal<{ tone: AlertTone; title: string; description?: string } | null>(null);
+  private toastTimer: ReturnType<typeof setTimeout> | null = null;
+
+  private mostrarToast(tone: AlertTone, title: string, description?: string): void {
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    this.toast.set({ tone, title, description });
+    this.toastTimer = setTimeout(() => this.toast.set(null), DEMORA_AUTOCIERRE_TOAST_MS);
+  }
+
+  ngOnDestroy(): void {
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+  }
 
   private culqiSub: Subscription | null = null;
 
@@ -84,8 +97,8 @@ export class PedidoForm {
       untracked(() => {
         if (!abierto) return;
         this.pf.set(pedidoFormVacio());
-        this.errores.set([]);
-        this.errorApi.set('');
+        if (this.toastTimer) clearTimeout(this.toastTimer);
+        this.toast.set(null);
         this.guardando.set(false);
         this.cargarOpciones();
       });
@@ -203,9 +216,10 @@ export class PedidoForm {
 
     const form = this.pf();
     const errores = validarPedido(form);
-    this.errorApi.set('');
-    this.errores.set(errores);
-    if (errores.length) return;
+    if (errores.length) {
+      this.mostrarToast('warning', 'Faltan campos por completar', `Revisa: ${errores.join(', ')}.`);
+      return;
+    }
 
     if (form.metodoPago === 'culqi') {
       // Primero el cliente paga en el checkout; con el token, la API cobra y registra.
@@ -216,7 +230,8 @@ export class PedidoForm {
         .subscribe({
           next: (token) => this.enviar(form, token),
           error: (error: unknown) =>
-            this.errorApi.set(
+            this.mostrarToast(
+              'error',
               error instanceof Error ? error.message : 'Culqi no pudo procesar el pago.',
             ),
         });
@@ -238,12 +253,14 @@ export class PedidoForm {
         next: (pedido) => {
           this.registrado.emit({
             tono: 'ok',
-            mensaje: `Pedido ${pedido.codigo} registrado · total ${money(pedido.total)} · pago ${metodoPagoLabel(form.metodoPago).toLowerCase()} confirmado.`,
+            titulo: 'Nuevo pedido registrado',
+            mensaje: pedido.codigo,
           });
           this.closed.emit();
         },
         error: (error: unknown) =>
-          this.errorApi.set(
+          this.mostrarToast(
+            'error',
             mensajeDeErrorPedido(error, 'No se pudo registrar el pedido. Intente nuevamente.'),
           ),
       });

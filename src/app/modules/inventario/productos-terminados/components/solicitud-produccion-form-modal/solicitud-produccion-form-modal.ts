@@ -2,6 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import {
   Component,
   DestroyRef,
+  OnDestroy,
   computed,
   effect,
   inject,
@@ -12,6 +13,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { LucideCheck, LucidePlus, LucideTrash2 } from '@lucide/angular';
 import { finalize } from 'rxjs';
+import { Alert, AlertTone } from '../../../../../shared/ds/alert/alert';
 import { Button } from '../../../../../shared/ds/button/button';
 import { Combobox } from '../../../../../shared/ds/combobox/combobox';
 import { Field } from '../../../../../shared/ds/field/field';
@@ -36,6 +38,8 @@ import {
   validarSolicitudProduccionForm,
 } from './solicitud-produccion-form.validaciones';
 
+const DEMORA_AUTOCIERRE_TOAST_MS = 4500;
+
 // Form de "Nueva solicitud a produccion" (OFT0-261) — conectado a
 // POST /solicitudes-produccion. El catalogo de producto usa
 // "productoTerminadoId" (no ProductoPresentacion.id, son dos PKs
@@ -44,16 +48,17 @@ import {
 // MovimientoProductoTerminadoFormModal: se filtran del combobox los
 // productos sin ese id resuelto (caso rarisimo).
 @Component({
-  imports: [Button, Combobox, Field, Icon, IconButton, Input, Modal],
+  imports: [Alert, Button, Combobox, Field, Icon, IconButton, Input, Modal],
   selector: 'app-solicitud-produccion-form-modal',
   templateUrl: './solicitud-produccion-form-modal.html',
 })
-export class SolicitudProduccionFormModal {
+export class SolicitudProduccionFormModal implements OnDestroy {
   private productoService = inject(ProductoPresentacionService);
   private solicitudService = inject(SolicitudProduccionService);
   private destroyRef = inject(DestroyRef);
   private estabaAbierto = false;
   private siguienteFilaId = 1;
+  private toastTimer: ReturnType<typeof setTimeout> | null = null;
 
   open = input(false);
   closed = output<void>();
@@ -89,8 +94,19 @@ export class SolicitudProduccionFormModal {
   );
 
   errores = signal<SolicitudProduccionFormErrores>({});
-  errorGeneral = signal<string | null>(null);
+  // Alerta dentro del propio modal: campos sin completar o error de la API (el formulario sigue abierto).
+  toast = signal<{ tone: AlertTone; title: string; description?: string } | null>(null);
   guardando = signal(false);
+
+  private mostrarToast(tone: AlertTone, title: string, description?: string): void {
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    this.toast.set({ tone, title, description });
+    this.toastTimer = setTimeout(() => this.toast.set(null), DEMORA_AUTOCIERRE_TOAST_MS);
+  }
+
+  ngOnDestroy(): void {
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+  }
 
   constructor() {
     effect(() => {
@@ -160,9 +176,21 @@ export class SolicitudProduccionFormModal {
     };
     const errores = validarSolicitudProduccionForm(form);
     this.errores.set(errores);
-    this.errorGeneral.set(null);
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    this.toast.set(null);
 
-    if (Object.keys(errores).length > 0 || this.generandoCodigo() || !this.codigoPreview()) {
+    if (Object.keys(errores).length > 0) {
+      const partes: string[] = [];
+      if (errores.fechaLimite) partes.push('fecha límite');
+      if (errores.filas) partes.push(errores.filas);
+      if (errores.porFila && Object.keys(errores.porFila).length > 0) {
+        partes.push('producto o cantidad de alguna fila');
+      }
+      this.mostrarToast('warning', 'Faltan campos por completar', `Revisa: ${partes.join(', ')}.`);
+      return;
+    }
+
+    if (this.generandoCodigo() || !this.codigoPreview()) {
       return;
     }
 
@@ -216,18 +244,19 @@ export class SolicitudProduccionFormModal {
     this.filas.set([filaDetalleSolicitudProduccionVacia(this.siguienteFilaId++)]);
     this.codigoPreview.set('');
     this.errores.set({});
-    this.errorGeneral.set(null);
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    this.toast.set(null);
     this.guardando.set(false);
   }
 
   private manejarError(error: unknown): void {
     if (!(error instanceof HttpErrorResponse)) {
-      this.errorGeneral.set('No se pudo crear la solicitud. Intente nuevamente.');
+      this.mostrarToast('error', 'No se pudo crear la solicitud. Intente nuevamente.');
       return;
     }
 
     if (error.status === 401 || error.status === 403) {
-      this.errorGeneral.set('No tiene permisos para crear solicitudes.');
+      this.mostrarToast('error', 'No tiene permisos para crear solicitudes.');
       return;
     }
 
@@ -244,16 +273,16 @@ export class SolicitudProduccionFormModal {
     // regenera para que la persona pueda reintentar sin recargar el
     // formulario — mismo criterio que LoteFormModal.
     if (error.status === 409 && mensajeMin.includes('codigo')) {
-      this.errorGeneral.set('Ese código de solicitud ya existe. Generando uno nuevo…');
+      this.mostrarToast('error', 'Ese código de solicitud ya existe. Generando uno nuevo…');
       this.regenerarCodigo();
       return;
     }
 
     if (error.status === 400 || error.status === 409) {
-      this.errorGeneral.set(mensaje || 'No se pudo crear la solicitud. Intente nuevamente.');
+      this.mostrarToast('error', mensaje || 'No se pudo crear la solicitud. Intente nuevamente.');
       return;
     }
 
-    this.errorGeneral.set('No se pudo crear la solicitud. Intente nuevamente.');
+    this.mostrarToast('error', 'No se pudo crear la solicitud. Intente nuevamente.');
   }
 }

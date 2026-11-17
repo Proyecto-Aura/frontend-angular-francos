@@ -1,3 +1,13 @@
+@if (toast(); as t) {
+  <div class="fixed top-6 right-6 z-50 w-full max-w-md">
+    <app-ds-alert
+      [tone]="t.tone"
+      [title]="t.title"
+      [description]="t.description ?? null"
+      [closable]="false"
+    />
+  </div>
+}
 <div class="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(240px,1fr)_minmax(0,2fr)]">
   <app-ds-card title="Roles" subtitle="Seleccione un rol para ver sus permisos">
     <ul class="flex flex-col gap-2" aria-label="Roles">
@@ -35,8 +45,6 @@
 
   <app-ds-card [title]="titulo()" subtitle="Módulos y pantallas a los que puede entrar este rol">
     <div class="flex flex-col gap-4">
-      <app-aviso-banner [texto]="aviso().mensaje" [tono]="aviso().tono" (closed)="cerrarAviso()" />
-
       @if (cargandoArbol()) {
         <p class="p-6 text-center text-ds-base text-muted-foreground">Cargando permisos…</p>
       } @else if (errorArbol()) {

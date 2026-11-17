@@ -2,6 +2,7 @@ import {
   AfterViewInit,
   Component,
   DestroyRef,
+  OnDestroy,
   OnInit,
   TemplateRef,
   ViewChild,
@@ -18,6 +19,7 @@ import {
   LucideUserPlus,
 } from '@lucide/angular';
 import { finalize } from 'rxjs';
+import { Alert, AlertTone } from '../../../../../shared/ds/alert/alert';
 import { Avatar } from '../../../../../shared/ds/avatar/avatar';
 import { Badge, BadgeTone } from '../../../../../shared/ds/badge/badge';
 import { Button } from '../../../../../shared/ds/button/button';
@@ -29,7 +31,6 @@ import { Input } from '../../../../../shared/ds/input/input';
 import { Modal } from '../../../../../shared/ds/modal/modal';
 import { Pagination } from '../../../../../shared/ds/pagination/pagination';
 import { Select, SelectOption } from '../../../../../shared/ds/select/select';
-import { AvisoBanner } from '../../../catalogo/components/aviso-banner/aviso-banner';
 import { ClienteDetalleModal } from '../../components/cliente-detalle-modal/cliente-detalle-modal';
 import { ClienteFormModal } from '../../components/cliente-form-modal/cliente-form-modal';
 import {
@@ -42,11 +43,13 @@ import {
 import { ClienteService } from '../../services/cliente.service';
 
 const MENSAJE_ERROR_ESTADO = 'No se pudo cambiar el estado del cliente. Intente nuevamente.';
+const DEMORA_AUTOCIERRE_TOAST_MS = 4500;
+const DEMORA_SALIDA_TOAST_MS = 300;
 
 @Component({
   imports: [
+    Alert,
     Avatar,
-    AvisoBanner,
     Badge,
     Button,
     Card,
@@ -63,7 +66,7 @@ const MENSAJE_ERROR_ESTADO = 'No se pudo cambiar el estado del cliente. Intente 
   selector: 'app-listar-clientes',
   templateUrl: './listar-clientes.html',
 })
-export class ListarClientes implements OnInit, AfterViewInit {
+export class ListarClientes implements OnInit, AfterViewInit, OnDestroy {
   private clienteService = inject(ClienteService);
   private destroyRef = inject(DestroyRef);
 
@@ -123,8 +126,11 @@ export class ListarClientes implements OnInit, AfterViewInit {
   /** El pie ("n de N clientes" y paginación) solo aparece cuando hay resultados que contar. */
   mostrarPie = computed(() => !this.cargando() && !this.errorCarga() && this.total() > 0);
 
-  aviso = signal('');
-  avisoTono = signal<'ok' | 'error'>('ok');
+  // Toast flotante arriba a la derecha: éxito (verde) o error de la API (rojo).
+  toast = signal<{ tone: AlertTone; title: string; description?: string } | null>(null);
+  toastVisible = signal(false);
+  private toastTimer: ReturnType<typeof setTimeout> | null = null;
+  private toastSalidaTimer: ReturnType<typeof setTimeout> | null = null;
 
   modalFormAbierto = signal(false);
   clienteEnEdicion = signal<Cliente | null>(null);
@@ -253,8 +259,8 @@ export class ListarClientes implements OnInit, AfterViewInit {
     this.clienteEnDetalle.set(cliente);
   }
 
-  clienteGuardado(aviso: string): void {
-    this.mostrarAviso(aviso, 'ok');
+  clienteGuardado(aviso: { titulo: string; mensaje: string }): void {
+    this.mostrarToast('success', aviso.titulo, aviso.mensaje);
     this.cargarClientes();
   }
 
@@ -285,10 +291,10 @@ export class ListarClientes implements OnInit, AfterViewInit {
       )
       .subscribe({
         next: () => {
-          this.mostrarAviso(`Cliente ${nombreCliente(cliente)} desactivado.`, 'ok');
+          this.mostrarToast('success', `Cliente ${nombreCliente(cliente)} desactivado.`);
           this.cargarClientes();
         },
-        error: () => this.mostrarAviso(MENSAJE_ERROR_ESTADO, 'error'),
+        error: () => this.mostrarToast('error', MENSAJE_ERROR_ESTADO),
       });
   }
 
@@ -298,15 +304,32 @@ export class ListarClientes implements OnInit, AfterViewInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: () => {
-          this.mostrarAviso(`Cliente ${nombreCliente(cliente)} reactivado.`, 'ok');
+          this.mostrarToast('success', `Cliente ${nombreCliente(cliente)} reactivado.`);
           this.cargarClientes();
         },
-        error: () => this.mostrarAviso(MENSAJE_ERROR_ESTADO, 'error'),
+        error: () => this.mostrarToast('error', MENSAJE_ERROR_ESTADO),
       });
   }
 
-  private mostrarAviso(texto: string, tono: 'ok' | 'error'): void {
-    this.aviso.set(texto);
-    this.avisoTono.set(tono);
+  private mostrarToast(tone: AlertTone, title: string, description?: string): void {
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    if (this.toastSalidaTimer) clearTimeout(this.toastSalidaTimer);
+
+    this.toast.set({ tone, title, description });
+    this.toastVisible.set(false);
+    requestAnimationFrame(() => requestAnimationFrame(() => this.toastVisible.set(true)));
+
+    this.toastTimer = setTimeout(() => this.cerrarToast(), DEMORA_AUTOCIERRE_TOAST_MS);
+  }
+
+  cerrarToast(): void {
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    this.toastVisible.set(false);
+    this.toastSalidaTimer = setTimeout(() => this.toast.set(null), DEMORA_SALIDA_TOAST_MS);
+  }
+
+  ngOnDestroy(): void {
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    if (this.toastSalidaTimer) clearTimeout(this.toastSalidaTimer);
   }
 }

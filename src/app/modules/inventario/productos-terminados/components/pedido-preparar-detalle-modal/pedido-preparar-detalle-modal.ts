@@ -1,6 +1,7 @@
 import {
   Component,
   DestroyRef,
+  OnDestroy,
   TemplateRef,
   ViewChild,
   computed,
@@ -13,6 +14,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { LucideEye, LucidePackageCheck } from '@lucide/angular';
 import { Subscription, finalize } from 'rxjs';
+import { Alert, AlertTone } from '../../../../../shared/ds/alert/alert';
 import { Badge, BadgeTone } from '../../../../../shared/ds/badge/badge';
 import { Button } from '../../../../../shared/ds/button/button';
 import { Card } from '../../../../../shared/ds/card/card';
@@ -32,6 +34,8 @@ import {
   tonoEstadoPedidoPreparar,
 } from '../../mappers/pedido-preparar.mapper';
 import { PedidoPrepararService } from '../../services/pedido-preparar.service';
+
+const DEMORA_AUTOCIERRE_TOAST_MS = 4500;
 
 interface Campo {
   label: string;
@@ -74,14 +78,15 @@ interface FilaItem {
 // mismo shape que obtener() (confirmado por el backend) — se usa esa
 // respuesta directamente en vez de volver a pedir el detalle.
 @Component({
-  imports: [Badge, Button, Card, CellStack, DataTable, Icon, Input, Modal],
+  imports: [Alert, Badge, Button, Card, CellStack, DataTable, Icon, Input, Modal],
   selector: 'app-pedido-preparar-detalle-modal',
   templateUrl: './pedido-preparar-detalle-modal.html',
 })
-export class PedidoPrepararDetalleModal {
+export class PedidoPrepararDetalleModal implements OnDestroy {
   private pedidoService = inject(PedidoPrepararService);
   private destroyRef = inject(DestroyRef);
   private cargaSub: Subscription | null = null;
+  private toastTimer: ReturnType<typeof setTimeout> | null = null;
 
   @ViewChild('productoCell', { static: true })
   productoCellTpl!: TemplateRef<{ $implicit: FilaItem; index: number }>;
@@ -99,9 +104,9 @@ export class PedidoPrepararDetalleModal {
   // icono de la fila cuando el pedido ya esta "en_preparacion").
   modo = input<'ver' | 'preparar'>('ver');
   closed = output<void>();
-  // Se emite cuando una transicion de estado se aplica (o rebota en 409 y
-  // hay que refrescar igual) — el listado vuelve a pedir pagina + indicadores.
-  actualizado = output<void>();
+  // Se emite cuando una transicion de estado se aplica — el listado vuelve a
+  // pedir pagina + indicadores y la pagina muestra el toast con este titulo/nombre.
+  actualizado = output<{ titulo: string; mensaje: string }>();
 
   readonly LucideEye = LucideEye;
 
@@ -111,7 +116,9 @@ export class PedidoPrepararDetalleModal {
   cargando = signal(false);
   error = signal(false);
   avanzando = signal(false);
-  errorAvance = signal('');
+
+  // Alerta dentro del propio modal: error al confirmar la entrega (el modal sigue abierto).
+  toast = signal<{ tone: AlertTone; title: string } | null>(null);
 
   // Cantidad preparada editable por item, keyed por item.id — se
   // resincroniza con "cantidad solicitada" cada vez que se carga un pedido
@@ -165,11 +172,12 @@ export class PedidoPrepararDetalleModal {
     });
   }
 
-  cargar(id: number, conservarErrorAvance = false): void {
+  cargar(id: number): void {
     this.cargaSub?.unsubscribe();
     this.cargando.set(true);
     this.error.set(false);
-    if (!conservarErrorAvance) this.errorAvance.set('');
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    this.toast.set(null);
 
     this.cargaSub = this.pedidoService
       .obtener(id)
@@ -318,7 +326,8 @@ export class PedidoPrepararDetalleModal {
     }
 
     this.avanzando.set(true);
-    this.errorAvance.set('');
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    this.toast.set(null);
 
     const cantidades = this.cantidadesPreparadas();
     const items = p.items.map((i) => ({
@@ -338,14 +347,15 @@ export class PedidoPrepararDetalleModal {
         // la misma tabla editable y el mismo boton sobre un pedido que ya
         // cambio de estado, un segundo click hubiera fallado.
         next: () => {
-          this.actualizado.emit();
+          this.actualizado.emit({ titulo: 'Pedido listo para entrega', mensaje: p.codigo });
           this.cerrar();
         },
         // 409 aca significa stock insuficiente en alguna linea (no se crea
         // nada) — no recargamos, para no perder las cantidades que el
         // operario esta ajustando.
         error: (error) => {
-          this.errorAvance.set(
+          this.mostrarToast(
+            'error',
             error.status === 409
               ? 'No hay stock suficiente para alguna línea. Ajusta las cantidades e intenta de nuevo.'
               : error.status === 400
@@ -356,12 +366,23 @@ export class PedidoPrepararDetalleModal {
       });
   }
 
+  private mostrarToast(tone: AlertTone, title: string): void {
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    this.toast.set({ tone, title });
+    this.toastTimer = setTimeout(() => this.toast.set(null), DEMORA_AUTOCIERRE_TOAST_MS);
+  }
+
+  ngOnDestroy(): void {
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+  }
+
   cerrar(): void {
     this.cargaSub?.unsubscribe();
     this.pedido.set(null);
     this.cantidadesPreparadas.set(new Map());
     this.error.set(false);
-    this.errorAvance.set('');
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    this.toast.set(null);
     this.closed.emit();
   }
 

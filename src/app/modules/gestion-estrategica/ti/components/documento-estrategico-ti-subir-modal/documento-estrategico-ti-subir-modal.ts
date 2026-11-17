@@ -1,3 +1,5 @@
+import { Alert } from '../../../../../shared/ds/alert/alert';
+import { crearAlertaTemporal } from '../../../../../shared/ds/alert/alerta-temporal';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, DestroyRef, effect, inject, input, output, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -20,7 +22,7 @@ import { DocumentoEstrategico } from '../../../negocio/interfaces/documento-estr
 import { DocumentoEstrategicoTiService } from '../../services/documento-estrategico-ti.service';
 
 @Component({
-  imports: [Button, Field, Icon, IconButton, Input, Modal],
+  imports: [Alert, Button, Field, Icon, IconButton, Input, Modal],
   selector: 'app-documento-estrategico-ti-subir-modal',
   templateUrl: './documento-estrategico-ti-subir-modal.html',
 })
@@ -47,6 +49,26 @@ export class DocumentoEstrategicoTiSubirModal {
   readonly errorGeneral = signal<string | null>(null);
   readonly arrastrando = signal(false);
   readonly guardando = signal(false);
+
+  private alertas = crearAlertaTemporal(() => this.errorGeneral.set(null));
+  toast = this.alertas.toast;
+  private mostrarErrorAlerta(mensaje: string | null): void {
+    if (!mensaje) {
+      this.alertas.limpiar();
+      return;
+    }
+    this.alertas.mostrar('error', mensaje);
+    this.errorGeneral.set(mensaje);
+  }
+  private advertirCampos(): void {
+    const mensaje = this.errorGeneral();
+    this.alertas.mostrar(
+      'warning',
+      'Faltan campos por completar',
+      'Revisa los campos marcados antes de guardar.',
+    );
+    this.errorGeneral.set(mensaje);
+  }
 
   constructor() {
     effect(() => {
@@ -100,12 +122,15 @@ export class DocumentoEstrategicoTiSubirModal {
           : null,
     );
     this.errorArchivo.set(archivo ? null : 'Selecciona un archivo.');
-    this.errorGeneral.set(null);
-    if (!nombre || nombre.length > 200 || !archivo) return;
+    this.mostrarErrorAlerta(null);
+    if (!nombre || nombre.length > 200 || !archivo) {
+      this.advertirCampos();
+      return;
+    }
 
     const planId = this.planId();
     if (planId === null) {
-      this.errorGeneral.set('No se pudo subir el documento. Intente nuevamente.');
+      this.mostrarErrorAlerta('No se pudo subir el documento. Intente nuevamente.');
       return;
     }
 
@@ -141,14 +166,14 @@ export class DocumentoEstrategicoTiSubirModal {
     this.archivo.set(null);
     this.errorNombre.set(null);
     this.errorArchivo.set(null);
-    this.errorGeneral.set(null);
+    this.mostrarErrorAlerta(null);
     this.arrastrando.set(false);
     this.guardando.set(false);
   }
 
   private manejarError(error: unknown): void {
     if (!(error instanceof HttpErrorResponse)) {
-      this.errorGeneral.set('No se pudo subir el documento. Intente nuevamente.');
+      this.mostrarErrorAlerta('No se pudo subir el documento. Intente nuevamente.');
       return;
     }
 
@@ -159,7 +184,7 @@ export class DocumentoEstrategicoTiSubirModal {
       return;
     }
     if (error.status === 409 && mensajeNormalizado.includes('borrador')) {
-      this.errorGeneral.set(mensaje);
+      this.mostrarErrorAlerta(mensaje);
       return;
     }
     if (error.status === 400) {
@@ -167,10 +192,10 @@ export class DocumentoEstrategicoTiSubirModal {
       return;
     }
     if (error.status === 401 || error.status === 403) {
-      this.errorGeneral.set('No tiene permisos para gestionar documentos estratégicos.');
+      this.mostrarErrorAlerta('No tiene permisos para gestionar documentos estratégicos.');
       return;
     }
-    this.errorGeneral.set('No se pudo subir el documento. Intente nuevamente.');
+    this.mostrarErrorAlerta('No se pudo subir el documento. Intente nuevamente.');
   }
 
   private mensajeDeError(error: HttpErrorResponse): string {

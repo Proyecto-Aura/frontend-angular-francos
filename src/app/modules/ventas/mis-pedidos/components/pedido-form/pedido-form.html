@@ -17,27 +17,13 @@
     </div>
   } @else {
     <div class="flex flex-col gap-5">
-      @if (errores().length) {
-        <div
-          role="alert"
-          class="flex items-start gap-3 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-ds-sm text-destructive"
-        >
-          <app-ds-icon [img]="LucideCircleAlert" [size]="17" />
-          <div class="min-w-0 flex-1">
-            <p class="font-semibold">Revisa los datos del pedido</p>
-            <p class="mt-1">Falta o es inválido: {{ errores().join(', ') }}.</p>
-          </div>
-        </div>
-      }
-
-      @if (errorApi()) {
-        <div
-          role="alert"
-          class="flex items-start gap-3 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-ds-sm text-destructive"
-        >
-          <app-ds-icon [img]="LucideCircleAlert" [size]="17" />
-          <p class="min-w-0 flex-1">{{ errorApi() }}</p>
-        </div>
+      @if (toast(); as t) {
+        <app-ds-alert
+          [tone]="t.tone"
+          [title]="t.title"
+          [description]="t.description ?? null"
+          [closable]="false"
+        />
       }
 
       <app-ds-field label="Cliente" [required]="true" htmlFor="pedido-cliente">

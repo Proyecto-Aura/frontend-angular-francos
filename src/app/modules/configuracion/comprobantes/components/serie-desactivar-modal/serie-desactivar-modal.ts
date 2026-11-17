@@ -1,3 +1,4 @@
+import { Alert, AlertTone } from '../../../../../shared/ds/alert/alert';
 import {
   Component,
   DestroyRef,
@@ -22,7 +23,7 @@ import {
 import { SeriesComprobanteService } from '../../services/series-comprobante.service';
 
 @Component({
-  imports: [Button, Modal],
+  imports: [Alert, Button, Modal],
   selector: 'app-serie-desactivar-modal',
   templateUrl: './serie-desactivar-modal.html',
 })
@@ -44,12 +45,31 @@ export class SerieDesactivarModal {
   readonly desactivando = signal(false);
   readonly errorGeneral = signal('');
 
+  toast = signal<{ tone: AlertTone; title: string; description?: string } | null>(null);
+  private alertaTimer: ReturnType<typeof setTimeout> | null = null;
+  private limpiarAlerta(): void {
+    if (this.alertaTimer) clearTimeout(this.alertaTimer);
+    this.alertaTimer = null;
+    this.errorGeneral.set('');
+    this.toast.set(null);
+  }
+  private mostrarAlerta(tone: AlertTone, title: string, description?: string): void {
+    this.limpiarAlerta();
+    this.toast.set({ tone, title, description });
+    this.alertaTimer = setTimeout(() => this.limpiarAlerta(), 4500);
+  }
+  private mostrarError(mensaje: string): void {
+    this.mostrarAlerta('error', mensaje);
+    this.errorGeneral.set(mensaje);
+  }
+
   constructor() {
+    this.destroyRef.onDestroy(() => this.limpiarAlerta());
     effect(() => {
       const estaAbierto = this.open();
       if (estaAbierto && !this.estabaAbierto) {
         this.desactivando.set(false);
-        this.errorGeneral.set('');
+        this.limpiarAlerta();
       }
       this.estabaAbierto = estaAbierto;
     });
@@ -64,7 +84,7 @@ export class SerieDesactivarModal {
     if (!serie) return;
 
     this.desactivando.set(true);
-    this.errorGeneral.set('');
+    this.limpiarAlerta();
     this.seriesService
       .desactivar(serie.id)
       .pipe(
@@ -77,7 +97,7 @@ export class SerieDesactivarModal {
           this.closed.emit();
         },
         error: (error: unknown) =>
-          this.errorGeneral.set(
+          this.mostrarError(
             apiErrorMessage(error, 'No se pudo desactivar la serie. Intente nuevamente.'),
           ),
       });

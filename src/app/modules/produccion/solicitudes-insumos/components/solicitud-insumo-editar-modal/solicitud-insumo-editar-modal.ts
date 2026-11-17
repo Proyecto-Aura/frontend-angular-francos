@@ -1,3 +1,4 @@
+import { Alert, AlertTone } from '../../../../../shared/ds/alert/alert';
 import { HttpErrorResponse } from '@angular/common/http';
 import {
   Component,
@@ -55,7 +56,7 @@ import {
 // usuario), pero SOLO informativo/desactivado — el backend no da forma de
 // cambiar solicitud_produccion_id despues de creada la solicitud.
 @Component({
-  imports: [Button, Combobox, Field, Icon, IconButton, Input, Modal],
+  imports: [Alert, Button, Combobox, Field, Icon, IconButton, Input, Modal],
   selector: 'app-solicitud-insumo-editar-modal',
   templateUrl: './solicitud-insumo-editar-modal.html',
 })
@@ -75,7 +76,7 @@ export class SolicitudInsumoEditarModal {
   /** null = cerrado. */
   solicitudId = input<number | null>(null);
   closed = output<void>();
-  saved = output<void>();
+  saved = output<string>();
 
   readonly LucideCheck = LucideCheck;
   readonly LucidePencil = LucidePencil;
@@ -112,7 +113,26 @@ export class SolicitudInsumoEditarModal {
   errorGeneral = signal<string | null>(null);
   guardando = signal(false);
 
+  toast = signal<{ tone: AlertTone; title: string; description?: string } | null>(null);
+  private alertaTimer: ReturnType<typeof setTimeout> | null = null;
+  private limpiarAlerta(): void {
+    if (this.alertaTimer) clearTimeout(this.alertaTimer);
+    this.alertaTimer = null;
+    this.errorGeneral.set(null);
+    this.toast.set(null);
+  }
+  private mostrarAviso(tone: AlertTone, title: string, description?: string): void {
+    this.limpiarAlerta();
+    this.toast.set({ tone, title, description });
+    this.alertaTimer = setTimeout(() => this.limpiarAlerta(), 4500);
+  }
+  private mostrarError(mensaje: string): void {
+    this.mostrarAviso('error', mensaje);
+    this.errorGeneral.set(mensaje);
+  }
+
   constructor() {
+    this.destroyRef.onDestroy(() => this.limpiarAlerta());
     effect(() => {
       const id = this.solicitudId();
       if (id !== null) {
@@ -123,7 +143,7 @@ export class SolicitudInsumoEditarModal {
 
   cargar(id: number): void {
     this.cargaSub?.unsubscribe();
-    this.errorGeneral.set(null);
+    this.limpiarAlerta();
     this.errores.set({});
     this.cargandoDatos.set(true);
     this.errorCarga.set(false);
@@ -214,9 +234,16 @@ export class SolicitudInsumoEditarModal {
     const form: SolicitudInsumoForm = { fechaLimite: this.fechaLimite(), filas: this.filas() };
     const errores = validarSolicitudInsumoForm(form);
     this.errores.set(errores);
-    this.errorGeneral.set(null);
+    this.limpiarAlerta();
 
-    if (Object.keys(errores).length > 0) return;
+    if (Object.keys(errores).length > 0) {
+      this.mostrarAviso(
+        'warning',
+        'Faltan campos por completar',
+        'Revisa los campos marcados antes de guardar.',
+      );
+      return;
+    }
 
     const cambios = calcularCambiosSolicitudInsumo(
       this.fechaLimiteOriginal,
@@ -255,7 +282,7 @@ export class SolicitudInsumoEditarModal {
       )
       .subscribe({
         next: () => {
-          this.saved.emit();
+          this.saved.emit(this.codigo());
           this.closed.emit();
         },
         error: (error: unknown) => this.manejarError(error),
@@ -272,7 +299,7 @@ export class SolicitudInsumoEditarModal {
     this.insumos.set([]);
     this.errorCarga.set(false);
     this.errores.set({});
-    this.errorGeneral.set(null);
+    this.limpiarAlerta();
     this.closed.emit();
   }
 
@@ -304,17 +331,17 @@ export class SolicitudInsumoEditarModal {
 
   private manejarError(error: unknown): void {
     if (!(error instanceof HttpErrorResponse)) {
-      this.errorGeneral.set('No se pudieron guardar los cambios. Intente nuevamente.');
+      this.mostrarError('No se pudieron guardar los cambios. Intente nuevamente.');
       return;
     }
 
     if (error.status === 401 || error.status === 403) {
-      this.errorGeneral.set('No tiene permisos para editar esta solicitud.');
+      this.mostrarError('No tiene permisos para editar esta solicitud.');
       return;
     }
 
     if (error.status === 409) {
-      this.errorGeneral.set(
+      this.mostrarError(
         'La solicitud ya cambió de estado y no se puede editar. Cierre y vuelva a abrirla.',
       );
       return;
@@ -326,7 +353,7 @@ export class SolicitudInsumoEditarModal {
       : apiError?.message
         ? [apiError.message]
         : [];
-    this.errorGeneral.set(
+    this.mostrarError(
       mensajes.join(' ') || 'No se pudieron guardar los cambios. Intente nuevamente.',
     );
   }

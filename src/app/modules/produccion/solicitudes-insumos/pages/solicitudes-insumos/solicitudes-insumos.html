@@ -1,3 +1,13 @@
+@if (toast(); as t) {
+  <div class="fixed top-6 right-6 z-50 w-full max-w-md">
+    <app-ds-alert
+      [tone]="t.tone"
+      [title]="t.title"
+      [description]="t.description ?? null"
+      [closable]="false"
+    />
+  </div>
+}
 <div class="flex flex-col gap-6 p-(--page-padding)">
   <div>
     <h1 class="text-ds-2xl font-medium text-foreground">Solicitudes de insumos</h1>
@@ -106,10 +116,6 @@
     </p>
   }
 
-  @if (errorCancelacion()) {
-    <p role="alert" class="text-ds-sm text-destructive">{{ errorCancelacion() }}</p>
-  }
-
   <app-ds-card [padded]="false" [hasFooter]="totalPaginas() > 1">
     @if (cargando()) {
       <div role="status" class="p-12 text-center text-muted-foreground">Cargando…</div>
@@ -144,7 +150,7 @@
   <app-solicitud-insumo-form-modal
     [open]="modalAbierto()"
     (closed)="cerrarForm()"
-    (saved)="solicitudCreada()"
+    (saved)="solicitudCreada($event)"
   />
 
   <app-solicitud-insumo-detalle-modal
@@ -155,7 +161,7 @@
   <app-solicitud-insumo-editar-modal
     [solicitudId]="solicitudEditarId()"
     (closed)="cerrarEditar()"
-    (saved)="solicitudEditada()"
+    (saved)="solicitudEditada($event)"
   />
 </div>
 

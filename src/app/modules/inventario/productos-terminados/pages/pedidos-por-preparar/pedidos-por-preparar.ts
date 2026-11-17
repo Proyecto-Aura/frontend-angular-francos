@@ -2,6 +2,7 @@ import {
   AfterViewInit,
   Component,
   DestroyRef,
+  OnDestroy,
   OnInit,
   TemplateRef,
   ViewChild,
@@ -20,6 +21,7 @@ import {
   LucideSearch,
 } from '@lucide/angular';
 import { finalize } from 'rxjs';
+import { Alert, AlertTone } from '../../../../../shared/ds/alert/alert';
 import { Avatar } from '../../../../../shared/ds/avatar/avatar';
 import { Badge, BadgeTone } from '../../../../../shared/ds/badge/badge';
 import { Button } from '../../../../../shared/ds/button/button';
@@ -65,6 +67,9 @@ const RESUMEN_VACIO: ResumenPedidosPorPreparar = {
   pendienteEntrega: 0,
 };
 
+const DEMORA_AUTOCIERRE_TOAST_MS = 4500;
+const DEMORA_SALIDA_TOAST_MS = 300;
+
 // "Pedidos por preparar" (OFT0-260, fila de acciones agregada en OFT0-262):
 // vista de inventario sobre los pedidos de venta que ya pasaron por
 // confirmacion y esperan que el operario de productos terminados los
@@ -84,6 +89,7 @@ const RESUMEN_VACIO: ResumenPedidosPorPreparar = {
 // confirme/ajuste cantidades por item).
 @Component({
   imports: [
+    Alert,
     Avatar,
     Badge,
     Button,
@@ -102,7 +108,7 @@ const RESUMEN_VACIO: ResumenPedidosPorPreparar = {
   selector: 'app-pedidos-por-preparar',
   templateUrl: './pedidos-por-preparar.html',
 })
-export class PedidosPorPreparar implements OnInit, AfterViewInit {
+export class PedidosPorPreparar implements OnInit, AfterViewInit, OnDestroy {
   private pedidoService = inject(PedidoPrepararService);
   private destroyRef = inject(DestroyRef);
 
@@ -130,7 +136,34 @@ export class PedidosPorPreparar implements OnInit, AfterViewInit {
   // directo desde la fila, sin pasar por el modal) — deshabilita esa fila
   // para evitar doble click mientras responde.
   iniciandoId = signal<number | null>(null);
-  errorIniciar = signal('');
+
+  // Toast flotante arriba a la derecha: éxito (verde) o error de la API (rojo).
+  toast = signal<{ tone: AlertTone; title: string; description?: string } | null>(null);
+  toastVisible = signal(false);
+  private toastTimer: ReturnType<typeof setTimeout> | null = null;
+  private toastSalidaTimer: ReturnType<typeof setTimeout> | null = null;
+
+  private mostrarToast(tone: AlertTone, title: string, description?: string): void {
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    if (this.toastSalidaTimer) clearTimeout(this.toastSalidaTimer);
+
+    this.toast.set({ tone, title, description });
+    this.toastVisible.set(false);
+    requestAnimationFrame(() => requestAnimationFrame(() => this.toastVisible.set(true)));
+
+    this.toastTimer = setTimeout(() => this.cerrarToast(), DEMORA_AUTOCIERRE_TOAST_MS);
+  }
+
+  cerrarToast(): void {
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    this.toastVisible.set(false);
+    this.toastSalidaTimer = setTimeout(() => this.toast.set(null), DEMORA_SALIDA_TOAST_MS);
+  }
+
+  ngOnDestroy(): void {
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    if (this.toastSalidaTimer) clearTimeout(this.toastSalidaTimer);
+  }
 
   readonly tamanioPagina = 10;
 
@@ -271,7 +304,8 @@ export class PedidosPorPreparar implements OnInit, AfterViewInit {
     this.pedidoDetalleId.set(null);
   }
 
-  pedidoActualizado(): void {
+  pedidoActualizado(aviso: { titulo: string; mensaje: string }): void {
+    this.mostrarToast('success', aviso.titulo, aviso.mensaje);
     this.recargarTodo();
   }
 
@@ -292,7 +326,6 @@ export class PedidosPorPreparar implements OnInit, AfterViewInit {
     if (fila.disponibilidad !== 'completo' || this.iniciandoId() !== null) return;
 
     this.iniciandoId.set(fila.pedido.id);
-    this.errorIniciar.set('');
     this.pedidoService
       .marcarEnPreparacion(fila.pedido.id)
       .pipe(
@@ -300,9 +333,13 @@ export class PedidosPorPreparar implements OnInit, AfterViewInit {
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
-        next: () => this.recargarTodo(),
+        next: () => {
+          this.mostrarToast('success', 'Pedido en preparación', fila.codigo);
+          this.recargarTodo();
+        },
         error: (error) => {
-          this.errorIniciar.set(
+          this.mostrarToast(
+            'error',
             error.status === 409
               ? 'El pedido ya cambió de estado. Se actualizará la lista.'
               : 'No se pudo iniciar la preparación. Intenta nuevamente.',

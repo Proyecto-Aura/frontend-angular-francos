@@ -1,0 +1,38 @@
+<div
+  class="flex gap-3 rounded-lg px-5 py-4"
+  [style.background]="colores().bg"
+  [attr.role]="tone() === 'error' ? 'alert' : 'status'"
+>
+  <span
+    class="inline-flex size-9 flex-none items-center justify-center rounded-md text-white"
+    [class]="insignia()"
+  >
+    <app-ds-icon [img]="icono()" [size]="18" />
+  </span>
+
+  <div class="flex min-w-0 flex-1 flex-col gap-1">
+    <p class="text-ds-xs font-semibold tracking-wide uppercase" [style.color]="colores().fg">
+      {{ etiqueta() }}
+    </p>
+    <p class="text-ds-base font-semibold text-foreground">{{ title() }}</p>
+    @if (description()) {
+      <p class="text-ds-sm text-muted-foreground">{{ description() }}</p>
+    }
+    @if (linkLabel()) {
+      <button
+        type="button"
+        class="mt-1 cursor-pointer self-start text-ds-sm font-semibold underline decoration-2 underline-offset-2"
+        [style.color]="colores().fg"
+        (click)="linkClick.emit()"
+      >
+        {{ linkLabel() }} →
+      </button>
+    }
+  </div>
+
+  @if (closable()) {
+    <app-ds-icon-button label="Cerrar alerta" variant="ghost" size="sm" (clicked)="closed.emit()">
+      <app-ds-icon [img]="LucideX" [size]="16" />
+    </app-ds-icon-button>
+  }
+</div>

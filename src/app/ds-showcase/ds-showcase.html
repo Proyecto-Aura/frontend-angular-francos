@@ -1,8 +1,22 @@
 <div class="min-h-screen bg-background text-foreground">
+  @if (toastAlert(); as toast) {
+    <div
+      class="fixed top-6 right-6 z-50 w-full max-w-md transition-transform duration-300 ease-out"
+      [class]="toastVisible() ? 'translate-x-0' : 'translate-x-[120%]'"
+    >
+      <app-ds-alert
+        [tone]="toast.tone"
+        [title]="toast.title"
+        [description]="toast.description"
+        [closable]="false"
+      />
+    </div>
+  }
+
   <header class="border-b border-border bg-card px-(--page-padding) py-6">
     <h1 class="text-ds-2xl font-medium text-foreground">Catálogo de componentes</h1>
     <p class="mt-1 text-ds-sm text-muted-foreground">
-      Franco's Portal Empresarial · design system · ejemplo de uso de los 25 componentes
+      Franco's Portal Empresarial · design system · ejemplo de uso de los 26 componentes
     </p>
   </header>
 
@@ -46,6 +60,37 @@
         <div class="flex flex-wrap items-center gap-3">
           @for (b of badgeTones; track b.tone) {
             <app-ds-badge [tone]="b.tone" [dot]="true">{{ b.label }}</app-ds-badge>
+          }
+        </div>
+      </app-ds-card>
+
+      <app-ds-card
+        title="Alertas"
+        subtitle="Tono según el resultado: éxito, error, advertencia e información — mensaje y descripción dinámicos"
+      >
+        <div class="flex flex-col gap-3">
+          @for (a of alertDemos(); track a.title; let i = $index) {
+            <app-ds-alert
+              [tone]="a.tone"
+              [title]="a.title"
+              [description]="a.description"
+              [linkLabel]="a.linkLabel ?? null"
+              (closed)="dismissAlertDemo(i)"
+            />
+          }
+          @if (alertDemos().length === 0) {
+            <p class="text-ds-sm text-muted-foreground">Cerraste todas las alertas de ejemplo.</p>
+          }
+        </div>
+
+        <p class="mt-5 text-ds-sm text-muted-foreground">
+          Como toast (arriba a la derecha, se esconde sola a los 4 segundos):
+        </p>
+        <div class="mt-2 flex flex-wrap gap-2">
+          @for (a of alertDemos(); track a.title) {
+            <app-ds-button size="sm" variant="secondary" (clicked)="mostrarToast(a)">
+              {{ a.title }}
+            </app-ds-button>
           }
         </div>
       </app-ds-card>

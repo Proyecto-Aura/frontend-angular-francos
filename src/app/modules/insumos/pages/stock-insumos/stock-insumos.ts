@@ -1,3 +1,5 @@
+import { MovimientoInsumo } from '../../interfaces/movimiento-insumo.interface';
+import { Alert, AlertTone } from '../../../../shared/ds/alert/alert';
 import { MovimientoInsumoService } from '../../services/movimiento-insumo.service';
 import {
   AfterViewInit,
@@ -92,6 +94,7 @@ const NIVEL_TONE: Record<NivelStock, BadgeTone> = {
 
 @Component({
   imports: [
+    Alert,
     Badge,
     Button,
     Card,
@@ -119,6 +122,22 @@ export class StockInsumos implements OnInit, AfterViewInit {
   private insumoService = inject(InsumoService);
   private loteService = inject(LoteInsumoService);
   private destroyRef = inject(DestroyRef);
+  constructor() {
+    this.destroyRef.onDestroy(() => this.cerrarToast());
+  }
+
+  toast = signal<{ tone: AlertTone; title: string; description?: string } | null>(null);
+  private toastTimer: ReturnType<typeof setTimeout> | null = null;
+  cerrarToast(): void {
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    this.toastTimer = null;
+    this.toast.set(null);
+  }
+  private mostrarToast(tone: AlertTone, title: string, description?: string): void {
+    this.cerrarToast();
+    this.toast.set({ tone, title, description });
+    this.toastTimer = setTimeout(() => this.cerrarToast(), 4500);
+  }
 
   @ViewChild('insumoCell', { static: true })
   insumoCellTpl!: TemplateRef<{ $implicit: Insumo; index: number }>;
@@ -360,7 +379,12 @@ export class StockInsumos implements OnInit, AfterViewInit {
     this.insumoEnEdicion.set(null);
   }
 
-  insumoGuardado(): void {
+  insumoGuardado(insumo?: Insumo): void {
+    this.mostrarToast(
+      'success',
+      this.insumoEnEdicion() ? 'Insumo actualizado' : 'Nuevo insumo registrado',
+      insumo ? `${insumo.sku} \u00b7 ${insumo.nombre}` : undefined,
+    );
     this.cerrarFormInsumo();
     this.recargarTodo();
   }
@@ -373,7 +397,12 @@ export class StockInsumos implements OnInit, AfterViewInit {
     this.modalLoteAbierto.set(false);
   }
 
-  loteGuardado(): void {
+  loteGuardado(lote?: { codigoLote: string; insumoNombre: string }): void {
+    this.mostrarToast(
+      'success',
+      'Lote registrado',
+      lote ? [lote.codigoLote, lote.insumoNombre].filter(Boolean).join(' \u00b7 ') : undefined,
+    );
     this.cerrarFormLote();
     this.recargarTodo();
   }
@@ -388,7 +417,12 @@ export class StockInsumos implements OnInit, AfterViewInit {
     this.insumoParaMovimiento.set(null);
   }
 
-  movimientoGuardado(): void {
+  movimientoGuardado(movimientos: MovimientoInsumo[] = []): void {
+    this.mostrarToast(
+      'success',
+      movimientos.length ? 'Movimiento registrado' : 'Entrega registrada',
+      [...new Set(movimientos.map((m) => m.insumoNombre))].join(', ') || undefined,
+    );
     this.cargarMovimientosTotal();
     this.cerrarFormMovimiento();
     this.recargarTodo();
@@ -400,14 +434,44 @@ export class StockInsumos implements OnInit, AfterViewInit {
       this.insumoService
         .desactivar(insumo.id)
         .pipe(takeUntilDestroyed(this.destroyRef))
-        .subscribe(() => this.recargarTodo());
+        .subscribe({
+          next: () => {
+            this.mostrarToast(
+              'success',
+              insumo.estado ? 'Insumo desactivado' : 'Insumo activado',
+              insumo.nombre,
+            );
+            this.recargarTodo();
+          },
+          error: () =>
+            this.mostrarToast(
+              'error',
+              'No se pudo cambiar el estado del insumo',
+              'Intenta nuevamente.',
+            ),
+        });
       return;
     }
 
     this.insumoService
       .activar(insumo.id)
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => this.recargarTodo());
+      .subscribe({
+        next: () => {
+          this.mostrarToast(
+            'success',
+            insumo.estado ? 'Insumo desactivado' : 'Insumo activado',
+            insumo.nombre,
+          );
+          this.recargarTodo();
+        },
+        error: () =>
+          this.mostrarToast(
+            'error',
+            'No se pudo cambiar el estado del insumo',
+            'Intenta nuevamente.',
+          ),
+      });
   }
 
   nivel(insumo: Insumo): NivelStock {

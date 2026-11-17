@@ -14,18 +14,13 @@
   </span>
 
   <div class="flex flex-col gap-4">
-    @if (errores().length) {
-      <div
-        class="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-ds-sm text-destructive"
-        role="alert"
-      >
-        <p class="font-semibold">Revisa estos campos:</p>
-        <ul class="mt-1 list-disc pl-4">
-          @for (e of errores(); track e) {
-            <li>{{ e }}</li>
-          }
-        </ul>
-      </div>
+    @if (toast(); as t) {
+      <app-ds-alert
+        [tone]="t.tone"
+        [title]="t.title"
+        [description]="t.description ?? null"
+        [closable]="false"
+      />
     }
 
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -244,15 +239,6 @@
         El usuario y la contraseña iniciales son el número de documento; el cliente debe cambiarlos
         al ingresar por primera vez.
       </p>
-    }
-
-    @if (errorGeneral()) {
-      <div
-        class="rounded-lg bg-destructive/10 px-3.5 py-3 text-ds-sm text-destructive"
-        role="alert"
-      >
-        {{ errorGeneral() }}
-      </div>
     }
   </div>
 

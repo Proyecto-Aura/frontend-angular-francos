@@ -2,7 +2,7 @@ import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angula
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Observable, catchError, finalize, forkJoin, map, of } from 'rxjs';
 
-import { AvisoBanner } from '../../../../ventas/catalogo/components/aviso-banner/aviso-banner';
+import { Alert, AlertTone } from '../../../../../shared/ds/alert/alert';
 import { Badge } from '../../../../../shared/ds/badge/badge';
 import { Breadcrumb, BreadcrumbItem } from '../../../../../shared/ds/breadcrumb/breadcrumb';
 import { Button } from '../../../../../shared/ds/button/button';
@@ -33,7 +33,7 @@ type ResultadoFallido = Extract<Resultado, { ok: false }>;
  */
 @Component({
   imports: [
-    AvisoBanner,
+    Alert,
     Badge,
     Breadcrumb,
     Button,
@@ -47,6 +47,22 @@ type ResultadoFallido = Extract<Resultado, { ok: false }>;
 export class GestionarParametrosVentas implements OnInit {
   private service = inject(ParametrosVentasService);
   private destroyRef = inject(DestroyRef);
+  constructor() {
+    this.destroyRef.onDestroy(() => this.cerrarToast());
+  }
+
+  toast = signal<{ tone: AlertTone; title: string; description?: string } | null>(null);
+  private toastTimer: ReturnType<typeof setTimeout> | null = null;
+  cerrarToast(): void {
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    this.toastTimer = null;
+    this.toast.set(null);
+  }
+  private mostrarToast(tone: AlertTone, title: string, description?: string): void {
+    this.cerrarToast();
+    this.toast.set({ tone, title, description });
+    this.toastTimer = setTimeout(() => this.cerrarToast(), 4500);
+  }
 
   protected readonly migas: BreadcrumbItem[] = [
     { label: 'Configuración' },
@@ -168,7 +184,14 @@ export class GestionarParametrosVentas implements OnInit {
     if (!guardado || !editado || this.guardando()) return;
 
     this.intentoGuardar.set(true);
-    if (Object.keys(this.errores()).length > 0) return;
+    if (Object.keys(this.errores()).length > 0) {
+      this.mostrarToast(
+        'warning',
+        'Faltan campos por completar',
+        'Revisa los campos marcados antes de guardar.',
+      );
+      return;
+    }
     if (this.umbralesInvalidos() > 0) {
       this.mostrarAviso('Corrige los umbrales propios marcados antes de guardar.', 'error');
       return;
@@ -252,11 +275,18 @@ export class GestionarParametrosVentas implements OnInit {
     }
   }
 
-  protected mostrarAviso(mensaje: string, tono: 'ok' | 'error' = 'ok'): void {
+  protected mostrarAviso(
+    mensaje: string,
+    tono: 'ok' | 'error' = 'ok',
+    titulo = mensaje,
+    descripcion?: string,
+  ): void {
     this.aviso.set({ mensaje, tono });
+    this.mostrarToast(tono === 'ok' ? 'success' : 'error', titulo, descripcion);
   }
 
   protected cerrarAviso(): void {
+    this.cerrarToast();
     this.aviso.set({ mensaje: '', tono: 'ok' });
   }
 }

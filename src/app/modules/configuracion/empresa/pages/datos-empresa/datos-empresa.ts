@@ -11,7 +11,7 @@ import {
 import { Observable, finalize, of, switchMap, tap } from 'rxjs';
 import { LucideUpload } from '@lucide/angular';
 
-import { AvisoBanner } from '../../../../ventas/catalogo/components/aviso-banner/aviso-banner';
+import { Alert, AlertTone } from '../../../../../shared/ds/alert/alert';
 import { Breadcrumb, BreadcrumbItem } from '../../../../../shared/ds/breadcrumb/breadcrumb';
 import { Button } from '../../../../../shared/ds/button/button';
 import { Card } from '../../../../../shared/ds/card/card';
@@ -30,12 +30,25 @@ import {
 import { EmpresaService } from '../../services/empresa.service';
 
 @Component({
-  imports: [AvisoBanner, Breadcrumb, Button, Card, Field, Icon, Input],
+  imports: [Alert, Breadcrumb, Button, Card, Field, Icon, Input],
   selector: 'app-datos-empresa',
   templateUrl: './datos-empresa.html',
 })
 export class DatosEmpresa implements OnInit, OnDestroy {
   private empresaService = inject(EmpresaService);
+
+  toast = signal<{ tone: AlertTone; title: string; description?: string } | null>(null);
+  private toastTimer: ReturnType<typeof setTimeout> | null = null;
+  cerrarToast(): void {
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    this.toastTimer = null;
+    this.toast.set(null);
+  }
+  private mostrarToast(tone: AlertTone, title: string, description?: string): void {
+    this.cerrarToast();
+    this.toast.set({ tone, title, description });
+    this.toastTimer = setTimeout(() => this.cerrarToast(), 4500);
+  }
 
   protected readonly LucideUpload = LucideUpload;
   protected readonly migas: BreadcrumbItem[] = [
@@ -85,6 +98,7 @@ export class DatosEmpresa implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.cerrarToast();
     this.liberarPrevia();
   }
 
@@ -122,6 +136,7 @@ export class DatosEmpresa implements OnInit, OnDestroy {
     const error = validarLogo(archivo);
     if (error) {
       this.logoError.set(error);
+      this.mostrarToast('warning', 'Logo no válido', error);
       return;
     }
 
@@ -145,13 +160,20 @@ export class DatosEmpresa implements OnInit, OnDestroy {
   descartar(): void {
     this.aplicarGuardada(this.base());
     this.intentoGuardar.set(false);
-    this.errorGuardar.set('');
+    this.mostrarErrorGuardar('');
   }
 
   guardar(): void {
     this.intentoGuardar.set(true);
-    this.errorGuardar.set('');
-    if (Object.keys(validarEmpresa(this.form())).length > 0) return;
+    this.mostrarErrorGuardar('');
+    if (Object.keys(validarEmpresa(this.form())).length > 0) {
+      this.mostrarToast(
+        'warning',
+        'Faltan campos por completar',
+        'Revisa los campos marcados antes de guardar.',
+      );
+      return;
+    }
 
     this.guardando.set(true);
     const archivo = this.logoArchivo();
@@ -174,12 +196,19 @@ export class DatosEmpresa implements OnInit, OnDestroy {
           this.aplicarGuardada(empresa);
           this.intentoGuardar.set(false);
           this.aviso.set('Los datos de la empresa se guardaron correctamente.');
+          this.mostrarToast('success', 'Datos de la empresa actualizados', empresa.razonSocial);
         },
         error: (err: unknown) =>
-          this.errorGuardar.set(
+          this.mostrarErrorGuardar(
             apiErrorMessage(err, 'No se pudieron guardar los cambios. Inténtalo nuevamente.'),
           ),
       });
+  }
+
+  private mostrarErrorGuardar(mensaje: string): void {
+    this.errorGuardar.set(mensaje);
+    if (mensaje) this.mostrarToast('error', mensaje);
+    else this.cerrarToast();
   }
 
   private aplicarGuardada(empresa: Empresa | null): void {

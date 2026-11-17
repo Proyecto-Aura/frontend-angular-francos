@@ -1,3 +1,4 @@
+import { Alert } from '../../../../shared/ds/alert/alert';
 import {
   Component,
   DestroyRef,
@@ -82,7 +83,7 @@ interface FilaDetalle {
 // solicitado) — mismo criterio que PedidoPrepararDetalleModal: el badge por
 // linea no se repite ahi porque ya se ve el numero editable al lado.
 @Component({
-  imports: [Badge, Button, Card, CellStack, DataTable, Icon, Input, Modal],
+  imports: [Alert, Badge, Button, Card, CellStack, DataTable, Icon, Input, Modal],
   selector: 'app-solicitud-insumo-detalle-modal',
   templateUrl: './solicitud-insumo-detalle-modal.html',
 })
@@ -109,7 +110,7 @@ export class SolicitudInsumoDetalleModal {
   closed = output<void>();
   // Se emite cuando "Registrar entrega" se aplica — el listado vuelve a
   // pedir pagina + indicadores.
-  entregaRegistrada = output<void>();
+  entregaRegistrada = output<string>();
 
   readonly LucideEye = LucideEye;
 
@@ -357,7 +358,7 @@ export class SolicitudInsumoDetalleModal {
       )
       .subscribe({
         next: () => {
-          this.entregaRegistrada.emit();
+          this.entregaRegistrada.emit(s.codigo);
           this.cerrar();
         },
         error: (error: unknown) => {

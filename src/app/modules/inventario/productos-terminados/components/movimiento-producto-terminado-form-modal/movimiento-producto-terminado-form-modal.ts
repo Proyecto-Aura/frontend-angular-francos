@@ -2,6 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import {
   Component,
   DestroyRef,
+  OnDestroy,
   computed,
   effect,
   inject,
@@ -12,6 +13,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { LucideArrowLeftRight, LucidePlus, LucideTrash2 } from '@lucide/angular';
 import { Subscription, finalize } from 'rxjs';
+import { Alert, AlertTone } from '../../../../../shared/ds/alert/alert';
 import { Button } from '../../../../../shared/ds/button/button';
 import { Combobox } from '../../../../../shared/ds/combobox/combobox';
 import { Field } from '../../../../../shared/ds/field/field';
@@ -39,6 +41,8 @@ import {
   MovimientoProductoTerminadoFormErrores,
   validarMovimientoProductoTerminadoForm,
 } from './movimiento-producto-terminado.validaciones';
+
+const DEMORA_AUTOCIERRE_TOAST_MS = 4500;
 
 const TIPOS_MOVIMIENTO: SelectOption[] = [
   { value: 'entrada', label: 'Entrada' },
@@ -68,11 +72,11 @@ export interface DesgloseFefoProductoTerminado {
 }
 
 @Component({
-  imports: [Button, Combobox, Field, Icon, IconButton, Input, Modal, Select],
+  imports: [Alert, Button, Combobox, Field, Icon, IconButton, Input, Modal, Select],
   selector: 'app-movimiento-producto-terminado-form-modal',
   templateUrl: './movimiento-producto-terminado-form-modal.html',
 })
-export class MovimientoProductoTerminadoFormModal {
+export class MovimientoProductoTerminadoFormModal implements OnDestroy {
   private productoService = inject(ProductoPresentacionService);
   private loteService = inject(LoteProductoTerminadoService);
   private movimientoService = inject(MovimientoProductoTerminadoService);
@@ -80,6 +84,7 @@ export class MovimientoProductoTerminadoFormModal {
   private destroyRef = inject(DestroyRef);
   private estabaAbierto = false;
   private siguienteFilaId = 1;
+  private toastTimer: ReturnType<typeof setTimeout> | null = null;
   private cargaPedidoSub: Subscription | null = null;
 
   open = input(false);
@@ -88,7 +93,7 @@ export class MovimientoProductoTerminadoFormModal {
   // la persona igual puede cambiarlo o agregar mas filas de otros productos.
   productoPreseleccionado = input<ProductoPresentacion | null>(null);
   closed = output<void>();
-  saved = output<MovimientoProductoTerminado[]>();
+  saved = output<{ titulo: string; mensaje: string }>();
 
   readonly LucideArrowLeftRight = LucideArrowLeftRight;
   readonly LucidePlus = LucidePlus;
@@ -159,8 +164,19 @@ export class MovimientoProductoTerminadoFormModal {
   );
 
   errores = signal<MovimientoProductoTerminadoFormErrores>({});
-  errorGeneral = signal<string | null>(null);
+  // Alerta dentro del propio modal: campos sin completar o error de la API (el formulario sigue abierto).
+  toast = signal<{ tone: AlertTone; title: string; description?: string } | null>(null);
   guardando = signal(false);
+
+  private mostrarToast(tone: AlertTone, title: string, description?: string): void {
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    this.toast.set({ tone, title, description });
+    this.toastTimer = setTimeout(() => this.toast.set(null), DEMORA_AUTOCIERRE_TOAST_MS);
+  }
+
+  ngOnDestroy(): void {
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+  }
 
   constructor() {
     effect(() => {
@@ -203,7 +219,8 @@ export class MovimientoProductoTerminadoFormModal {
     // Codex).
     this.cargaPedidoSub?.unsubscribe();
     this.pedidoBuscado.set(valor);
-    this.errorGeneral.set(null);
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    this.toast.set(null);
 
     if (!valor) {
       this.pedido.set(null);
@@ -246,7 +263,7 @@ export class MovimientoProductoTerminadoFormModal {
         error: () => {
           this.pedido.set(null);
           this.limpiarFilasDePedido();
-          this.errorGeneral.set('No se pudo cargar el pedido. Intenta nuevamente.');
+          this.mostrarToast('error', 'No se pudo cargar el pedido. Intenta nuevamente.');
         },
       });
   }
@@ -472,9 +489,19 @@ export class MovimientoProductoTerminadoFormModal {
     }
 
     this.errores.set(errores);
-    this.errorGeneral.set(null);
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    this.toast.set(null);
 
-    if (Object.keys(errores).length > 0) return;
+    if (Object.keys(errores).length > 0) {
+      const partes: string[] = [];
+      if (errores.motivoGeneral) partes.push('motivo general');
+      if (errores.filas) partes.push(errores.filas);
+      if (errores.porFila && Object.keys(errores.porFila).length > 0) {
+        partes.push('producto, lote o cantidad de alguna fila');
+      }
+      this.mostrarToast('warning', 'Faltan campos por completar', `Revisa: ${partes.join(', ')}.`);
+      return;
+    }
 
     this.guardando.set(true);
     const razon = form.motivoGeneral;
@@ -513,8 +540,16 @@ export class MovimientoProductoTerminadoFormModal {
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
-        next: (movimientos) => {
-          this.saved.emit(movimientos);
+        next: (movimientos: MovimientoProductoTerminado[]) => {
+          const productos = Array.from(
+            new Set(
+              movimientos.map(
+                (m) =>
+                  `${m.productoNombre} · ${etiquetaPresentacion(m.presentacionCantidad, m.presentacionUnidadMedida)}`,
+              ),
+            ),
+          ).join(', ');
+          this.saved.emit({ titulo: 'Movimiento registrado', mensaje: productos });
           this.closed.emit();
         },
         error: (error: unknown) => this.manejarError(error),
@@ -536,13 +571,15 @@ export class MovimientoProductoTerminadoFormModal {
     // un producto_presentacion_id valido con una fila vacia en pantalla,
     // sin que la persona se entere de que algo no cuadra.
     if (this.filas().some((fila) => !fila.productoTerminadoId)) {
-      this.errorGeneral.set(
+      this.mostrarToast(
+        'error',
         'No se pudo identificar algún producto de este pedido en el catálogo. Contacta a soporte.',
       );
       return;
     }
 
-    this.errorGeneral.set(null);
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    this.toast.set(null);
     this.guardando.set(true);
 
     // Las filas se crearon con id = item.id del pedido (ver seleccionarPedido)
@@ -563,7 +600,7 @@ export class MovimientoProductoTerminadoFormModal {
       )
       .subscribe({
         next: () => {
-          this.saved.emit([]);
+          this.saved.emit({ titulo: 'Pedido listo para entrega', mensaje: pedido.codigo });
           this.closed.emit();
         },
         error: (error: unknown) => this.manejarErrorPedido(error),
@@ -572,18 +609,19 @@ export class MovimientoProductoTerminadoFormModal {
 
   private manejarErrorPedido(error: unknown): void {
     if (!(error instanceof HttpErrorResponse)) {
-      this.errorGeneral.set('No se pudo registrar la preparación. Intenta nuevamente.');
+      this.mostrarToast('error', 'No se pudo registrar la preparación. Intenta nuevamente.');
       return;
     }
 
     if (error.status === 401 || error.status === 403) {
-      this.errorGeneral.set('No tiene permisos para confirmar la entrega de este pedido.');
+      this.mostrarToast('error', 'No tiene permisos para confirmar la entrega de este pedido.');
       return;
     }
 
     // 409 aca significa stock insuficiente en alguna linea (no se crea
     // nada) — mismo criterio que pedido-preparar-detalle-modal.
-    this.errorGeneral.set(
+    this.mostrarToast(
+      'error',
       error.status === 409
         ? 'No hay stock suficiente para alguna línea. Ajusta las cantidades e intenta de nuevo.'
         : error.status === 400
@@ -680,7 +718,8 @@ export class MovimientoProductoTerminadoFormModal {
     this.lotesPorProducto.set({});
     this.cargandoLotesDe.set(new Set());
     this.errores.set({});
-    this.errorGeneral.set(null);
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    this.toast.set(null);
     this.guardando.set(false);
 
     if (productoTerminadoId) this.cargarLotesDeProducto(productoTerminadoId);
@@ -696,12 +735,12 @@ export class MovimientoProductoTerminadoFormModal {
 
   private manejarError(error: unknown): void {
     if (!(error instanceof HttpErrorResponse)) {
-      this.errorGeneral.set('No se pudo registrar el movimiento. Intente nuevamente.');
+      this.mostrarToast('error', 'No se pudo registrar el movimiento. Intente nuevamente.');
       return;
     }
 
     if (error.status === 401 || error.status === 403) {
-      this.errorGeneral.set('No tiene permisos para registrar movimientos.');
+      this.mostrarToast('error', 'No tiene permisos para registrar movimientos.');
       return;
     }
 
@@ -714,10 +753,13 @@ export class MovimientoProductoTerminadoFormModal {
     const mensaje = mensajes.join(' ');
 
     if (error.status === 400 || error.status === 404 || error.status === 409) {
-      this.errorGeneral.set(mensaje || 'No se pudo registrar el movimiento. Intente nuevamente.');
+      this.mostrarToast(
+        'error',
+        mensaje || 'No se pudo registrar el movimiento. Intente nuevamente.',
+      );
       return;
     }
 
-    this.errorGeneral.set('No se pudo registrar el movimiento. Intente nuevamente.');
+    this.mostrarToast('error', 'No se pudo registrar el movimiento. Intente nuevamente.');
   }
 }

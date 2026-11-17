@@ -226,4 +226,34 @@ describe('InsumoFormModal', () => {
     });
     req.flush(makeInsumoDto({ id: 1, nombre: 'Harina de trigo 000', stock_maximo: 500 }));
   });
+  it('muestra una alerta de advertencia dentro del modal si faltan campos', () => {
+    const fixture = openModal();
+    fixture.componentInstance.guardar();
+    fixture.detectChanges();
+    expect(fixture.componentInstance.advertencia()).toBe(true);
+    expect(fixture.nativeElement.querySelector('app-ds-alert').textContent).toContain(
+      'Faltan campos por completar',
+    );
+    httpMock.expectNone((r) => r.method === 'POST');
+  });
+  it('oculta la advertencia a los 4500 ms y reinicia el plazo al volver a guardar', () => {
+    vi.useFakeTimers();
+    try {
+      const fixture = openModal();
+      const component = fixture.componentInstance;
+      component.guardar();
+      vi.advanceTimersByTime(3000);
+      component.guardar();
+      vi.advanceTimersByTime(1500);
+      expect(component.advertencia()).toBe(true);
+      vi.advanceTimersByTime(3000);
+      fixture.detectChanges();
+      expect(component.advertencia()).toBe(false);
+      expect(fixture.nativeElement.querySelector('app-ds-alert')).toBeNull();
+      expect(component.errores().nombre).toBeTruthy();
+      fixture.destroy();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

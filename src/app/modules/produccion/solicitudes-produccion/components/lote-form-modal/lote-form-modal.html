@@ -121,10 +121,13 @@
     </app-ds-field>
   </div>
 
-  @if (errorGeneral()) {
-    <div class="mt-4 rounded-lg bg-destructive/10 px-3.5 py-3 text-ds-sm text-destructive">
-      {{ errorGeneral() }}
-    </div>
+  @if (toast(); as t) {
+    <app-ds-alert
+      [tone]="t.tone"
+      [title]="t.title"
+      [description]="t.description ?? null"
+      [closable]="false"
+    />
   }
 
   <span footer class="flex gap-2">

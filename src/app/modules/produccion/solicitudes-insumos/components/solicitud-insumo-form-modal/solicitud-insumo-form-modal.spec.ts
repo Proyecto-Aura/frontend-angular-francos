@@ -308,4 +308,21 @@ describe('SolicitudInsumoFormModal', () => {
 
     expect(component.errorGeneral()).toBe('No se pudo crear la solicitud. Intente nuevamente.');
   });
+  it('muestra la advertencia de campos incompletos y la oculta a los 4500 ms', () => {
+    vi.useFakeTimers();
+    try {
+      const fixture = openModal();
+      fixture.componentInstance.guardar();
+      fixture.detectChanges();
+      expect(fixture.componentInstance.toast()?.tone).toBe('warning');
+      expect(fixture.nativeElement.querySelector('app-ds-alert').textContent).toContain(
+        'Faltan campos por completar',
+      );
+      vi.advanceTimersByTime(4500);
+      expect(fixture.componentInstance.toast()).toBeNull();
+      fixture.destroy();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

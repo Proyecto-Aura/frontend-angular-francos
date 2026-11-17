@@ -249,10 +249,13 @@ describe('ListarClientes', () => {
   it('shows the notice and reloads the list after saving', () => {
     create();
 
-    page.clienteGuardado('Cliente registrado.');
+    page.clienteGuardado({ titulo: 'Nuevo cliente registrado', mensaje: 'Ana Vega Torres' });
 
-    expect(page.aviso()).toBe('Cliente registrado.');
-    expect(page.avisoTono()).toBe('ok');
+    expect(page.toast()).toMatchObject({
+      tone: 'success',
+      title: 'Nuevo cliente registrado',
+      description: 'Ana Vega Torres',
+    });
     flushList(expectListRequest(1), [makeClienteDto()]);
   });
 
@@ -301,8 +304,10 @@ describe('ListarClientes', () => {
 
     expect(page.procesandoEstado()).toBe(false);
     expect(page.clienteADesactivar()).toBeNull();
-    expect(page.aviso()).toBe('Cliente Ana Vega Torres desactivado.');
-    expect(page.avisoTono()).toBe('ok');
+    expect(page.toast()).toMatchObject({
+      tone: 'success',
+      title: 'Cliente Ana Vega Torres desactivado.',
+    });
     flushList(expectListRequest(1), [makeClienteDto({ estado: false })]);
   });
 
@@ -315,8 +320,10 @@ describe('ListarClientes', () => {
       .expectOne((r) => r.method === 'DELETE')
       .flush({}, { status: 500, statusText: 'Server Error' });
 
-    expect(page.aviso()).toBe('No se pudo cambiar el estado del cliente. Intente nuevamente.');
-    expect(page.avisoTono()).toBe('error');
+    expect(page.toast()).toMatchObject({
+      tone: 'error',
+      title: 'No se pudo cambiar el estado del cliente. Intente nuevamente.',
+    });
     expect(page.clienteADesactivar()).toBeNull();
   });
 
@@ -338,7 +345,10 @@ describe('ListarClientes', () => {
     );
     req.flush(makeClienteDto({ estado: true }));
 
-    expect(page.aviso()).toBe('Cliente Ana Vega Torres reactivado.');
+    expect(page.toast()).toMatchObject({
+      tone: 'success',
+      title: 'Cliente Ana Vega Torres reactivado.',
+    });
     flushList(expectListRequest(1), [makeClienteDto()]);
   });
 
@@ -350,7 +360,7 @@ describe('ListarClientes', () => {
       .expectOne((r) => r.method === 'PATCH')
       .flush({}, { status: 500, statusText: 'Server Error' });
 
-    expect(page.avisoTono()).toBe('error');
+    expect(page.toast()?.tone).toBe('error');
   });
 
   it('maps the category and the state to badge tone and label', () => {

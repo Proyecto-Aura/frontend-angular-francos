@@ -116,10 +116,15 @@
     }
   </div>
 
-  @if (errorGeneral()) {
-    <div class="mt-4 rounded-lg bg-destructive/10 px-3.5 py-3 text-ds-sm text-destructive">
-      {{ errorGeneral() }}
-    </div>
+  @if (errorGeneral(); as mensaje) {
+    <app-ds-alert tone="error" [title]="mensaje" [closable]="false" />
+  } @else if (advertencia()) {
+    <app-ds-alert
+      tone="warning"
+      title="Faltan campos por completar"
+      description="Revisa los campos marcados antes de guardar."
+      [closable]="false"
+    />
   }
 
   <span footer class="flex gap-2">

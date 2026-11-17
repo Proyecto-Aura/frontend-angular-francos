@@ -1,8 +1,18 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, DestroyRef, effect, inject, input, output, signal } from '@angular/core';
+import {
+  Component,
+  DestroyRef,
+  OnDestroy,
+  effect,
+  inject,
+  input,
+  output,
+  signal,
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { LucidePencil } from '@lucide/angular';
 import { finalize } from 'rxjs';
+import { Alert, AlertTone } from '../../../../../shared/ds/alert/alert';
 import { Button } from '../../../../../shared/ds/button/button';
 import { Field } from '../../../../../shared/ds/field/field';
 import { Icon } from '../../../../../shared/ds/icon/icon';
@@ -17,25 +27,28 @@ import { etiquetaPresentacion } from '../../mappers/producto-presentacion.mapper
 import { ProductoPresentacionService } from '../../services/producto-presentacion.service';
 import { EditarStockErrores, validarEditarStockForm } from './editar-stock.validaciones';
 
+const DEMORA_AUTOCIERRE_TOAST_MS = 4500;
+
 // SKU, nombre, descripcion, categoria, presentacion y stock actual se
 // muestran deshabilitados, solo de referencia — el PATCH de este modulo
 // unicamente acepta stock_minimo/stock_maximo (confirmado por el backend).
 // Editar el resto del producto (nombre, descripcion, categoria,
 // presentacion) es del modulo de catalogo, no de este.
 @Component({
-  imports: [Button, Field, Icon, Input, Modal, Textarea],
+  imports: [Alert, Button, Field, Icon, Input, Modal, Textarea],
   selector: 'app-editar-stock-modal',
   templateUrl: './editar-stock-modal.html',
 })
-export class EditarStockModal {
+export class EditarStockModal implements OnDestroy {
   private productoPresentacionService = inject(ProductoPresentacionService);
   private destroyRef = inject(DestroyRef);
   private productoAnterior: ProductoPresentacion | null = null;
+  private toastTimer: ReturnType<typeof setTimeout> | null = null;
 
   /** null = cerrado. */
   producto = input<ProductoPresentacion | null>(null);
   closed = output<void>();
-  saved = output<void>();
+  saved = output<ProductoPresentacion>();
 
   readonly LucidePencil = LucidePencil;
   readonly etiquetaPresentacion = etiquetaPresentacion;
@@ -44,8 +57,19 @@ export class EditarStockModal {
   stockMaximo = signal('');
 
   errores = signal<EditarStockErrores>({});
-  errorGeneral = signal<string | null>(null);
+  // Alerta dentro del propio modal: campos sin completar o error de la API (el formulario sigue abierto).
+  toast = signal<{ tone: AlertTone; title: string; description?: string } | null>(null);
   guardando = signal(false);
+
+  private mostrarToast(tone: AlertTone, title: string, description?: string): void {
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    this.toast.set({ tone, title, description });
+    this.toastTimer = setTimeout(() => this.toast.set(null), DEMORA_AUTOCIERRE_TOAST_MS);
+  }
+
+  ngOnDestroy(): void {
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+  }
 
   constructor() {
     // Prellena con los valores actuales cada vez que se abre para un
@@ -57,7 +81,8 @@ export class EditarStockModal {
         this.stockMinimo.set(String(producto.stockMinimo));
         this.stockMaximo.set(producto.stockMaximo !== null ? String(producto.stockMaximo) : '');
         this.errores.set({});
-        this.errorGeneral.set(null);
+        if (this.toastTimer) clearTimeout(this.toastTimer);
+        this.toast.set(null);
       }
       this.productoAnterior = producto;
     });
@@ -77,10 +102,17 @@ export class EditarStockModal {
     };
     const errores = validarEditarStockForm(form);
     this.errores.set(errores);
-    this.errorGeneral.set(null);
 
-    if (Object.keys(errores).length > 0) return;
+    if (Object.keys(errores).length > 0) {
+      const partes: string[] = [];
+      if (errores.stockMinimo) partes.push('stock mínimo');
+      if (errores.stockMaximo) partes.push('stock máximo');
+      this.mostrarToast('warning', 'Faltan campos por completar', `Revisa: ${partes.join(', ')}.`);
+      return;
+    }
 
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    this.toast.set(null);
     this.guardando.set(true);
     this.productoPresentacionService
       .actualizarStock(producto.id, form)
@@ -90,7 +122,7 @@ export class EditarStockModal {
       )
       .subscribe({
         next: () => {
-          this.saved.emit();
+          this.saved.emit(producto);
           this.closed.emit();
         },
         error: (error: unknown) => this.manejarError(error),
@@ -99,12 +131,12 @@ export class EditarStockModal {
 
   private manejarError(error: unknown): void {
     if (!(error instanceof HttpErrorResponse)) {
-      this.errorGeneral.set('No se pudo actualizar el stock. Intente nuevamente.');
+      this.mostrarToast('error', 'No se pudo actualizar el stock. Intente nuevamente.');
       return;
     }
 
     if (error.status === 401 || error.status === 403) {
-      this.errorGeneral.set('No tiene permisos para editar el stock.');
+      this.mostrarToast('error', 'No tiene permisos para editar el stock.');
       return;
     }
 
@@ -117,10 +149,10 @@ export class EditarStockModal {
     const mensaje = mensajes.join(' ');
 
     if (error.status === 400 || error.status === 404 || error.status === 409) {
-      this.errorGeneral.set(mensaje || 'No se pudo actualizar el stock. Intente nuevamente.');
+      this.mostrarToast('error', mensaje || 'No se pudo actualizar el stock. Intente nuevamente.');
       return;
     }
 
-    this.errorGeneral.set('No se pudo actualizar el stock. Intente nuevamente.');
+    this.mostrarToast('error', 'No se pudo actualizar el stock. Intente nuevamente.');
   }
 }

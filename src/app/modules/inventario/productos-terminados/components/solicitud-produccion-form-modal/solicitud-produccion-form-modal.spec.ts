@@ -171,6 +171,11 @@ describe('SolicitudProduccionFormModal', () => {
       fechaLimite: 'Requerido.',
       porFila: { 1: { productoTerminadoId: 'Selecciona un producto.' } },
     });
+    expect(component.toast()).toMatchObject({
+      tone: 'warning',
+      title: 'Faltan campos por completar',
+    });
+    expect(component.toast()?.description).toContain('fecha límite');
   });
 
   it('posts the solicitud with the codigo preview y el detalle mapeado a producto_terminado_id, then emits saved/closed', () => {
@@ -232,7 +237,7 @@ describe('SolicitudProduccionFormModal', () => {
       updated_at: '2026-10-30T05:38:54.653Z',
     });
 
-    expect(component.errorGeneral()).toBeNull();
+    expect(component.toast()).toBeNull();
     expect(guardados).toHaveLength(1);
     expect(guardados[0]).toMatchObject({ codigo: 'FR-SPR-001-261030-TEST', detalle: [] });
     expect(closed).toBe(1);
@@ -271,9 +276,10 @@ describe('SolicitudProduccionFormModal', () => {
         { status: 409, statusText: 'Conflict' },
       );
 
-    expect(component.errorGeneral()).toBe(
-      'Ese código de solicitud ya existe. Generando uno nuevo…',
-    );
+    expect(component.toast()).toMatchObject({
+      tone: 'error',
+      title: 'Ese código de solicitud ya existe. Generando uno nuevo…',
+    });
     expect(component.generandoCodigo()).toBe(true);
 
     httpMock
@@ -302,7 +308,10 @@ describe('SolicitudProduccionFormModal', () => {
       .expectOne(SOLICITUDES_BASE)
       .flush({ statusCode: 403, message: 'Forbidden' }, { status: 403, statusText: 'Forbidden' });
 
-    expect(component.errorGeneral()).toBe('No tiene permisos para crear solicitudes.');
+    expect(component.toast()).toMatchObject({
+      tone: 'error',
+      title: 'No tiene permisos para crear solicitudes.',
+    });
   });
 
   it('shows a generic error for an unexpected server response', () => {
@@ -321,6 +330,9 @@ describe('SolicitudProduccionFormModal', () => {
         { status: 500, statusText: 'Server Error' },
       );
 
-    expect(component.errorGeneral()).toBe('No se pudo crear la solicitud. Intente nuevamente.');
+    expect(component.toast()).toMatchObject({
+      tone: 'error',
+      title: 'No se pudo crear la solicitud. Intente nuevamente.',
+    });
   });
 });

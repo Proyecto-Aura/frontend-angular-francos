@@ -139,7 +139,7 @@ describe('EditarStockModal', () => {
       .expectOne(`${PRODUCTOS_TERMINADOS_BASE}/7`)
       .flush({ statusCode: 403, message: 'Forbidden' }, { status: 403, statusText: 'Forbidden' });
 
-    expect(component.errorGeneral()).toBe('No tiene permisos para editar el stock.');
+    expect(component.toast()?.title).toBe('No tiene permisos para editar el stock.');
   });
 
   it('shows the backend message for a 409 (stock_maximo menor que stock_minimo del lado del servidor)', () => {
@@ -154,7 +154,7 @@ describe('EditarStockModal', () => {
         { status: 409, statusText: 'Conflict' },
       );
 
-    expect(component.errorGeneral()).toBe('stock_maximo no puede ser menor que stock_minimo');
+    expect(component.toast()?.title).toBe('stock_maximo no puede ser menor que stock_minimo');
   });
 
   it('shows a generic error for an unexpected server response', () => {
@@ -169,6 +169,6 @@ describe('EditarStockModal', () => {
         { status: 500, statusText: 'Server Error' },
       );
 
-    expect(component.errorGeneral()).toBe('No se pudo actualizar el stock. Intente nuevamente.');
+    expect(component.toast()?.title).toBe('No se pudo actualizar el stock. Intente nuevamente.');
   });
 });

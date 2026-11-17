@@ -3,6 +3,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import {
   Component,
   DestroyRef,
+  OnDestroy,
   computed,
   effect,
   inject,
@@ -13,6 +14,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { LucidePencil, LucidePlus } from '@lucide/angular';
 import { finalize } from 'rxjs';
+import { Alert, AlertTone } from '../../../../../shared/ds/alert/alert';
 import { Button } from '../../../../../shared/ds/button/button';
 import { Field } from '../../../../../shared/ds/field/field';
 import { Icon } from '../../../../../shared/ds/icon/icon';
@@ -52,16 +54,18 @@ const PISTA_DOCUMENTO: Record<TipoDocumento, string> = {
 const PISTA_CORREO_ALTA = 'Recibe el correo de verificación con las credenciales por defecto.';
 const PISTA_CORREO_EDICION = 'El correo pertenece a la cuenta de acceso y no se edita aquí.';
 
+const DEMORA_AUTOCIERRE_TOAST_MS = 4500;
+
 const aOpciones = (items: UbigeoItem[]): SelectOption[] =>
   items.map((item) => ({ value: item.id, label: item.nombre }));
 
 /** Alta y edición de clientes. Sin `cliente` registra uno nuevo; con `cliente` lo edita (PATCH). */
 @Component({
-  imports: [Button, Field, Icon, Input, Modal, NgTemplateOutlet, Select],
+  imports: [Alert, Button, Field, Icon, Input, Modal, NgTemplateOutlet, Select],
   selector: 'app-cliente-form-modal',
   templateUrl: './cliente-form-modal.html',
 })
-export class ClienteFormModal {
+export class ClienteFormModal implements OnDestroy {
   private clienteService = inject(ClienteService);
   private ubigeoService = inject(UbigeoService);
   private destroyRef = inject(DestroyRef);
@@ -72,7 +76,7 @@ export class ClienteFormModal {
   cliente = input<Cliente | null>(null);
   closed = output<void>();
   /** Emite el aviso a mostrar en la página cuando el backend confirma el guardado. */
-  saved = output<string>();
+  saved = output<{ titulo: string; mensaje: string }>();
 
   readonly LucidePencil = LucidePencil;
   readonly LucidePlus = LucidePlus;
@@ -91,9 +95,21 @@ export class ClienteFormModal {
   distritoOptions = signal<SelectOption[]>([]);
 
   f = signal<ClienteForm>(clienteFormVacio());
-  errores = signal<string[]>([]);
-  errorGeneral = signal<string | null>(null);
   guardando = signal(false);
+
+  // Alerta dentro del propio modal: campos sin completar o error de la API (el formulario sigue abierto).
+  toast = signal<{ tone: AlertTone; title: string; description?: string } | null>(null);
+  private toastTimer: ReturnType<typeof setTimeout> | null = null;
+
+  private mostrarToast(tone: AlertTone, title: string, description?: string): void {
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    this.toast.set({ tone, title, description });
+    this.toastTimer = setTimeout(() => this.toast.set(null), DEMORA_AUTOCIERRE_TOAST_MS);
+  }
+
+  ngOnDestroy(): void {
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+  }
 
   modoEdicion = computed(() => this.cliente() !== null);
   titulo = computed(() => (this.modoEdicion() ? 'Editar cliente' : 'Registrar cliente'));
@@ -168,10 +184,12 @@ export class ClienteFormModal {
     const cliente = this.cliente();
     const errores = validarClienteForm(form, cliente !== null);
 
-    this.errores.set(errores);
-    this.errorGeneral.set(null);
-
     if (errores.length > 0) {
+      this.mostrarToast(
+        'warning',
+        'Revisa los datos del formulario',
+        `Revisa: ${errores.join(', ')}.`,
+      );
       return;
     }
 
@@ -186,7 +204,7 @@ export class ClienteFormModal {
         )
         .subscribe({
           next: (actualizado) =>
-            this.terminar(`Cliente ${nombreCliente(actualizado)} actualizado.`),
+            this.terminar({ titulo: 'Cliente actualizado', mensaje: nombreCliente(actualizado) }),
           error: (error: unknown) => this.manejarError(error),
         });
       return;
@@ -199,10 +217,17 @@ export class ClienteFormModal {
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
-        next: (registrado) =>
-          this.terminar(
-            `Cliente registrado · cuenta ${registrado.usuario} creada con credenciales iniciales para ${registrado.email}.`,
-          ),
+        next: () =>
+          this.terminar({
+            titulo: 'Nuevo cliente registrado',
+            mensaje: nombreCliente({
+              tipoCliente: this.esEmpresa() ? 'empresa' : 'persona_natural',
+              razonSocial: form.razonSocial,
+              nombres: form.nombres,
+              apellidoPaterno: form.apellidoPaterno,
+              apellidoMaterno: form.apellidoMaterno,
+            }),
+          }),
         error: (error: unknown) => this.manejarError(error),
       });
   }
@@ -224,7 +249,7 @@ export class ClienteFormModal {
     });
   }
 
-  private terminar(aviso: string): void {
+  private terminar(aviso: { titulo: string; mensaje: string }): void {
     this.saved.emit(aviso);
     this.closed.emit();
   }
@@ -233,8 +258,8 @@ export class ClienteFormModal {
     const cliente = this.cliente();
 
     this.f.set(cliente ? clienteAForm(cliente) : clienteFormVacio());
-    this.errores.set([]);
-    this.errorGeneral.set(null);
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    this.toast.set(null);
     this.guardando.set(false);
     this.cargarUbicaciones(cliente);
   }
@@ -251,7 +276,7 @@ export class ClienteFormModal {
         .pipe(takeUntilDestroyed(this.destroyRef))
         .subscribe({
           next: (items) => this.departamentoOptions.set(aOpciones(items)),
-          error: () => this.errorGeneral.set(MENSAJE_ERROR_UBICACION),
+          error: () => this.mostrarToast('error', MENSAJE_ERROR_UBICACION),
         });
     }
 
@@ -272,7 +297,7 @@ export class ClienteFormModal {
             this.provinciaOptions.set(aOpciones(items));
           }
         },
-        error: () => this.errorGeneral.set(MENSAJE_ERROR_UBICACION),
+        error: () => this.mostrarToast('error', MENSAJE_ERROR_UBICACION),
       });
   }
 
@@ -286,18 +311,18 @@ export class ClienteFormModal {
             this.distritoOptions.set(aOpciones(items));
           }
         },
-        error: () => this.errorGeneral.set(MENSAJE_ERROR_UBICACION),
+        error: () => this.mostrarToast('error', MENSAJE_ERROR_UBICACION),
       });
   }
 
   private manejarError(error: unknown): void {
     if (!(error instanceof HttpErrorResponse)) {
-      this.errorGeneral.set(MENSAJE_ERROR_GENERAL);
+      this.mostrarToast('error', MENSAJE_ERROR_GENERAL);
       return;
     }
 
     if (error.status === 401 || error.status === 403) {
-      this.errorGeneral.set('No tiene permisos para gestionar clientes.');
+      this.mostrarToast('error', 'No tiene permisos para gestionar clientes.');
       return;
     }
 
@@ -310,10 +335,10 @@ export class ClienteFormModal {
         : apiError?.message
           ? [apiError.message]
           : [];
-      this.errorGeneral.set(mensajes.join(' ') || MENSAJE_ERROR_GENERAL);
+      this.mostrarToast('error', mensajes.join(' ') || MENSAJE_ERROR_GENERAL);
       return;
     }
 
-    this.errorGeneral.set(MENSAJE_ERROR_GENERAL);
+    this.mostrarToast('error', MENSAJE_ERROR_GENERAL);
   }
 }

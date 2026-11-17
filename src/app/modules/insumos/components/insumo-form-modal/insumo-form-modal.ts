@@ -1,3 +1,4 @@
+import { Alert } from '../../../../shared/ds/alert/alert';
 import { HttpErrorResponse } from '@angular/common/http';
 import {
   Component,
@@ -33,7 +34,7 @@ const FORM_VACIO: InsumoForm = {
 };
 
 @Component({
-  imports: [Button, Field, Icon, Input, Modal, Select, Textarea],
+  imports: [Alert, Button, Field, Icon, Input, Modal, Select, Textarea],
   selector: 'app-insumo-form-modal',
   templateUrl: './insumo-form-modal.html',
 })
@@ -70,6 +71,7 @@ export class InsumoFormModal {
   stockMaximo = signal('');
 
   errores = signal<InsumoFormErrores>({});
+  advertencia = signal(false);
   errorGeneral = signal<string | null>(null);
   guardando = signal(false);
 
@@ -84,7 +86,29 @@ export class InsumoFormModal {
     return insumo ? `${insumo.stockActual} ${insumo.unidadMedida}` : '';
   });
 
+  private alertaTimer: ReturnType<typeof setTimeout> | null = null;
+
+  private limpiarAlerta(): void {
+    if (this.alertaTimer) clearTimeout(this.alertaTimer);
+    this.alertaTimer = null;
+    this.errorGeneral.set(null);
+    this.advertencia.set(false);
+  }
+
+  private mostrarAdvertencia(): void {
+    this.limpiarAlerta();
+    this.advertencia.set(true);
+    this.alertaTimer = setTimeout(() => this.limpiarAlerta(), 4500);
+  }
+
+  private mostrarError(mensaje: string): void {
+    this.limpiarAlerta();
+    this.errorGeneral.set(mensaje);
+    this.alertaTimer = setTimeout(() => this.limpiarAlerta(), 4500);
+  }
+
   constructor() {
+    this.destroyRef.onDestroy(() => this.limpiarAlerta());
     effect(() => {
       const estaAbierto = this.open();
       if (estaAbierto && !this.estabaAbierto) {
@@ -103,9 +127,10 @@ export class InsumoFormModal {
     const errores = validarInsumoForm(form);
 
     this.errores.set(errores);
-    this.errorGeneral.set(null);
+    this.limpiarAlerta();
 
     if (Object.keys(errores).length > 0) {
+      this.mostrarAdvertencia();
       return;
     }
 
@@ -143,7 +168,7 @@ export class InsumoFormModal {
     this.stockMinimo.set(insumo ? String(insumo.stockMinimo) : FORM_VACIO.stockMinimo);
     this.stockMaximo.set(insumo ? String(insumo.stockMaximo) : FORM_VACIO.stockMaximo);
     this.errores.set({});
-    this.errorGeneral.set(null);
+    this.limpiarAlerta();
     this.guardando.set(false);
   }
 
@@ -160,12 +185,12 @@ export class InsumoFormModal {
 
   private manejarError(error: unknown): void {
     if (!(error instanceof HttpErrorResponse)) {
-      this.errorGeneral.set('No se pudo guardar el insumo. Intente nuevamente.');
+      this.mostrarError('No se pudo guardar el insumo. Intente nuevamente.');
       return;
     }
 
     if (error.status === 401 || error.status === 403) {
-      this.errorGeneral.set('No tiene permisos para registrar insumos.');
+      this.mostrarError('No tiene permisos para registrar insumos.');
       return;
     }
 
@@ -184,10 +209,10 @@ export class InsumoFormModal {
     }
 
     if (error.status === 400 || error.status === 409) {
-      this.errorGeneral.set(mensaje || 'No se pudo guardar el insumo. Intente nuevamente.');
+      this.mostrarError(mensaje || 'No se pudo guardar el insumo. Intente nuevamente.');
       return;
     }
 
-    this.errorGeneral.set('No se pudo guardar el insumo. Intente nuevamente.');
+    this.mostrarError('No se pudo guardar el insumo. Intente nuevamente.');
   }
 }

@@ -1,3 +1,5 @@
+import { Alert } from '../../../../../shared/ds/alert/alert';
+import { crearAlertaTemporal } from '../../../../../shared/ds/alert/alerta-temporal';
 import {
   AfterViewInit,
   Component,
@@ -37,6 +39,7 @@ import { PlanEstrategicoService } from '../../services/plan-estrategico.service'
 
 @Component({
   imports: [
+    Alert,
     Badge,
     Button,
     Card,
@@ -68,6 +71,18 @@ export class PlanEstrategicoHome implements AfterViewInit, OnInit {
 
   private planService = inject(PlanEstrategicoService);
   private destroyRef = inject(DestroyRef);
+  private alertas = crearAlertaTemporal();
+  toast = this.alertas.toast;
+  private notificarExito(
+    titulo: string,
+    entidad?: { codigo?: string; nombre?: string } | null,
+  ): void {
+    this.alertas.mostrar(
+      'success',
+      titulo,
+      entidad ? [entidad.codigo, entidad.nombre].filter(Boolean).join(' \u00b7 ') : undefined,
+    );
+  }
 
   readonly LucidePlus = LucidePlus;
   readonly LucideTarget = LucideTarget;
@@ -218,13 +233,22 @@ export class PlanEstrategicoHome implements AfterViewInit, OnInit {
     this.planActivo.set(null);
   }
 
-  planGuardado(): void {
+  planGuardado(plan?: PlanEstrategico): void {
+    this.notificarExito(
+      this.modalActivo() === 'estado'
+        ? 'Estado del plan actualizado'
+        : this.planSeleccionado()
+          ? 'Plan actualizado'
+          : 'Nuevo plan registrado',
+      plan ?? this.planSeleccionado(),
+    );
     this.cerrarModal();
     this.cargarPlanes(this.pagina());
     this.cargarResumen();
   }
 
   planEliminado(): void {
+    this.notificarExito('Plan eliminado', this.planSeleccionado());
     const paginaDestino =
       this.planes().length <= 1 && this.pagina() > 1 ? this.pagina() - 1 : this.pagina();
     this.cerrarModal();

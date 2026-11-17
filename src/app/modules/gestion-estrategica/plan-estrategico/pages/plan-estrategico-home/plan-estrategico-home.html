@@ -1,3 +1,13 @@
+@if (toast(); as t) {
+  <div class="fixed top-6 right-6 z-50 w-full max-w-md">
+    <app-ds-alert
+      [tone]="t.tone"
+      [title]="t.title"
+      [description]="t.description ?? null"
+      [closable]="false"
+    />
+  </div>
+}
 <div class="flex flex-col gap-6 p-(--page-padding)">
   <div class="flex justify-between gap-4">
     <div>
@@ -109,7 +119,7 @@
     [open]="modalActivo() === 'form'"
     [plan]="planSeleccionado()"
     (closed)="cerrarModal()"
-    (saved)="planGuardado()"
+    (saved)="planGuardado($event)"
   />
 
   <app-plan-estrategico-estado-modal
@@ -117,7 +127,7 @@
     [plan]="planSeleccionado()"
     [planActivo]="planActivo()"
     (closed)="cerrarModal()"
-    (saved)="planGuardado()"
+    (saved)="planGuardado($event)"
   />
 
   <app-plan-estrategico-eliminar-modal

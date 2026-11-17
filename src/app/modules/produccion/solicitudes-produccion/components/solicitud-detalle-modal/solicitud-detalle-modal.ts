@@ -1,3 +1,4 @@
+import { Alert } from '../../../../../shared/ds/alert/alert';
 import {
   Component,
   DestroyRef,
@@ -68,7 +69,7 @@ interface FilaDetalle {
 // modal confundia — parecia que la entrega ya se habia aplicado cuando en
 // realidad solo se estaba registrando la produccion.
 @Component({
-  imports: [Badge, Button, Card, CellStack, DataTable, Icon, Modal],
+  imports: [Alert, Badge, Button, Card, CellStack, DataTable, Icon, Modal],
   selector: 'app-solicitud-detalle-modal',
   templateUrl: './solicitud-detalle-modal.html',
 })
@@ -92,7 +93,7 @@ export class SolicitudDetalleModal {
   closed = output<void>();
   // Se emite cuando "Registrar entrega" se aplica (o rebota en 409 y hay
   // que refrescar igual) — el listado vuelve a pedir pagina + indicadores.
-  entregaRegistrada = output<void>();
+  entregaRegistrada = output<{ codigo: string; conflicto?: boolean }>();
 
   readonly LucideEye = LucideEye;
 
@@ -104,7 +105,19 @@ export class SolicitudDetalleModal {
   registrando = signal(false);
   errorEntrega = signal('');
 
+  private alertaTimer: ReturnType<typeof setTimeout> | null = null;
+  private limpiarErrorEntrega(): void {
+    if (this.alertaTimer) clearTimeout(this.alertaTimer);
+    this.alertaTimer = null;
+    this.errorEntrega.set('');
+  }
+  private mostrarErrorEntrega(mensaje: string): void {
+    this.limpiarErrorEntrega();
+    this.errorEntrega.set(mensaje);
+    this.alertaTimer = setTimeout(() => this.limpiarErrorEntrega(), 4500);
+  }
   constructor() {
+    this.destroyRef.onDestroy(() => this.limpiarErrorEntrega());
     effect(() => {
       const id = this.solicitudId();
       if (id !== null) {
@@ -134,7 +147,7 @@ export class SolicitudDetalleModal {
     this.cargaSub?.unsubscribe();
     this.cargando.set(true);
     this.error.set(false);
-    this.errorEntrega.set('');
+    this.limpiarErrorEntrega();
 
     this.cargaSub = this.solicitudService
       .obtener(id)
@@ -215,7 +228,7 @@ export class SolicitudDetalleModal {
     }
 
     this.registrando.set(true);
-    this.errorEntrega.set('');
+    this.limpiarErrorEntrega();
 
     this.solicitudService
       .cambiarEstado(s.id, 'entregado')
@@ -225,17 +238,17 @@ export class SolicitudDetalleModal {
       )
       .subscribe({
         next: () => {
-          this.entregaRegistrada.emit();
+          this.entregaRegistrada.emit({ codigo: s.codigo });
           this.cerrar();
         },
         error: (error: unknown) => {
           const status = (error as { status?: number }).status;
           if (status === 409) {
-            this.entregaRegistrada.emit();
+            this.entregaRegistrada.emit({ codigo: s.codigo, conflicto: true });
             this.cerrar();
             return;
           }
-          this.errorEntrega.set('No se pudo registrar la entrega. Intenta nuevamente.');
+          this.mostrarErrorEntrega('No se pudo registrar la entrega. Intenta nuevamente.');
         },
       });
   }
@@ -244,7 +257,7 @@ export class SolicitudDetalleModal {
     this.cargaSub?.unsubscribe();
     this.solicitud.set(null);
     this.error.set(false);
-    this.errorEntrega.set('');
+    this.limpiarErrorEntrega();
     this.closed.emit();
   }
 

@@ -1,3 +1,5 @@
+import { Alert } from '../../../../../shared/ds/alert/alert';
+import { crearAlertaTemporal } from '../../../../../shared/ds/alert/alerta-temporal';
 import { HttpErrorResponse } from '@angular/common/http';
 import {
   Component,
@@ -21,7 +23,7 @@ import { ObjetivoEstrategicoService } from '../../services/objetivo-estrategico.
 import { relacionesDeObjetivo } from './objetivo-estrategico-eliminar.reglas';
 
 @Component({
-  imports: [Button, Icon, Modal],
+  imports: [Alert, Button, Icon, Modal],
   selector: 'app-objetivo-estrategico-eliminar-modal',
   templateUrl: './objetivo-estrategico-eliminar-modal.html',
 })
@@ -49,12 +51,23 @@ export class ObjetivoEstrategicoEliminarModal {
     () => this.relaciones().salientes.length > 0 || this.relaciones().entrantes.length > 0,
   );
 
+  private alertas = crearAlertaTemporal(() => this.errorGeneral.set(null));
+  toast = this.alertas.toast;
+  private mostrarErrorAlerta(mensaje: string | null): void {
+    if (!mensaje) {
+      this.alertas.limpiar();
+      return;
+    }
+    this.alertas.mostrar('error', mensaje);
+    this.errorGeneral.set(mensaje);
+  }
+
   constructor() {
     effect(() => {
       const estaAbierto = this.open();
       if (estaAbierto && !this.estabaAbierto) {
         this.eliminando.set(false);
-        this.errorGeneral.set(null);
+        this.mostrarErrorAlerta(null);
       }
       this.estabaAbierto = estaAbierto;
     });
@@ -69,7 +82,7 @@ export class ObjetivoEstrategicoEliminarModal {
     if (!objetivo || this.tieneRelaciones()) return;
 
     this.eliminando.set(true);
-    this.errorGeneral.set(null);
+    this.mostrarErrorAlerta(null);
     this.objetivoService
       .eliminar(objetivo.id)
       .pipe(
@@ -87,12 +100,12 @@ export class ObjetivoEstrategicoEliminarModal {
 
   private manejarError(error: unknown): void {
     if (!(error instanceof HttpErrorResponse)) {
-      this.errorGeneral.set('No se pudo eliminar el objetivo. Intente nuevamente.');
+      this.mostrarErrorAlerta('No se pudo eliminar el objetivo. Intente nuevamente.');
       return;
     }
 
     if (error.status === 401 || error.status === 403) {
-      this.errorGeneral.set('No tiene permisos para eliminar objetivos estratégicos.');
+      this.mostrarErrorAlerta('No tiene permisos para eliminar objetivos estratégicos.');
       return;
     }
 
@@ -104,12 +117,12 @@ export class ObjetivoEstrategicoEliminarModal {
         : [];
 
     if (error.status === 409) {
-      this.errorGeneral.set(
+      this.mostrarErrorAlerta(
         mensajes.join(' ') || 'No se pudo eliminar el objetivo. Intente nuevamente.',
       );
       return;
     }
 
-    this.errorGeneral.set('No se pudo eliminar el objetivo. Intente nuevamente.');
+    this.mostrarErrorAlerta('No se pudo eliminar el objetivo. Intente nuevamente.');
   }
 }

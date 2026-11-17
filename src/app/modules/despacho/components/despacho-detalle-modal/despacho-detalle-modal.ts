@@ -1,3 +1,4 @@
+import { Alert, AlertTone } from '../../../../shared/ds/alert/alert';
 import {
   Component,
   DestroyRef,
@@ -51,7 +52,7 @@ interface FilaItem {
 // reparto, ya ofrece "Marcar como entregado") y avisa al listado con
 // `actualizado` para que refresque sus filas y sus tarjetas.
 @Component({
-  imports: [Badge, Button, Card, CellStack, DataTable, Icon, Modal],
+  imports: [Alert, Badge, Button, Card, CellStack, DataTable, Icon, Modal],
   selector: 'app-despacho-detalle-modal',
   templateUrl: './despacho-detalle-modal.html',
 })
@@ -68,7 +69,7 @@ export class DespachoDetalleModal {
   closed = output<void>();
   // Se emite cuando una transición de estado se aplica (o rebota en 409 y hay
   // que refrescar igual): el listado vuelve a pedir su página y sus totales.
-  actualizado = output<void>();
+  actualizado = output<{ titulo: string; codigo: string } | undefined>();
 
   readonly LucideTruck = LucideTruck;
 
@@ -84,7 +85,23 @@ export class DespachoDetalleModal {
     { key: 'cantidadMostrada', header: 'Cantidad', numeric: true, strong: true },
   ]);
 
+  toast = signal<{ tone: AlertTone; title: string; description?: string } | null>(null);
+  private alertaTimer: ReturnType<typeof setTimeout> | null = null;
+  private limpiarAlerta(): void {
+    if (this.alertaTimer) clearTimeout(this.alertaTimer);
+    this.alertaTimer = null;
+    this.toast.set(null);
+    this.errorAvance.set('');
+  }
+  private mostrarAlerta(tone: AlertTone, title: string, description?: string): void {
+    this.limpiarAlerta();
+    this.toast.set({ tone, title, description });
+    if (tone !== 'success') this.errorAvance.set(title);
+    this.alertaTimer = setTimeout(() => this.limpiarAlerta(), 4500);
+  }
+
   constructor() {
+    this.destroyRef.onDestroy(() => this.limpiarAlerta());
     effect(() => {
       const id = this.pedidoId();
       if (id !== null) {
@@ -97,7 +114,7 @@ export class DespachoDetalleModal {
     this.cargaSub?.unsubscribe();
     this.cargando.set(true);
     this.error.set(false);
-    if (!conservarErrorAvance) this.errorAvance.set('');
+    if (!conservarErrorAvance) this.limpiarAlerta();
 
     this.cargaSub = this.despachoService
       .obtener(id)
@@ -222,7 +239,7 @@ export class DespachoDetalleModal {
     mensajeConflicto: string,
   ): void {
     this.avanzando.set(true);
-    this.errorAvance.set('');
+    this.limpiarAlerta();
 
     peticion
       .pipe(
@@ -231,21 +248,26 @@ export class DespachoDetalleModal {
       )
       .subscribe({
         next: (pedido) => {
-          this.pedido.set(pedido);
-          this.actualizado.emit();
+          this.actualizado.emit({
+            titulo: pedido.estado === 'en_camino' ? 'Pedido en camino' : 'Pedido entregado',
+            codigo: pedido.codigo,
+          });
+          this.cerrar();
         },
         error: (error) => {
           if (error.status === 409) {
-            this.errorAvance.set(mensajeConflicto);
+            this.mostrarAlerta('warning', mensajeConflicto, this.pedido()?.codigo);
             // El estado pudo cambiar por otra persona: se vuelve a leer para
             // que los botones coincidan con la realidad, y se refresca el
             // listado.
             this.cargar(this.pedido()?.id ?? 0, true);
-            this.actualizado.emit();
+            this.actualizado.emit(undefined);
             return;
           }
-          this.errorAvance.set(
+          this.mostrarAlerta(
+            'error',
             error.status === 404 ? 'El pedido ya no existe en despacho.' : mensajeError,
+            this.pedido()?.codigo,
           );
         },
       });
@@ -255,7 +277,7 @@ export class DespachoDetalleModal {
     this.cargaSub?.unsubscribe();
     this.pedido.set(null);
     this.error.set(false);
-    this.errorAvance.set('');
+    this.limpiarAlerta();
     this.closed.emit();
   }
 

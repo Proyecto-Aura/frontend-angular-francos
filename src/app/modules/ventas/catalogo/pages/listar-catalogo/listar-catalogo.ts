@@ -2,6 +2,7 @@ import {
   AfterViewInit,
   Component,
   DestroyRef,
+  OnDestroy,
   OnInit,
   TemplateRef,
   ViewChild,
@@ -22,6 +23,7 @@ import {
   LucideTable,
 } from '@lucide/angular';
 
+import { Alert, AlertTone } from '../../../../../shared/ds/alert/alert';
 import { Badge, BadgeTone } from '../../../../../shared/ds/badge/badge';
 import { Button } from '../../../../../shared/ds/button/button';
 import { DataTable, DsColumn } from '../../../../../shared/ds/data-table/data-table';
@@ -41,7 +43,6 @@ import {
   money,
   nf,
 } from '../../interfaces/producto.interface';
-import { AvisoBanner } from '../../components/aviso-banner/aviso-banner';
 import { ProductoDetalle } from '../../components/producto-detalle/producto-detalle';
 import { ProductoForm } from '../../components/producto-form/producto-form';
 import { CatalogoService } from '../../services/catalogo.service';
@@ -49,6 +50,8 @@ import { mensajeDeError } from '../../utils/error-api';
 
 const POR_PAGINA_TARJETAS = 12;
 const POR_PAGINA_TABLA = 5;
+const DEMORA_AUTOCIERRE_TOAST_MS = 4500;
+const DEMORA_SALIDA_TOAST_MS = 300;
 
 type Vista = 'tarjetas' | 'tabla';
 interface RowCtx {
@@ -56,11 +59,9 @@ interface RowCtx {
   index: number;
 }
 
-const SIN_AVISO: ResultadoGuardado = { mensaje: '', tono: 'ok' };
-
 @Component({
   imports: [
-    AvisoBanner,
+    Alert,
     Badge,
     Button,
     DataTable,
@@ -76,7 +77,7 @@ const SIN_AVISO: ResultadoGuardado = { mensaje: '', tono: 'ok' };
   selector: 'app-listar-catalogo',
   templateUrl: './listar-catalogo.html',
 })
-export class ListarCatalogo implements AfterViewInit, OnInit {
+export class ListarCatalogo implements AfterViewInit, OnInit, OnDestroy {
   private catalogoService = inject(CatalogoService);
   private destroyRef = inject(DestroyRef);
 
@@ -254,7 +255,34 @@ export class ListarCatalogo implements AfterViewInit, OnInit {
   protected formModo = signal<'nuevo' | 'editar' | null>(null);
   protected productoEnEdicion = signal<Producto | null>(null);
   protected skuDetalle = signal<string | null>(null);
-  protected aviso = signal<ResultadoGuardado>(SIN_AVISO);
+
+  // Toast flotante arriba a la derecha: éxito (verde) o error de la API (rojo).
+  protected toast = signal<{ tone: AlertTone; title: string; description?: string } | null>(null);
+  protected toastVisible = signal(false);
+  private toastTimer: ReturnType<typeof setTimeout> | null = null;
+  private toastSalidaTimer: ReturnType<typeof setTimeout> | null = null;
+
+  private mostrarToast(tone: AlertTone, title: string, description?: string): void {
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    if (this.toastSalidaTimer) clearTimeout(this.toastSalidaTimer);
+
+    this.toast.set({ tone, title, description });
+    this.toastVisible.set(false);
+    requestAnimationFrame(() => requestAnimationFrame(() => this.toastVisible.set(true)));
+
+    this.toastTimer = setTimeout(() => this.cerrarToast(), DEMORA_AUTOCIERRE_TOAST_MS);
+  }
+
+  protected cerrarToast(): void {
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    this.toastVisible.set(false);
+    this.toastSalidaTimer = setTimeout(() => this.toast.set(null), DEMORA_SALIDA_TOAST_MS);
+  }
+
+  ngOnDestroy(): void {
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    if (this.toastSalidaTimer) clearTimeout(this.toastSalidaTimer);
+  }
 
   /** El detalle se resuelve por SKU para reflejar cambios (p. ej. al desactivar desde el propio modal). */
   protected filaDetalle = computed(() => {
@@ -268,10 +296,14 @@ export class ListarCatalogo implements AfterViewInit, OnInit {
   }
 
   protected editarProducto(f: FilaCatalogo) {
-    this.skuDetalle.set(null);
-    this.productoEnEdicion.set(
-      this.catalogoService.productos().find((p) => p.id === f.productoId) ?? null,
+    const producto = this.catalogoService.productos().find((p) => p.id === f.productoId);
+    const presentacion = producto?.presentaciones.find(
+      (p) => p.productoPresentacionId === f.productoPresentacionId,
     );
+    if (!producto || !presentacion) return;
+
+    this.skuDetalle.set(null);
+    this.productoEnEdicion.set({ ...producto, presentaciones: [presentacion] });
     this.formModo.set('editar');
   }
 
@@ -285,11 +317,9 @@ export class ListarCatalogo implements AfterViewInit, OnInit {
   }
 
   protected mostrarAviso(resultado: ResultadoGuardado) {
-    this.aviso.set(resultado);
-  }
-
-  protected cerrarAviso() {
-    this.aviso.set(SIN_AVISO);
+    const tono = resultado.tono === 'ok' ? 'success' : 'error';
+    if (resultado.titulo) this.mostrarToast(tono, resultado.titulo, resultado.mensaje);
+    else this.mostrarToast(tono, resultado.mensaje);
   }
 
   protected cargar() {
@@ -302,12 +332,12 @@ export class ListarCatalogo implements AfterViewInit, OnInit {
       .alternarEstadoPresentacion(f.productoId, f.presentacionId)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (mensaje) => this.aviso.set({ mensaje, tono: 'ok' }),
+        next: (mensaje) => this.mostrarToast('success', mensaje),
         error: (error: unknown) =>
-          this.aviso.set({
-            mensaje: mensajeDeError(error, 'No se pudo cambiar el estado. Intente nuevamente.'),
-            tono: 'error',
-          }),
+          this.mostrarToast(
+            'error',
+            mensajeDeError(error, 'No se pudo cambiar el estado. Intente nuevamente.'),
+          ),
       });
   }
 }

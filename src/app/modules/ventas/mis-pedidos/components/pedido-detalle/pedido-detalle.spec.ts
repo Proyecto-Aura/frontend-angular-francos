@@ -104,7 +104,7 @@ describe('PedidoDetalle', () => {
       expect(avisos).toEqual([
         {
           tono: 'ok',
-          mensaje: 'Pedido PED-000001 pasó a En espera de inventario · visible para Inventario.',
+          mensaje: 'Pedido PED-000001 pasó a En espera de inventario.',
         },
       ]);
       expect(texto()).toContain('En espera de inventario');

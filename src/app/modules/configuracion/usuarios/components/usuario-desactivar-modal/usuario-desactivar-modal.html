@@ -11,13 +11,13 @@
         {{ usuarioActual.nombreCompleto }} no podrá ingresar al sistema. Sus datos e historial se
         conservan y puede reactivarse en cualquier momento.
       </p>
-      @if (errorGeneral()) {
-        <div
-          role="alert"
-          class="rounded-lg bg-destructive/10 px-3.5 py-3 text-ds-sm text-destructive"
-        >
-          {{ errorGeneral() }}
-        </div>
+      @if (toast(); as t) {
+        <app-ds-alert
+          [tone]="t.tone"
+          [title]="t.title"
+          [description]="t.description ?? null"
+          [closable]="false"
+        />
       }
     </div>
   }

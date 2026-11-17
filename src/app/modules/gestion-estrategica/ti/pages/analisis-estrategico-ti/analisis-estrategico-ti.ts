@@ -1,3 +1,5 @@
+import { Alert } from '../../../../../shared/ds/alert/alert';
+import { crearAlertaTemporal } from '../../../../../shared/ds/alert/alerta-temporal';
 import {
   AfterViewInit,
   Component,
@@ -34,6 +36,7 @@ import { DocumentoEstrategicoTiService } from '../../services/documento-estrateg
 
 @Component({
   imports: [
+    Alert,
     Badge,
     Button,
     Card,
@@ -64,6 +67,19 @@ export class AnalisisEstrategicoTiPage implements AfterViewInit {
 
   private documentoService = inject(DocumentoEstrategicoTiService);
   private destroyRef = inject(DestroyRef);
+  private alertas = crearAlertaTemporal();
+  toast = this.alertas.toast;
+  private notificarExito(
+    titulo: string,
+    entidad?: { codigo?: string; nombre?: string } | null,
+  ): void {
+    this.alertas.mostrar(
+      'success',
+      titulo,
+      entidad ? [entidad.codigo, entidad.nombre].filter(Boolean).join(' \u00b7 ') : undefined,
+    );
+  }
+
   private solicitudActual = 0;
 
   readonly planSeleccionado = inject(PlanSeleccionadoService);
@@ -177,12 +193,14 @@ export class AnalisisEstrategicoTiPage implements AfterViewInit {
     this.documentoSeleccionado.set(null);
   }
 
-  documentoSubido(): void {
+  documentoSubido(documento?: DocumentoEstrategico): void {
+    this.notificarExito('Documento registrado', documento);
     this.cerrarModal();
     this.cargarDocumentos(this.planSeleccionado.planId(), 1);
   }
 
   documentoEliminado(): void {
+    this.notificarExito('Documento eliminado', this.documentoSeleccionado());
     const paginaDestino =
       this.documentos().length === 1 && this.pagina() > 1 ? this.pagina() - 1 : this.pagina();
     this.cerrarModal();

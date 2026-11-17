@@ -352,8 +352,13 @@ describe('SolicitudInsumoDetalleModal (Inventario)', () => {
       const component = fixture.componentInstance;
 
       let entregado = 0;
+      let codigoEntregado = '';
+      const codigoEsperado = component.solicitud()!.codigo;
       let cerrado = 0;
-      component.entregaRegistrada.subscribe(() => entregado++);
+      component.entregaRegistrada.subscribe((codigo) => {
+        entregado++;
+        codigoEntregado = codigo;
+      });
       component.closed.subscribe(() => cerrado++);
 
       component.registrarEntrega();
@@ -369,6 +374,7 @@ describe('SolicitudInsumoDetalleModal (Inventario)', () => {
 
       expect(component.registrando()).toBe(false);
       expect(entregado).toBe(1);
+      expect(codigoEntregado).toBe(codigoEsperado);
       expect(cerrado).toBe(1);
     });
 

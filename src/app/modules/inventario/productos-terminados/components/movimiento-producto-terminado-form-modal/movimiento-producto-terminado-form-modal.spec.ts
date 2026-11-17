@@ -318,7 +318,7 @@ describe('MovimientoProductoTerminadoFormModal', () => {
 
     fixture.componentInstance.guardar();
 
-    expect(fixture.componentInstance.errorGeneral()).toContain('No se pudo identificar');
+    expect(fixture.componentInstance.toast()?.title).toContain('No se pudo identificar');
     httpMock.expectNone((r) => r.method === 'PATCH');
   });
 
@@ -350,7 +350,10 @@ describe('MovimientoProductoTerminadoFormModal', () => {
     });
     req.flush(makePedidoDetalleDto({ estado: 'pendiente_entrega' }));
 
-    expect(guardadoEmitido).toEqual([]);
+    expect(guardadoEmitido).toEqual({
+      titulo: 'Pedido listo para entrega',
+      mensaje: 'PED-000050',
+    });
     expect(cerrado).toBe(true);
     httpMock.expectNone((r) => r.url === MOVIMIENTOS_BASE);
   });
@@ -365,7 +368,7 @@ describe('MovimientoProductoTerminadoFormModal', () => {
       .expectOne(`${PEDIDOS_PREPARAR_BASE}/50/pendiente-entrega`)
       .flush('conflict', { status: 409, statusText: 'Conflict' });
 
-    expect(fixture.componentInstance.errorGeneral()).toContain('No hay stock suficiente');
+    expect(fixture.componentInstance.toast()?.title).toContain('No hay stock suficiente');
   });
 
   it('entregaPedidoBloqueada es true cuando la disponibilidad del pedido no es completo, y guardar() no hace nada', () => {
@@ -877,14 +880,19 @@ describe('MovimientoProductoTerminadoFormModal', () => {
         },
       },
     });
+    expect(component.toast()).toMatchObject({
+      tone: 'warning',
+      title: 'Faltan campos por completar',
+    });
+    expect(component.toast()?.description).toContain('motivo general');
   });
 
   it('posts a batch entrada with lote_producto_terminado_id and emits saved/closed on success', () => {
     const fixture = openModal();
     const component = fixture.componentInstance;
-    const guardados: unknown[][] = [];
+    const guardados: unknown[] = [];
     let closed = 0;
-    component.saved.subscribe((movimientos) => guardados.push(movimientos));
+    component.saved.subscribe((aviso) => guardados.push(aviso));
     component.closed.subscribe(() => closed++);
 
     component.motivoGeneral.set('Producción del día');
@@ -903,8 +911,9 @@ describe('MovimientoProductoTerminadoFormModal', () => {
     req.flush([makeMovimientoRespuestaDto()]);
 
     expect(component.guardando()).toBe(false);
-    expect(guardados).toHaveLength(1);
-    expect(guardados[0]).toMatchObject([{ id: 1, codigoLote: 'FR-LTP-001' }]);
+    expect(guardados).toEqual([
+      { titulo: 'Movimiento registrado', mensaje: 'Pan de molde · 500 gr' },
+    ]);
     expect(closed).toBe(1);
   });
 
@@ -985,7 +994,7 @@ describe('MovimientoProductoTerminadoFormModal', () => {
       );
 
     expect(component.guardando()).toBe(false);
-    expect(component.errorGeneral()).toBe('Lote no encontrado (lote_producto_terminado_id=1)');
+    expect(component.toast()?.title).toBe('Lote no encontrado (lote_producto_terminado_id=1)');
   });
 
   it('shows a permission error for a forbidden response', () => {
@@ -1002,7 +1011,7 @@ describe('MovimientoProductoTerminadoFormModal', () => {
       .expectOne(`${MOVIMIENTOS_BASE}/entrada`)
       .flush({ statusCode: 403, message: 'Forbidden' }, { status: 403, statusText: 'Forbidden' });
 
-    expect(component.errorGeneral()).toBe('No tiene permisos para registrar movimientos.');
+    expect(component.toast()?.title).toBe('No tiene permisos para registrar movimientos.');
   });
 
   it('shows a generic error for an unexpected server response', () => {
@@ -1022,7 +1031,7 @@ describe('MovimientoProductoTerminadoFormModal', () => {
         { status: 500, statusText: 'Server Error' },
       );
 
-    expect(component.errorGeneral()).toBe(
+    expect(component.toast()?.title).toBe(
       'No se pudo registrar el movimiento. Intente nuevamente.',
     );
   });

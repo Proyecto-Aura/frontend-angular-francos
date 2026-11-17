@@ -215,7 +215,13 @@ describe('LotesProductoTerminadoGeneral (Produccion)', () => {
     fixture.componentInstance.abrirAgregarLote();
     expect(fixture.componentInstance.modalAbierto()).toBe(true);
 
-    fixture.componentInstance.loteRegistrado();
+    fixture.componentInstance.loteRegistrado({
+      codigoLote: 'FR-LT-001',
+      productoNombre: 'Chifles',
+    });
+    expect(fixture.componentInstance.toast()?.description).toBe('FR-LT-001 \u00b7 Chifles');
+    expect(fixture.componentInstance.modalAbierto()).toBe(true);
+    fixture.componentInstance.cerrarForm();
     expect(fixture.componentInstance.modalAbierto()).toBe(false);
 
     flushLotes(expectLotesRequest());

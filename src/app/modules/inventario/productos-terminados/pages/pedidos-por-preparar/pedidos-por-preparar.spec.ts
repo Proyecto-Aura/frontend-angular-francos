@@ -270,7 +270,15 @@ describe('PedidosPorPreparar', () => {
     flushPage(expectPageRequest((r) => r.params.get('page') === '1'));
     flushResumen();
 
-    fixture.componentInstance.pedidoActualizado();
+    fixture.componentInstance.pedidoActualizado({
+      titulo: 'Pedido listo para entrega',
+      mensaje: 'PED-001042',
+    });
+    expect(fixture.componentInstance.toast()).toMatchObject({
+      tone: 'success',
+      title: 'Pedido listo para entrega',
+      description: 'PED-001042',
+    });
     flushPage(expectPageRequest((r) => r.params.get('page') === '1'));
     flushResumen();
   });
@@ -336,6 +344,12 @@ describe('PedidosPorPreparar', () => {
       pago: null,
     });
 
+    expect(fixture.componentInstance.toast()).toMatchObject({
+      tone: 'success',
+      title: 'Pedido en preparación',
+      description: 'PED-001042',
+    });
+
     flushPage(expectPageRequest((r) => r.params.get('page') === '1'));
     flushResumen();
   });
@@ -372,7 +386,7 @@ describe('PedidosPorPreparar', () => {
       .expectOne(`${PEDIDOS_PREPARAR_BASE}/1042/en-preparacion`)
       .flush('conflict', { status: 409, statusText: 'Conflict' });
 
-    expect(fixture.componentInstance.errorIniciar()).toContain('ya cambió de estado');
+    expect(fixture.componentInstance.toast()?.title).toContain('ya cambió de estado');
 
     flushPage(expectPageRequest((r) => r.params.get('page') === '1'));
     flushResumen();
