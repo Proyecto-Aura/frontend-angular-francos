@@ -2,6 +2,7 @@ import {
   AfterViewInit,
   Component,
   DestroyRef,
+  OnDestroy,
   OnInit,
   TemplateRef,
   ViewChild,
@@ -12,6 +13,7 @@ import {
 } from '@angular/core';
 import { LucideEye } from '@lucide/angular';
 
+import { Alert, AlertTone } from '../../../../../shared/ds/alert/alert';
 import { Avatar } from '../../../../../shared/ds/avatar/avatar';
 import { Badge } from '../../../../../shared/ds/badge/badge';
 import { Button } from '../../../../../shared/ds/button/button';
@@ -23,7 +25,6 @@ import { IconButton } from '../../../../../shared/ds/icon-button/icon-button';
 import { Input } from '../../../../../shared/ds/input/input';
 import { Pagination } from '../../../../../shared/ds/pagination/pagination';
 import { Select, SelectOption } from '../../../../../shared/ds/select/select';
-import { AvisoBanner } from '../../../catalogo/components/aviso-banner/aviso-banner';
 import { ReembolsoDetalle } from '../../components/reembolso-detalle/reembolso-detalle';
 import { ResultadoGuardado, money } from '../../interfaces/pedido.interface';
 import { EstadoReembolsoDto } from '../../interfaces/reembolso-dto.interface';
@@ -41,18 +42,18 @@ import { ReembolsosService } from '../../services/reembolsos.service';
 const POR_PAGINA = 10;
 // Espera tras la última tecla antes de buscar, para no consultar en cada letra.
 const ESPERA_BUSQUEDA_MS = 300;
+const DEMORA_AUTOCIERRE_TOAST_MS = 4500;
+const DEMORA_SALIDA_TOAST_MS = 300;
 
 interface RowCtx {
   $implicit: ReembolsoFila;
   index: number;
 }
 
-const SIN_AVISO: ResultadoGuardado = { mensaje: '', tono: 'ok' };
-
 /** HU-A-011: solicitudes de reembolso (RF-A039), filtros (RF-A040) y su gestión desde el detalle. */
 @Component({
   imports: [
-    AvisoBanner,
+    Alert,
     Avatar,
     Badge,
     Button,
@@ -69,7 +70,7 @@ const SIN_AVISO: ResultadoGuardado = { mensaje: '', tono: 'ok' };
   selector: 'app-reembolsos',
   templateUrl: './reembolsos.html',
 })
-export class Reembolsos implements AfterViewInit, OnInit {
+export class Reembolsos implements AfterViewInit, OnInit, OnDestroy {
   private reembolsosService = inject(ReembolsosService);
 
   @ViewChild('solicitudCell', { static: true }) solicitudCellTpl!: TemplateRef<RowCtx>;
@@ -131,7 +132,34 @@ export class Reembolsos implements AfterViewInit, OnInit {
 
   // --- Modal ---
   protected reembolsoDetalleId = signal<number | null>(null);
-  protected aviso = signal<ResultadoGuardado>(SIN_AVISO);
+
+  // Toast flotante arriba a la derecha: éxito (verde) o error de la API (rojo).
+  protected toast = signal<{ tone: AlertTone; title: string; description?: string } | null>(null);
+  protected toastVisible = signal(false);
+  private toastTimer: ReturnType<typeof setTimeout> | null = null;
+  private toastSalidaTimer: ReturnType<typeof setTimeout> | null = null;
+
+  private mostrarToast(tone: AlertTone, title: string, description?: string): void {
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    if (this.toastSalidaTimer) clearTimeout(this.toastSalidaTimer);
+
+    this.toast.set({ tone, title, description });
+    this.toastVisible.set(false);
+    requestAnimationFrame(() => requestAnimationFrame(() => this.toastVisible.set(true)));
+
+    this.toastTimer = setTimeout(() => this.cerrarToast(), DEMORA_AUTOCIERRE_TOAST_MS);
+  }
+
+  protected cerrarToast(): void {
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    this.toastVisible.set(false);
+    this.toastSalidaTimer = setTimeout(() => this.toast.set(null), DEMORA_SALIDA_TOAST_MS);
+  }
+
+  ngOnDestroy(): void {
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    if (this.toastSalidaTimer) clearTimeout(this.toastSalidaTimer);
+  }
 
   private busqueda: ReturnType<typeof setTimeout> | undefined;
 
@@ -205,11 +233,7 @@ export class Reembolsos implements AfterViewInit, OnInit {
 
   /** Aviso de lo hecho desde el detalle; si salió bien, el listado se recarga con el estado nuevo. */
   protected cambio(resultado: ResultadoGuardado) {
-    this.aviso.set(resultado);
+    this.mostrarToast(resultado.tono === 'ok' ? 'success' : 'error', resultado.mensaje);
     if (resultado.tono === 'ok') this.cargar();
-  }
-
-  protected cerrarAviso() {
-    this.aviso.set(SIN_AVISO);
   }
 }

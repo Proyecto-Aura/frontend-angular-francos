@@ -1,6 +1,7 @@
 import {
   Component,
   DestroyRef,
+  OnDestroy,
   computed,
   effect,
   inject,
@@ -10,8 +11,9 @@ import {
   untracked,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { LucideCircleAlert, LucidePlus, LucideTrash2 } from '@lucide/angular';
+import { LucidePlus, LucideTrash2 } from '@lucide/angular';
 import { finalize } from 'rxjs';
+import { Alert, AlertTone } from '../../../../../shared/ds/alert/alert';
 import { Button } from '../../../../../shared/ds/button/button';
 import { Field } from '../../../../../shared/ds/field/field';
 import { Icon } from '../../../../../shared/ds/icon/icon';
@@ -21,6 +23,8 @@ import { Modal } from '../../../../../shared/ds/modal/modal';
 import { Select, SelectOption } from '../../../../../shared/ds/select/select';
 import { Switch } from '../../../../../shared/ds/switch/switch';
 import { Textarea } from '../../../../../shared/ds/textarea/textarea';
+
+const DEMORA_AUTOCIERRE_TOAST_MS = 4500;
 import {
   PresentacionForm,
   Producto,
@@ -35,11 +39,11 @@ import { CatalogoService } from '../../services/catalogo.service';
 import { mensajeDeError } from '../../utils/error-api';
 
 @Component({
-  imports: [Button, Field, Icon, IconButton, Input, Modal, Select, Switch, Textarea],
+  imports: [Alert, Button, Field, Icon, IconButton, Input, Modal, Select, Switch, Textarea],
   selector: 'app-producto-form',
   templateUrl: './producto-form.html',
 })
-export class ProductoForm {
+export class ProductoForm implements OnDestroy {
   private catalogoService = inject(CatalogoService);
   private destroyRef = inject(DestroyRef);
 
@@ -47,6 +51,8 @@ export class ProductoForm {
   modo = input<'nuevo' | 'editar' | null>(null);
   /** Producto a editar (solo con modo = 'editar'). */
   producto = input<Producto | null>(null);
+  /** Edición desde una tarjeta: conserva los datos generales del producto. */
+  soloPresentacion = input(false);
 
   closed = output<void>();
   /** Emite el aviso a mostrar en la pantalla que abrió el formulario. */
@@ -54,13 +60,23 @@ export class ProductoForm {
 
   readonly LucidePlus = LucidePlus;
   readonly LucideTrash2 = LucideTrash2;
-  readonly LucideCircleAlert = LucideCircleAlert;
 
   protected pf = signal<ProductoFormModel>(productoFormVacio(''));
-  protected errores = signal<string[]>([]);
-  /** Mensaje de la API cuando no se pudo guardar (el formulario sigue abierto). */
-  protected errorApi = signal('');
   protected guardando = signal(false);
+
+  // Alerta dentro del propio modal: campos sin completar o error de la API (el formulario sigue abierto).
+  protected toast = signal<{ tone: AlertTone; title: string; description?: string } | null>(null);
+  private toastTimer: ReturnType<typeof setTimeout> | null = null;
+
+  private mostrarToast(tone: AlertTone, title: string, description?: string): void {
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    this.toast.set({ tone, title, description });
+    this.toastTimer = setTimeout(() => this.toast.set(null), DEMORA_AUTOCIERRE_TOAST_MS);
+  }
+
+  ngOnDestroy(): void {
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+  }
 
   constructor() {
     // Al abrir (nuevo / editar) se carga el formulario correspondiente.
@@ -69,8 +85,8 @@ export class ProductoForm {
       const producto = this.producto();
       untracked(() => {
         if (!modo) return;
-        this.errores.set([]);
-        this.errorApi.set('');
+        if (this.toastTimer) clearTimeout(this.toastTimer);
+        this.toast.set(null);
         this.guardando.set(false);
         this.pf.set(
           modo === 'editar' && producto
@@ -110,7 +126,11 @@ export class ProductoForm {
   }
 
   protected titulo = computed(() =>
-    this.modo() === 'editar' ? 'Editar producto' : 'Registrar producto',
+    this.modo() === 'editar'
+      ? this.soloPresentacion()
+        ? 'Editar presentación'
+        : 'Editar producto'
+      : 'Registrar producto',
   );
 
   protected nota = computed(() =>
@@ -160,6 +180,7 @@ export class ProductoForm {
   }
 
   protected agregarPres() {
+    if (this.soloPresentacion()) return;
     this.pf.update((f) => ({ ...f, presentaciones: [...f.presentaciones, presentacionVacia()] }));
   }
 
@@ -172,18 +193,18 @@ export class ProductoForm {
 
     const pf = this.pf();
     const err = validarProducto(pf);
-    this.errorApi.set('');
 
     if (err.length) {
-      this.errores.set(err);
+      this.mostrarToast('warning', 'Faltan campos por completar', `Revisa: ${err.join(', ')}.`);
       return;
     }
 
-    this.errores.set([]);
     const prod = this.producto();
     const peticion =
       this.modo() === 'editar' && prod
-        ? this.catalogoService.actualizar(prod.id, pf)
+        ? this.soloPresentacion()
+          ? this.catalogoService.actualizarPresentacion(prod.id, pf.presentaciones[0], prod.nombre)
+          : this.catalogoService.actualizar(prod.id, pf)
         : this.catalogoService.registrar(pf);
 
     this.guardando.set(true);
@@ -198,7 +219,8 @@ export class ProductoForm {
           this.closed.emit();
         },
         error: (error: unknown) =>
-          this.errorApi.set(
+          this.mostrarToast(
+            'error',
             mensajeDeError(error, 'No se pudo guardar el producto. Intente nuevamente.'),
           ),
       });

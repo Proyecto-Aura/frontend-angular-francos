@@ -114,7 +114,7 @@ export class PedidoDetalle {
           this.detalle.set(actualizado);
           this.estadoCambiado.emit({
             tono: 'ok',
-            mensaje: `Pedido ${d.codigo} pasó a En espera de inventario · visible para Inventario.`,
+            mensaje: `Pedido ${d.codigo} pasó a En espera de inventario.`,
           });
         },
         error: (error: unknown) =>

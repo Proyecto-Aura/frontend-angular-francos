@@ -53,8 +53,8 @@
         </p>
       }
 
-      @if (errorEntrega()) {
-        <p role="alert" class="text-ds-sm text-destructive">{{ errorEntrega() }}</p>
+      @if (errorEntrega(); as mensaje) {
+        <app-ds-alert tone="error" [title]="mensaje" [closable]="false" />
       }
     </div>
   }

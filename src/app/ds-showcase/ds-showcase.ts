@@ -1,4 +1,11 @@
-import { AfterViewInit, Component, TemplateRef, ViewChild, signal } from '@angular/core';
+import {
+  AfterViewInit,
+  Component,
+  OnDestroy,
+  TemplateRef,
+  ViewChild,
+  signal,
+} from '@angular/core';
 import {
   LucideBarChart3,
   LucideBell,
@@ -15,6 +22,7 @@ import {
   LucideUsers,
 } from '@lucide/angular';
 
+import { Alert, AlertTone } from '../shared/ds/alert/alert';
 import { Avatar } from '../shared/ds/avatar/avatar';
 import { Badge, BadgeTone } from '../shared/ds/badge/badge';
 import { BarChart, BarChartDatum } from '../shared/ds/bar-chart/bar-chart';
@@ -53,6 +61,7 @@ interface PedidoRow {
 
 @Component({
   imports: [
+    Alert,
     Avatar,
     Badge,
     BarChart,
@@ -83,7 +92,7 @@ interface PedidoRow {
   selector: 'app-ds-showcase',
   templateUrl: './ds-showcase.html',
 })
-export class DsShowcase implements AfterViewInit {
+export class DsShowcase implements AfterViewInit, OnDestroy {
   @ViewChild('clienteCell', { static: true }) clienteCellTpl!: TemplateRef<{
     $implicit: PedidoRow;
     index: number;
@@ -106,6 +115,70 @@ export class DsShowcase implements AfterViewInit {
   readonly LucideList = LucideList;
   readonly LucideSettings = LucideSettings;
   readonly LucideBarChart3 = LucideBarChart3;
+
+  alertDemos = signal<
+    { tone: AlertTone; title: string; description: string; linkLabel?: string }[]
+  >([
+    {
+      tone: 'success',
+      title: 'Inicio de sesión exitoso',
+      description: 'Bienvenido de nuevo, Admin.',
+    },
+    {
+      tone: 'error',
+      title: 'Credenciales inválidas',
+      description: 'Revisa tu usuario y tu contraseña e intenta de nuevo.',
+    },
+    {
+      tone: 'warning',
+      title: 'Faltan campos por completar',
+      description: 'Ingresa tu usuario y tu contraseña para continuar.',
+    },
+    {
+      tone: 'info',
+      title: 'Tu sesión está por expirar',
+      description: 'Se cerrará en 2 minutos por inactividad.',
+      linkLabel: 'Ver seguimiento',
+    },
+  ]);
+
+  dismissAlertDemo(index: number): void {
+    this.alertDemos.update((items) => items.filter((_, i) => i !== index));
+  }
+
+  /**
+   * Toast: igual a una alerta de inicio de sesión, pero flotante arriba a la
+   * derecha, con autocierre. Entra deslizando de derecha a izquierda y, al
+   * esconderse, vuelve a salir hacia la derecha (no desaparece de golpe).
+   */
+  toastAlert = signal<{ tone: AlertTone; title: string; description: string } | null>(null);
+  toastVisible = signal(false);
+  private toastTimer: ReturnType<typeof setTimeout> | null = null;
+  private toastOcultarTimer: ReturnType<typeof setTimeout> | null = null;
+
+  mostrarToast(demo: { tone: AlertTone; title: string; description: string }): void {
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    if (this.toastOcultarTimer) clearTimeout(this.toastOcultarTimer);
+
+    this.toastAlert.set(demo);
+    this.toastVisible.set(false);
+    // Doble rAF: deja pintar la posicion inicial (fuera de pantalla) antes de
+    // animar hacia el centro, si no el navegador no anima el primer cambio.
+    requestAnimationFrame(() => requestAnimationFrame(() => this.toastVisible.set(true)));
+
+    this.toastTimer = setTimeout(() => this.cerrarToast(), 4000);
+  }
+
+  cerrarToast(): void {
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    this.toastVisible.set(false);
+    this.toastOcultarTimer = setTimeout(() => this.toastAlert.set(null), 300);
+  }
+
+  ngOnDestroy(): void {
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    if (this.toastOcultarTimer) clearTimeout(this.toastOcultarTimer);
+  }
 
   badgeTones: { tone: BadgeTone; label: string }[] = [
     { tone: 'neutral', label: 'Neutral' },

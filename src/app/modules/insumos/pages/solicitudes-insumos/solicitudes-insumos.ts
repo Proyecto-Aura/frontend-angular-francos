@@ -1,3 +1,4 @@
+import { Alert, AlertTone } from '../../../../shared/ds/alert/alert';
 import {
   AfterViewInit,
   Component,
@@ -84,6 +85,7 @@ const RESUMEN_VACIO: ResumenSolicitudesInsumo = {
 // flujos son exclusivos de Produccion.
 @Component({
   imports: [
+    Alert,
     Badge,
     Button,
     Card,
@@ -103,6 +105,22 @@ const RESUMEN_VACIO: ResumenSolicitudesInsumo = {
 export class SolicitudesInsumos implements OnInit, AfterViewInit {
   private solicitudService = inject(SolicitudInsumoService);
   private destroyRef = inject(DestroyRef);
+  constructor() {
+    this.destroyRef.onDestroy(() => this.cerrarToast());
+  }
+
+  toast = signal<{ tone: AlertTone; title: string; description?: string } | null>(null);
+  private toastTimer: ReturnType<typeof setTimeout> | null = null;
+  cerrarToast(): void {
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    this.toastTimer = null;
+    this.toast.set(null);
+  }
+  private mostrarToast(tone: AlertTone, title: string, description?: string): void {
+    this.cerrarToast();
+    this.toast.set({ tone, title, description });
+    this.toastTimer = setTimeout(() => this.cerrarToast(), 4500);
+  }
 
   @ViewChild('estadoCell', { static: true })
   estadoCellTpl!: TemplateRef<{ $implicit: FilaSolicitud; index: number }>;
@@ -319,16 +337,29 @@ export class SolicitudesInsumos implements OnInit, AfterViewInit {
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
-        next: () => this.recargarTodo(),
+        next: () => {
+          this.mostrarToast(
+            'success',
+            estado === 'rechazado' ? 'Solicitud cancelada' : 'Solicitud en preparación',
+            solicitud.codigo,
+          );
+          this.recargarTodo();
+        },
         error: (error) => {
           this.errorCambioEstado.set(
             error.status === 409
               ? 'La solicitud ya cambió de estado. Se actualizará la lista.'
               : 'No se pudo actualizar el estado. Intenta nuevamente.',
           );
+          this.mostrarToast(error.status === 409 ? 'warning' : 'error', this.errorCambioEstado());
           if (error.status === 409) this.recargarTodo();
         },
       });
+  }
+
+  entregaRegistrada(codigo: string): void {
+    this.mostrarToast('success', 'Entrega registrada', codigo);
+    this.recargarTodo();
   }
 
   estadoLabel(estado: EstadoSolicitudInsumo): string {

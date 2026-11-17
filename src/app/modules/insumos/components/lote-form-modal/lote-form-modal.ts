@@ -1,3 +1,4 @@
+import { Alert } from '../../../../shared/ds/alert/alert';
 import { HttpErrorResponse } from '@angular/common/http';
 import {
   Component,
@@ -36,7 +37,7 @@ function fechaIsoLocal(fecha: Date): string {
 }
 
 @Component({
-  imports: [Button, Combobox, Field, Icon, Input, Modal],
+  imports: [Alert, Button, Combobox, Field, Icon, Input, Modal],
   selector: 'app-lote-form-modal',
   templateUrl: './lote-form-modal.html',
 })
@@ -48,7 +49,7 @@ export class LoteFormModal {
 
   open = input(false);
   closed = output<void>();
-  saved = output<LoteInsumo>();
+  saved = output<LoteInsumo & { insumoNombre: string }>();
 
   readonly LucideLayers = LucideLayers;
 
@@ -84,10 +85,33 @@ export class LoteFormModal {
   generandoCodigo = signal(false);
 
   errores = signal<LoteFormErrores>({});
+  advertencia = signal(false);
   errorGeneral = signal<string | null>(null);
   guardando = signal(false);
 
+  private alertaTimer: ReturnType<typeof setTimeout> | null = null;
+
+  private limpiarAlerta(): void {
+    if (this.alertaTimer) clearTimeout(this.alertaTimer);
+    this.alertaTimer = null;
+    this.errorGeneral.set(null);
+    this.advertencia.set(false);
+  }
+
+  private mostrarAdvertencia(): void {
+    this.limpiarAlerta();
+    this.advertencia.set(true);
+    this.alertaTimer = setTimeout(() => this.limpiarAlerta(), 4500);
+  }
+
+  private mostrarError(mensaje: string): void {
+    this.limpiarAlerta();
+    this.errorGeneral.set(mensaje);
+    this.alertaTimer = setTimeout(() => this.limpiarAlerta(), 4500);
+  }
+
   constructor() {
+    this.destroyRef.onDestroy(() => this.limpiarAlerta());
     effect(() => {
       const estaAbierto = this.open();
       if (estaAbierto && !this.estabaAbierto) {
@@ -115,9 +139,13 @@ export class LoteFormModal {
     const errores = validarLoteForm(form, this.requiereFechaVencimiento());
 
     this.errores.set(errores);
-    this.errorGeneral.set(null);
+    this.limpiarAlerta();
 
-    if (Object.keys(errores).length > 0 || this.generandoCodigo() || !this.codigoLote()) {
+    if (Object.keys(errores).length > 0) {
+      this.mostrarAdvertencia();
+      return;
+    }
+    if (this.generandoCodigo() || !this.codigoLote()) {
       return;
     }
 
@@ -130,7 +158,7 @@ export class LoteFormModal {
       )
       .subscribe({
         next: (lote) => {
-          this.saved.emit(lote);
+          this.saved.emit({ ...lote, insumoNombre: this.insumoSeleccionado()?.nombre ?? '' });
           this.closed.emit();
         },
         error: (error: unknown) => this.manejarError(error),
@@ -181,7 +209,7 @@ export class LoteFormModal {
     this.cantidadInicial.set('');
     this.codigoLote.set('');
     this.errores.set({});
-    this.errorGeneral.set(null);
+    this.limpiarAlerta();
     this.guardando.set(false);
   }
 
@@ -197,12 +225,12 @@ export class LoteFormModal {
 
   private manejarError(error: unknown): void {
     if (!(error instanceof HttpErrorResponse)) {
-      this.errorGeneral.set('No se pudo registrar el lote. Intente nuevamente.');
+      this.mostrarError('No se pudo registrar el lote. Intente nuevamente.');
       return;
     }
 
     if (error.status === 401 || error.status === 403) {
-      this.errorGeneral.set('No tiene permisos para registrar lotes.');
+      this.mostrarError('No tiene permisos para registrar lotes.');
       return;
     }
 
@@ -224,16 +252,16 @@ export class LoteFormModal {
     // vez): se regenera para que la persona pueda reintentar sin recargar
     // todo el formulario.
     if (error.status === 409 && (mensajeMin.includes('codigo') || mensajeMin.includes('lote'))) {
-      this.errorGeneral.set('Ese código de lote ya existe. Generando uno nuevo…');
+      this.mostrarError('Ese código de lote ya existe. Generando uno nuevo…');
       this.regenerarCodigo();
       return;
     }
 
     if (error.status === 400 || error.status === 409) {
-      this.errorGeneral.set(mensaje || 'No se pudo registrar el lote. Intente nuevamente.');
+      this.mostrarError(mensaje || 'No se pudo registrar el lote. Intente nuevamente.');
       return;
     }
 
-    this.errorGeneral.set('No se pudo registrar el lote. Intente nuevamente.');
+    this.mostrarError('No se pudo registrar el lote. Intente nuevamente.');
   }
 }

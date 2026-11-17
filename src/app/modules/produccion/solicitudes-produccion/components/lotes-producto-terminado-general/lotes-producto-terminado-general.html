@@ -1,3 +1,13 @@
+@if (toast(); as t) {
+  <div class="fixed top-6 right-6 z-50 w-full max-w-md">
+    <app-ds-alert
+      [tone]="t.tone"
+      [title]="t.title"
+      [description]="t.description ?? null"
+      [closable]="false"
+    />
+  </div>
+}
 <div class="flex flex-wrap justify-end gap-3">
   <app-ds-button variant="primary" (clicked)="abrirAgregarLote()">
     <span icon><app-ds-icon [img]="LucideLayers" [size]="16" /></span>
@@ -102,7 +112,11 @@
   }
 </app-ds-card>
 
-<app-lote-form-modal [open]="modalAbierto()" (closed)="cerrarForm()" (saved)="loteRegistrado()" />
+<app-lote-form-modal
+  [open]="modalAbierto()"
+  (closed)="cerrarForm()"
+  (saved)="loteRegistrado($event)"
+/>
 
 <ng-template #productoCell let-fila>
   <app-ds-cell-stack [primary]="fila.productoConPresentacion" [secondary]="fila.sku" />

@@ -1,3 +1,4 @@
+import { Alert, AlertTone } from '../../../../../shared/ds/alert/alert';
 import {
   AfterViewInit,
   Component,
@@ -66,6 +67,7 @@ interface FilaLote {
 // (confirmado por el backend, rol produccion habilitado para crear).
 @Component({
   imports: [
+    Alert,
     Badge,
     Button,
     Card,
@@ -86,6 +88,22 @@ export class LotesProductoTerminadoGeneral implements OnInit, AfterViewInit {
   private loteService = inject(LoteProductoTerminadoService);
   private productoService = inject(ProductoPresentacionService);
   private destroyRef = inject(DestroyRef);
+  constructor() {
+    this.destroyRef.onDestroy(() => this.cerrarToast());
+  }
+
+  toast = signal<{ tone: AlertTone; title: string; description?: string } | null>(null);
+  private toastTimer: ReturnType<typeof setTimeout> | null = null;
+  cerrarToast(): void {
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    this.toastTimer = null;
+    this.toast.set(null);
+  }
+  private mostrarToast(tone: AlertTone, title: string, description?: string): void {
+    this.cerrarToast();
+    this.toast.set({ tone, title, description });
+    this.toastTimer = setTimeout(() => this.cerrarToast(), 4500);
+  }
 
   @ViewChild('productoCell', { static: true })
   productoCellTpl!: TemplateRef<{ $implicit: FilaLote; index: number }>;
@@ -257,8 +275,12 @@ export class LotesProductoTerminadoGeneral implements OnInit, AfterViewInit {
     this.modalAbierto.set(false);
   }
 
-  loteRegistrado(): void {
-    this.cerrarForm();
+  loteRegistrado(lote?: { codigoLote: string; productoNombre: string }): void {
+    this.mostrarToast(
+      'success',
+      'Lote registrado',
+      lote ? [lote.codigoLote, lote.productoNombre].filter(Boolean).join(' \u00b7 ') : undefined,
+    );
     this.cargarLotes(1);
     this.registrado.emit();
   }

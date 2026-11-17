@@ -1,3 +1,5 @@
+import { Alert } from '../../../../../shared/ds/alert/alert';
+import { crearAlertaTemporal } from '../../../../../shared/ds/alert/alerta-temporal';
 import { HttpErrorResponse } from '@angular/common/http';
 import {
   Component,
@@ -32,7 +34,7 @@ const ANIO_MIN = 2020;
 const ANIO_MAX = 2060;
 
 @Component({
-  imports: [Button, Field, Icon, Input, Modal, Select, Textarea],
+  imports: [Alert, Button, Field, Icon, Input, Modal, Select, Textarea],
   selector: 'app-plan-estrategico-form-modal',
   templateUrl: './plan-estrategico-form-modal.html',
 })
@@ -95,6 +97,26 @@ export class PlanEstrategicoFormModal {
     return seSolapa(Number(anioInicio), Number(anioFin), this.planesExistentes());
   });
 
+  private alertas = crearAlertaTemporal(() => this.errorGeneral.set(null));
+  toast = this.alertas.toast;
+  private mostrarErrorAlerta(mensaje: string | null): void {
+    if (!mensaje) {
+      this.alertas.limpiar();
+      return;
+    }
+    this.alertas.mostrar('error', mensaje);
+    this.errorGeneral.set(mensaje);
+  }
+  private advertirCampos(): void {
+    const mensaje = this.errorGeneral();
+    this.alertas.mostrar(
+      'warning',
+      'Faltan campos por completar',
+      'Revisa los campos marcados antes de guardar.',
+    );
+    this.errorGeneral.set(mensaje);
+  }
+
   constructor() {
     effect(() => {
       const anioFin = this.anioFin();
@@ -122,9 +144,10 @@ export class PlanEstrategicoFormModal {
     const errores = validarPlanForm(form);
 
     this.errores.set(errores);
-    this.errorGeneral.set(null);
+    this.mostrarErrorAlerta(null);
 
     if (Object.keys(errores).length > 0) {
+      this.advertirCampos();
       return;
     }
 
@@ -160,7 +183,7 @@ export class PlanEstrategicoFormModal {
     this.anioInicio.set(plan ? String(plan.anioInicio) : '');
     this.anioFin.set(plan ? String(plan.anioFin) : '');
     this.errores.set({});
-    this.errorGeneral.set(null);
+    this.mostrarErrorAlerta(null);
     this.guardando.set(false);
     this.planesExistentes.set([]);
 
@@ -187,7 +210,7 @@ export class PlanEstrategicoFormModal {
 
   private manejarError(error: unknown): void {
     if (!(error instanceof HttpErrorResponse)) {
-      this.errorGeneral.set('No se pudo guardar el plan. Intente nuevamente.');
+      this.mostrarErrorAlerta('No se pudo guardar el plan. Intente nuevamente.');
       return;
     }
 
@@ -201,7 +224,7 @@ export class PlanEstrategicoFormModal {
     const mensajeNormalizado = mensaje.toLocaleLowerCase('es');
 
     if (error.status === 409 && mensajeNormalizado.includes('borrador')) {
-      this.errorGeneral.set(mensaje);
+      this.mostrarErrorAlerta(mensaje);
       return;
     }
 
@@ -222,15 +245,15 @@ export class PlanEstrategicoFormModal {
     }
 
     if (error.status === 400) {
-      this.errorGeneral.set(mensaje || 'No se pudo guardar el plan. Intente nuevamente.');
+      this.mostrarErrorAlerta(mensaje || 'No se pudo guardar el plan. Intente nuevamente.');
       return;
     }
 
     if (error.status === 401 || error.status === 403) {
-      this.errorGeneral.set('No tiene permisos para registrar planes estratégicos.');
+      this.mostrarErrorAlerta('No tiene permisos para registrar planes estratégicos.');
       return;
     }
 
-    this.errorGeneral.set('No se pudo guardar el plan. Intente nuevamente.');
+    this.mostrarErrorAlerta('No se pudo guardar el plan. Intente nuevamente.');
   }
 }

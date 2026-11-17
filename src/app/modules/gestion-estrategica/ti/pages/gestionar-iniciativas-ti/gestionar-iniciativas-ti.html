@@ -1,3 +1,13 @@
+@if (toast(); as t) {
+  <div class="fixed top-6 right-6 z-50 w-full max-w-md">
+    <app-ds-alert
+      [tone]="t.tone"
+      [title]="t.title"
+      [description]="t.description ?? null"
+      [closable]="false"
+    />
+  </div>
+}
 <div class="flex min-h-full flex-col">
   <div class="flex flex-col gap-4 p-(--page-padding)">
     @if (planSeleccionado.cargando()) {
@@ -273,25 +283,25 @@
         [iniciativa]="iniciativaSeleccionada()"
         [objetivoIdInicial]="objetivoIdInicial()"
         (closed)="cerrarModal()"
-        (saved)="iniciativaActualizada()"
+        (saved)="iniciativaActualizada($event)"
       />
       <app-iniciativa-ti-estado-modal
         [open]="modalActivo() === 'estado'"
         [iniciativa]="iniciativaSeleccionada()"
         (closed)="cerrarModal()"
-        (changed)="iniciativaActualizada()"
+        (changed)="iniciativaActualizada(undefined, $event)"
       />
       <app-iniciativa-ti-cancelar-modal
         [open]="modalActivo() === 'cancelar'"
         [iniciativa]="iniciativaSeleccionada()"
         (closed)="cerrarModal()"
-        (cancelled)="iniciativaActualizada()"
+        (cancelled)="iniciativaActualizada(undefined, $event)"
       />
       <app-iniciativa-ti-eliminar-modal
         [open]="modalActivo() === 'eliminar'"
         [iniciativa]="iniciativaSeleccionada()"
         (closed)="cerrarModal()"
-        (deleted)="iniciativaActualizada()"
+        (deleted)="iniciativaActualizada(undefined, $event)"
       />
     }
   </div>

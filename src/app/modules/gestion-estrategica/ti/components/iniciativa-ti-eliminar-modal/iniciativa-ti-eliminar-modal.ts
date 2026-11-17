@@ -1,3 +1,5 @@
+import { Alert } from '../../../../../shared/ds/alert/alert';
+import { crearAlertaTemporal } from '../../../../../shared/ds/alert/alerta-temporal';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, DestroyRef, effect, inject, input, output, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -9,7 +11,7 @@ import { Iniciativa } from '../../../negocio/interfaces/iniciativa.interface';
 import { IniciativaTiService } from '../../services/iniciativa-ti.service';
 
 @Component({
-  imports: [Button, Modal],
+  imports: [Alert, Button, Modal],
   selector: 'app-iniciativa-ti-eliminar-modal',
   templateUrl: './iniciativa-ti-eliminar-modal.html',
 })
@@ -22,17 +24,28 @@ export class IniciativaTiEliminarModal {
   open = input(false);
   iniciativa = input<Iniciativa | null>(null);
   closed = output<void>();
-  deleted = output<void>();
+  deleted = output<boolean>();
 
   readonly eliminando = signal(false);
   readonly errorGeneral = signal<string | null>(null);
+
+  private alertas = crearAlertaTemporal(() => this.errorGeneral.set(null));
+  toast = this.alertas.toast;
+  private mostrarErrorAlerta(mensaje: string | null): void {
+    if (!mensaje) {
+      this.alertas.limpiar();
+      return;
+    }
+    this.alertas.mostrar('error', mensaje);
+    this.errorGeneral.set(mensaje);
+  }
 
   constructor() {
     effect(() => {
       const estaAbierto = this.open();
       if (estaAbierto && !this.estabaAbierto) {
         this.eliminando.set(false);
-        this.errorGeneral.set(null);
+        this.mostrarErrorAlerta(null);
         this.recargarAlCerrar = false;
       }
       this.estabaAbierto = estaAbierto;
@@ -42,7 +55,7 @@ export class IniciativaTiEliminarModal {
   cerrar(): void {
     if (this.recargarAlCerrar) {
       this.recargarAlCerrar = false;
-      this.deleted.emit();
+      this.deleted.emit(false);
     }
     this.closed.emit();
   }
@@ -51,7 +64,7 @@ export class IniciativaTiEliminarModal {
     const iniciativa = this.iniciativa();
     if (!iniciativa || this.eliminando()) return;
     this.eliminando.set(true);
-    this.errorGeneral.set(null);
+    this.mostrarErrorAlerta(null);
     this.iniciativaService
       .eliminar(iniciativa.id)
       .pipe(
@@ -60,7 +73,7 @@ export class IniciativaTiEliminarModal {
       )
       .subscribe({
         next: () => {
-          this.deleted.emit();
+          this.deleted.emit(true);
           this.closed.emit();
         },
         error: (error: unknown) => this.manejarError(error),
@@ -69,7 +82,7 @@ export class IniciativaTiEliminarModal {
 
   private manejarError(error: unknown): void {
     if (!(error instanceof HttpErrorResponse)) {
-      this.errorGeneral.set('No se pudo eliminar la iniciativa. Intente nuevamente.');
+      this.mostrarErrorAlerta('No se pudo eliminar la iniciativa. Intente nuevamente.');
       return;
     }
     const apiError = error.error as Partial<IniciativaApiErrorDto> | null;
@@ -81,14 +94,14 @@ export class IniciativaTiEliminarModal {
           : []
     ).join(' ');
     if (error.status === 404) {
-      this.errorGeneral.set('La iniciativa ya no existe.');
+      this.mostrarErrorAlerta('La iniciativa ya no existe.');
       this.recargarAlCerrar = true;
     } else if (error.status === 409) {
-      this.errorGeneral.set(mensaje || 'No se pudo eliminar la iniciativa. Intente nuevamente.');
+      this.mostrarErrorAlerta(mensaje || 'No se pudo eliminar la iniciativa. Intente nuevamente.');
     } else if (error.status === 401 || error.status === 403) {
-      this.errorGeneral.set('No tiene permisos para gestionar iniciativas.');
+      this.mostrarErrorAlerta('No tiene permisos para gestionar iniciativas.');
     } else {
-      this.errorGeneral.set('No se pudo eliminar la iniciativa. Intente nuevamente.');
+      this.mostrarErrorAlerta('No se pudo eliminar la iniciativa. Intente nuevamente.');
     }
   }
 }

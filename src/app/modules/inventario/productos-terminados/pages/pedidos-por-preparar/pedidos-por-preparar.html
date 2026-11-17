@@ -90,8 +90,18 @@
     </p>
   }
 
-  @if (errorIniciar()) {
-    <p role="alert" class="text-ds-sm text-destructive">{{ errorIniciar() }}</p>
+  @if (toast(); as t) {
+    <div
+      class="fixed top-6 right-6 z-50 w-full max-w-md transition-transform duration-300 ease-out"
+      [class]="toastVisible() ? 'translate-x-0' : 'translate-x-[120%]'"
+    >
+      <app-ds-alert
+        [tone]="t.tone"
+        [title]="t.title"
+        [description]="t.description ?? null"
+        [closable]="false"
+      />
+    </div>
   }
 
   <app-ds-card [padded]="false" [hasFooter]="totalPaginas() > 1">
@@ -127,7 +137,7 @@
     [pedidoId]="pedidoDetalleId()"
     [modo]="modoDetalle()"
     (closed)="cerrarDetalle()"
-    (actualizado)="pedidoActualizado()"
+    (actualizado)="pedidoActualizado($event)"
   />
 </div>
 

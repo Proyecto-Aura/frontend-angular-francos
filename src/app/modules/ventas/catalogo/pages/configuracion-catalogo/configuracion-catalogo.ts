@@ -1,5 +1,6 @@
 import {
   Component,
+  OnDestroy,
   OnInit,
   TemplateRef,
   Type,
@@ -12,7 +13,6 @@ import { finalize } from 'rxjs';
 import {
   LucideBan,
   LucideBox,
-  LucideCircleAlert,
   LucidePencil,
   LucidePlus,
   LucideRotateCcw,
@@ -20,6 +20,7 @@ import {
   LucideTriangleAlert,
 } from '@lucide/angular';
 
+import { Alert, AlertTone } from '../../../../../shared/ds/alert/alert';
 import { Badge } from '../../../../../shared/ds/badge/badge';
 import { Button } from '../../../../../shared/ds/button/button';
 import { DataTable, DsColumn } from '../../../../../shared/ds/data-table/data-table';
@@ -32,11 +33,20 @@ import { Modal } from '../../../../../shared/ds/modal/modal';
 import { Select, SelectOption } from '../../../../../shared/ds/select/select';
 import { DsTab, Tabs } from '../../../../../shared/ds/tabs/tabs';
 import { Textarea } from '../../../../../shared/ds/textarea/textarea';
-import { CfgFormModel, CfgTab, RegistroCfg, nf } from '../../interfaces/producto.interface';
-import { AvisoBanner } from '../../components/aviso-banner/aviso-banner';
+import {
+  CfgFormModel,
+  CfgTab,
+  RegistroCfg,
+  UnidadCfg,
+  nf,
+} from '../../interfaces/producto.interface';
+import { etiquetaPresentacion } from '../../mappers/producto.mapper';
 import { CatalogoService } from '../../services/catalogo.service';
 import { mensajeDeError } from '../../utils/error-api';
 import { ConfiguracionCatalogoService } from '../../services/configuracion-catalogo.service';
+
+const DEMORA_AUTOCIERRE_TOAST_MS = 4500;
+const DEMORA_SALIDA_TOAST_MS = 300;
 
 interface RowCtx {
   $implicit: RegistroCfg;
@@ -73,7 +83,7 @@ const TABS: TabInfo[] = [
 
 @Component({
   imports: [
-    AvisoBanner,
+    Alert,
     Badge,
     Button,
     DataTable,
@@ -90,7 +100,7 @@ const TABS: TabInfo[] = [
   selector: 'app-configuracion-catalogo',
   templateUrl: './configuracion-catalogo.html',
 })
-export class ConfiguracionCatalogo implements OnInit {
+export class ConfiguracionCatalogo implements OnInit, OnDestroy {
   private catalogo = inject(CatalogoService);
   private catalogoService = inject(ConfiguracionCatalogoService);
 
@@ -111,7 +121,6 @@ export class ConfiguracionCatalogo implements OnInit {
   readonly LucideBan = LucideBan;
   readonly LucideRotateCcw = LucideRotateCcw;
   readonly LucideTriangleAlert = LucideTriangleAlert;
-  readonly LucideCircleAlert = LucideCircleAlert;
 
   protected readonly tabs = TABS;
   protected readonly nf = nf;
@@ -119,10 +128,7 @@ export class ConfiguracionCatalogo implements OnInit {
   protected tab = signal<CfgTab>('categorias');
   protected query = signal('');
   protected estadoFiltro = signal('');
-  protected aviso = signal('');
-  protected avisoTono = signal<'ok' | 'error'>('ok');
   protected guardando = signal(false);
-  protected errorApi = signal('');
   protected cargandoCategorias = this.catalogoService.cargandoCategorias;
   protected errorCategorias = this.catalogoService.errorCategorias;
   protected cargandoPresentaciones = this.catalogoService.cargandoPresentaciones;
@@ -234,11 +240,34 @@ export class ConfiguracionCatalogo implements OnInit {
   protected modo = signal<'nuevo' | 'editar' | null>(null);
   protected selId = signal<number | null>(null);
   protected cf = signal<CfgFormModel>(this.formVacio());
-  protected errores = signal<string[]>([]);
 
-  private mostrarAviso(mensaje: string, tono: 'ok' | 'error' = 'ok') {
-    this.aviso.set(mensaje);
-    this.avisoTono.set(tono);
+  // Toast flotante arriba a la derecha: éxito (verde), error de la API (rojo)
+  // o campos sin completar (amarillo). Mismo patrón y tamaño que en el login.
+  protected toast = signal<{ tone: AlertTone; title: string; description?: string } | null>(null);
+  protected toastVisible = signal(false);
+  private toastTimer: ReturnType<typeof setTimeout> | null = null;
+  private toastSalidaTimer: ReturnType<typeof setTimeout> | null = null;
+
+  private mostrarToast(tone: AlertTone, title: string, description?: string): void {
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    if (this.toastSalidaTimer) clearTimeout(this.toastSalidaTimer);
+
+    this.toast.set({ tone, title, description });
+    this.toastVisible.set(false);
+    requestAnimationFrame(() => requestAnimationFrame(() => this.toastVisible.set(true)));
+
+    this.toastTimer = setTimeout(() => this.cerrarToast(), DEMORA_AUTOCIERRE_TOAST_MS);
+  }
+
+  protected cerrarToast(): void {
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    this.toastVisible.set(false);
+    this.toastSalidaTimer = setTimeout(() => this.toast.set(null), DEMORA_SALIDA_TOAST_MS);
+  }
+
+  ngOnDestroy(): void {
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    if (this.toastSalidaTimer) clearTimeout(this.toastSalidaTimer);
   }
 
   private formVacio(): CfgFormModel {
@@ -253,8 +282,6 @@ export class ConfiguracionCatalogo implements OnInit {
   protected nuevo() {
     this.selId.set(null);
     this.cf.set(this.formVacio());
-    this.errores.set([]);
-    this.errorApi.set('');
     this.modo.set('nuevo');
   }
 
@@ -266,16 +293,12 @@ export class ConfiguracionCatalogo implements OnInit {
       cantidad: reg.cantidad === undefined ? '' : String(reg.cantidad),
       unidad: reg.unidad ?? 'gr',
     });
-    this.errores.set([]);
-    this.errorApi.set('');
     this.modo.set('editar');
   }
 
   protected cerrarForm() {
     this.modo.set(null);
     this.selId.set(null);
-    this.errores.set([]);
-    this.errorApi.set('');
   }
 
   protected setCampo(campo: keyof CfgFormModel, valor: string) {
@@ -285,22 +308,38 @@ export class ConfiguracionCatalogo implements OnInit {
   protected guardar() {
     const err = this.catalogoService.validarCfg(this.tab(), this.selId(), this.cf());
     if (err.length) {
-      this.errores.set(err);
+      this.mostrarToast(
+        'warning',
+        'Faltan campos por completar',
+        `Revisa: ${err.join(', ')}.`,
+      );
       return;
     }
-    this.errores.set([]);
-    this.errorApi.set('');
+
+    const esCreacion = this.selId() === null;
+    const tab = this.tab();
+    const nombre =
+      tab === 'categorias'
+        ? this.cf().nombre.trim()
+        : etiquetaPresentacion(Number(this.cf().cantidad), this.cf().unidad as UnidadCfg);
+    const singular = this.tabActual().singular;
+    const singularCap = singular.charAt(0).toUpperCase() + singular.slice(1);
+    const titulo = esCreacion ? `Nueva ${singular} registrada` : `${singularCap} actualizada`;
+
     this.guardando.set(true);
     this.catalogoService
-      .guardarCfg(this.tab(), this.selId(), this.cf())
+      .guardarCfg(tab, this.selId(), this.cf())
       .pipe(finalize(() => this.guardando.set(false)))
       .subscribe({
-        next: (mensaje) => {
-          this.mostrarAviso(mensaje);
+        next: () => {
+          this.mostrarToast('success', titulo, nombre);
           this.cerrarForm();
         },
         error: (e: unknown) =>
-          this.errorApi.set(mensajeDeError(e, 'No se pudo guardar. Inténtalo de nuevo.')),
+          this.mostrarToast(
+            'error',
+            mensajeDeError(e, 'No se pudo guardar. Inténtalo de nuevo.'),
+          ),
       });
   }
 
@@ -335,9 +374,9 @@ export class ConfiguracionCatalogo implements OnInit {
       .alternarCfg(this.tab(), reg.id)
       .pipe(finalize(() => this.guardando.set(false)))
       .subscribe({
-        next: (mensaje) => this.mostrarAviso(mensaje),
+        next: (mensaje) => this.mostrarToast('success', mensaje),
         error: (e: unknown) =>
-          this.mostrarAviso(mensajeDeError(e, 'No se pudo cambiar el estado.'), 'error'),
+          this.mostrarToast('error', mensajeDeError(e, 'No se pudo cambiar el estado.')),
       });
     this.confirmaId.set(null);
   }

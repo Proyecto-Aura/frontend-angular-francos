@@ -112,34 +112,26 @@ describe('DespachoDetalleModal (HU-A-023, RF-A095 a RF-A098)', () => {
     expect(raiz().textContent).toContain('solo lectura');
   });
 
-  it('puts the order on its way, keeps the modal open and offers to deliver it (RF-A096)', () => {
-    abrir({ estado: 'pendiente_entrega' });
-
-    boton('Iniciar despacho')!.click();
-    httpMock.expectOne(`${URL}/en-camino`).flush(detalleDto({ estado: 'en_camino' }));
-    fixture.detectChanges();
-
-    expect(fixture.componentInstance.pedido()?.estado).toBe('en_camino');
-    expect(botones()).toContain('Marcar como entregado');
-    expect(botones()).not.toContain('Iniciar despacho');
-    expect(avisos).toBe(1);
-    expect(fixture.componentInstance.errorAvance()).toBe('');
-  });
-
-  it('marks the order as delivered with its delivery date and tells the list (RF-A098)', () => {
-    abrir({ estado: 'en_camino' });
-
-    boton('Marcar como entregado')!.click();
-    httpMock
-      .expectOne(`${URL}/entregado`)
-      .flush(detalleDto({ estado: 'entregado', fecha_entrega: '2026-11-03T15:00:00.000Z' }));
-    fixture.detectChanges();
-
-    expect(fixture.componentInstance.pedido()?.estado).toBe('entregado');
-    expect(fixture.componentInstance.campos().map((c) => c.label)).toContain('Entregado el');
-    expect(botones()).not.toContain('Marcar como entregado');
-    expect(avisos).toBe(1);
-  });
+  it.each([
+    ['pendiente_entrega', 'en-camino', 'en_camino', 'Pedido en camino'],
+    ['en_camino', 'entregado', 'entregado', 'Pedido entregado'],
+  ] as const)(
+    'cierra tras cambiar %s y emite el aviso con el codigo',
+    (estado, endpoint, siguiente, titulo) => {
+      abrir({ estado });
+      let cerrado = 0;
+      const mensajes: unknown[] = [];
+      fixture.componentInstance.closed.subscribe(() => cerrado++);
+      fixture.componentInstance.actualizado.subscribe((aviso) => mensajes.push(aviso));
+      if (estado === 'pendiente_entrega') fixture.componentInstance.iniciarDespacho();
+      else fixture.componentInstance.marcarEntregado();
+      httpMock.expectOne(`${URL}/${endpoint}`).flush(detalleDto({ estado: siguiente }));
+      expect(cerrado).toBe(1);
+      expect(fixture.componentInstance.pedido()).toBeNull();
+      expect(mensajes).toEqual([{ titulo, codigo: 'PED-000007' }]);
+      expect(avisos).toBe(1);
+    },
+  );
 
   it('blocks the action while the request is in flight so it cannot be sent twice', () => {
     abrir({ estado: 'pendiente_entrega' });
@@ -165,7 +157,7 @@ describe('DespachoDetalleModal (HU-A-023, RF-A095 a RF-A098)', () => {
     fixture.detectChanges();
 
     expect(fixture.componentInstance.errorAvance()).toContain('ya cambió de estado');
-    expect(raiz().querySelector('[role="alert"]')?.textContent).toContain('ya cambió de estado');
+    expect(raiz().querySelector('app-ds-alert')?.textContent).toContain('ya cambió de estado');
     expect(fixture.componentInstance.pedido()?.estado).toBe('en_camino');
     expect(avisos).toBe(1);
   });

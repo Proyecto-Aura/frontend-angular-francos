@@ -13,7 +13,7 @@ import { LucideChevronDown, LucideChevronRight } from '@lucide/angular';
 import { catchError, finalize, forkJoin, of } from 'rxjs';
 
 import { RutaNodo } from '../../../../../core/interfaces/ruta-nodo.interface';
-import { AvisoBanner } from '../../../../ventas/catalogo/components/aviso-banner/aviso-banner';
+import { Alert, AlertTone } from '../../../../../shared/ds/alert/alert';
 import { Badge } from '../../../../../shared/ds/badge/badge';
 import { Button } from '../../../../../shared/ds/button/button';
 import { Card } from '../../../../../shared/ds/card/card';
@@ -32,7 +32,7 @@ import { RolesPermisosService } from '../../services/roles-permisos.service';
 import { UsuariosService } from '../../services/usuarios.service';
 
 @Component({
-  imports: [AvisoBanner, Badge, Button, Card, Icon, Switch],
+  imports: [Alert, Badge, Button, Card, Icon, Switch],
   selector: 'app-usuarios-roles-permisos',
   templateUrl: './usuarios-roles-permisos.html',
 })
@@ -40,6 +40,19 @@ export class UsuariosRolesPermisos {
   private permisosService = inject(RolesPermisosService);
   private usuariosService = inject(UsuariosService);
   private destroyRef = inject(DestroyRef);
+
+  toast = signal<{ tone: AlertTone; title: string; description?: string } | null>(null);
+  private toastTimer: ReturnType<typeof setTimeout> | null = null;
+  cerrarToast(): void {
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    this.toastTimer = null;
+    this.toast.set(null);
+  }
+  private mostrarToast(tone: AlertTone, title: string, description?: string): void {
+    this.cerrarToast();
+    this.toast.set({ tone, title, description });
+    this.toastTimer = setTimeout(() => this.cerrarToast(), 4500);
+  }
 
   roles = input<Rol[]>([]);
 
@@ -84,6 +97,7 @@ export class UsuariosRolesPermisos {
   );
 
   constructor() {
+    this.destroyRef.onDestroy(() => this.cerrarToast());
     this.cargarArbol();
 
     // Al llegar los roles se elige el primero y se cuentan sus usuarios.
@@ -137,7 +151,7 @@ export class UsuariosRolesPermisos {
 
   protected seleccionar(rol: Rol): void {
     this.rolId.set(rol.id);
-    this.aviso.set({ mensaje: '', tono: 'ok' });
+    this.actualizarAviso({ mensaje: '', tono: 'ok' });
     this.cargarAccesos(rol.id);
   }
 
@@ -157,7 +171,7 @@ export class UsuariosRolesPermisos {
           this.actuales.set(new Set(accesos));
         },
         error: (error: unknown) =>
-          this.aviso.set({
+          this.actualizarAviso({
             mensaje: apiErrorMessage(error, 'No se pudo cargar los permisos del rol.'),
             tono: 'error',
           }),
@@ -198,7 +212,7 @@ export class UsuariosRolesPermisos {
     const revocar = diferencia(this.guardados(), this.actuales());
 
     this.guardando.set(true);
-    this.aviso.set({ mensaje: '', tono: 'ok' });
+    this.actualizarAviso({ mensaje: '', tono: 'ok' });
     this.permisosService
       .guardar(rolId, otorgar, revocar)
       .pipe(
@@ -207,12 +221,12 @@ export class UsuariosRolesPermisos {
       )
       .subscribe({
         next: () => {
-          this.aviso.set({ mensaje: 'Permisos guardados correctamente', tono: 'ok' });
+          this.actualizarAviso({ mensaje: 'Permisos guardados correctamente', tono: 'ok' });
           this.cargarAccesos(rolId);
         },
         // No es atómico: se vuelve a leer para mostrar lo que quedó guardado de verdad.
         error: (error: unknown) => {
-          this.aviso.set({
+          this.actualizarAviso({
             mensaje: apiErrorMessage(
               error,
               'No se pudieron guardar todos los permisos. Revise el resultado e intente nuevamente.',
@@ -224,7 +238,13 @@ export class UsuariosRolesPermisos {
       });
   }
 
+  private actualizarAviso(aviso: { mensaje: string; tono: 'ok' | 'error' }): void {
+    this.aviso.set(aviso);
+    if (aviso.mensaje) this.mostrarToast(aviso.tono === 'ok' ? 'success' : 'error', aviso.mensaje);
+    else this.cerrarToast();
+  }
+
   protected cerrarAviso(): void {
-    this.aviso.set({ mensaje: '', tono: 'ok' });
+    this.actualizarAviso({ mensaje: '', tono: 'ok' });
   }
 }

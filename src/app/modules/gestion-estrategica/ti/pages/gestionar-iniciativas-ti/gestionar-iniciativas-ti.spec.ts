@@ -395,9 +395,9 @@ describe('GestionarIniciativasTiPage', () => {
         .componentInstance as IniciativaTiEliminarModal;
       const emitSuccess = {
         form: () => form.saved.emit(makeIniciativa()),
-        estado: () => state.changed.emit(),
-        cancelar: () => cancel.cancelled.emit(),
-        eliminar: () => remove.deleted.emit(),
+        estado: () => state.changed.emit(true),
+        cancelar: () => cancel.cancelled.emit(true),
+        eliminar: () => remove.deleted.emit(true),
       };
       emitSuccess[modal]();
 

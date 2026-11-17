@@ -1,3 +1,5 @@
+import { Alert } from '../../../../../shared/ds/alert/alert';
+import { crearAlertaTemporal } from '../../../../../shared/ds/alert/alerta-temporal';
 import { HttpErrorResponse } from '@angular/common/http';
 import {
   Component,
@@ -31,7 +33,7 @@ import {
 } from '../../../negocio/components/kpi-form-modal/kpi.reglas';
 
 @Component({
-  imports: [Badge, Button, Field, Input, Modal, Select],
+  imports: [Alert, Badge, Button, Field, Input, Modal, Select],
   selector: 'app-kpi-ti-valor-modal',
   templateUrl: './kpi-ti-valor-modal.html',
 })
@@ -111,6 +113,26 @@ export class KpiTiValorModal {
     );
   });
 
+  private alertas = crearAlertaTemporal(() => this.errorGeneral.set(null));
+  toast = this.alertas.toast;
+  private mostrarErrorAlerta(mensaje: string | null): void {
+    if (!mensaje) {
+      this.alertas.limpiar();
+      return;
+    }
+    this.alertas.mostrar('error', mensaje);
+    this.errorGeneral.set(mensaje);
+  }
+  private advertirCampos(): void {
+    const mensaje = this.errorGeneral();
+    this.alertas.mostrar(
+      'warning',
+      'Faltan campos por completar',
+      'Revisa los campos marcados antes de guardar.',
+    );
+    this.errorGeneral.set(mensaje);
+  }
+
   constructor() {
     effect(() => {
       const estaAbierto = this.open();
@@ -135,18 +157,21 @@ export class KpiTiValorModal {
     const opcion = this.opcionSeleccionada();
     const valor = this.valorNumerico();
     this.errorValor.set(null);
-    this.errorGeneral.set(null);
+    this.mostrarErrorAlerta(null);
 
     if (!opcion) {
-      this.errorGeneral.set('Seleccione un periodo.');
+      this.mostrarErrorAlerta('Seleccione un periodo.');
       return;
     }
     if (valor === null) {
       this.errorValor.set('Ingrese un valor numérico.');
+      this.advertirCampos();
       return;
     }
     if (!kpi || this.plan().estadoCodigo !== 'ACTIVO') {
-      this.errorGeneral.set('Solo se pueden registrar valores de KPI cuando el plan está Activo.');
+      this.mostrarErrorAlerta(
+        'Solo se pueden registrar valores de KPI cuando el plan está Activo.',
+      );
       return;
     }
 
@@ -200,7 +225,7 @@ export class KpiTiValorModal {
 
     this.cargando.set(true);
     this.errorCarga.set(false);
-    this.errorGeneral.set(null);
+    this.mostrarErrorAlerta(null);
     forkJoin({
       periodos: this.catalogoService.listarPeriodos(kpi.frecuenciaId),
       historial: this.kpiService.listarValores(kpi.id),
@@ -234,7 +259,7 @@ export class KpiTiValorModal {
     this.cargando.set(false);
     this.guardando.set(false);
     this.errorCarga.set(false);
-    this.errorGeneral.set(null);
+    this.mostrarErrorAlerta(null);
     this.errorValor.set(null);
   }
 
@@ -251,7 +276,7 @@ export class KpiTiValorModal {
 
   private manejarError(error: unknown): void {
     if (!(error instanceof HttpErrorResponse)) {
-      this.errorGeneral.set('No se pudo registrar el valor. Intente nuevamente.');
+      this.mostrarErrorAlerta('No se pudo registrar el valor. Intente nuevamente.');
       return;
     }
     const apiError = error.error as Partial<KpiApiErrorDto> | null;
@@ -263,13 +288,13 @@ export class KpiTiValorModal {
     const mensaje = mensajes.join(' ');
 
     if (error.status === 401 || error.status === 403) {
-      this.errorGeneral.set('No tiene permisos para gestionar KPIs.');
+      this.mostrarErrorAlerta('No tiene permisos para gestionar KPIs.');
       return;
     }
     if (error.status === 404 || error.status === 409) {
-      this.errorGeneral.set(mensaje || 'No se pudo registrar el valor. Intente nuevamente.');
+      this.mostrarErrorAlerta(mensaje || 'No se pudo registrar el valor. Intente nuevamente.');
       return;
     }
-    this.errorGeneral.set('No se pudo registrar el valor. Intente nuevamente.');
+    this.mostrarErrorAlerta('No se pudo registrar el valor. Intente nuevamente.');
   }
 }

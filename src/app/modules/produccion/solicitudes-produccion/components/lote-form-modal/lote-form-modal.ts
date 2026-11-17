@@ -1,3 +1,4 @@
+import { Alert, AlertTone } from '../../../../../shared/ds/alert/alert';
 import { HttpErrorResponse } from '@angular/common/http';
 import {
   Component,
@@ -57,7 +58,7 @@ function fechaIsoLocal(fecha: Date): string {
 // LoteFormModal de Insumos: codigo de lote autogenerado (no editable), no
 // se puede guardar hasta que termine de generarse.
 @Component({
-  imports: [Button, Combobox, Field, Icon, Input, Modal],
+  imports: [Alert, Button, Combobox, Field, Icon, Input, Modal],
   selector: 'app-lote-form-modal',
   templateUrl: './lote-form-modal.html',
 })
@@ -71,7 +72,7 @@ export class LoteFormModal {
 
   open = input(false);
   closed = output<void>();
-  saved = output<LoteProductoTerminado>();
+  saved = output<LoteProductoTerminado & { productoNombre: string }>();
 
   readonly LucideLayers = LucideLayers;
 
@@ -146,7 +147,26 @@ export class LoteFormModal {
   errorGeneral = signal<string | null>(null);
   guardando = signal(false);
 
+  toast = signal<{ tone: AlertTone; title: string; description?: string } | null>(null);
+  private alertaTimer: ReturnType<typeof setTimeout> | null = null;
+  private limpiarAlerta(): void {
+    if (this.alertaTimer) clearTimeout(this.alertaTimer);
+    this.alertaTimer = null;
+    this.errorGeneral.set(null);
+    this.toast.set(null);
+  }
+  private mostrarAviso(tone: AlertTone, title: string, description?: string): void {
+    this.limpiarAlerta();
+    this.toast.set({ tone, title, description });
+    this.alertaTimer = setTimeout(() => this.limpiarAlerta(), 4500);
+  }
+  private mostrarError(mensaje: string): void {
+    this.mostrarAviso('error', mensaje);
+    this.errorGeneral.set(mensaje);
+  }
+
   constructor() {
+    this.destroyRef.onDestroy(() => this.limpiarAlerta());
     effect(() => {
       const estaAbierto = this.open();
       if (estaAbierto && !this.estabaAbierto) {
@@ -212,9 +232,17 @@ export class LoteFormModal {
     const errores = validarLoteForm(form);
 
     this.errores.set(errores);
-    this.errorGeneral.set(null);
+    this.limpiarAlerta();
 
-    if (Object.keys(errores).length > 0 || this.generandoCodigo() || !this.codigoLote()) {
+    if (Object.keys(errores).length > 0) {
+      this.mostrarAviso(
+        'warning',
+        'Faltan campos por completar',
+        'Revisa los campos marcados antes de guardar.',
+      );
+      return;
+    }
+    if (this.generandoCodigo() || !this.codigoLote()) {
       return;
     }
 
@@ -227,7 +255,13 @@ export class LoteFormModal {
       )
       .subscribe({
         next: (lote) => {
-          this.saved.emit(lote);
+          const productoNombre = this.productoSeleccionado()?.productoNombre ?? '';
+          this.mostrarAviso(
+            'success',
+            'Lote registrado',
+            [lote.codigoLote, productoNombre].filter(Boolean).join(' \u00b7 '),
+          );
+          this.saved.emit({ ...lote, productoNombre });
           const solicitudId = this.solicitudDetalle()?.id;
           if (solicitudId) {
             this.refrescarSolicitudTrasGuardar(solicitudId);
@@ -322,7 +356,7 @@ export class LoteFormModal {
     this.solicitudDetalle.set(null);
     this.cargandoSolicitud.set(false);
     this.errores.set({});
-    this.errorGeneral.set(null);
+    this.limpiarAlerta();
     this.guardando.set(false);
   }
 
@@ -339,12 +373,12 @@ export class LoteFormModal {
 
   private manejarError(error: unknown): void {
     if (!(error instanceof HttpErrorResponse)) {
-      this.errorGeneral.set('No se pudo registrar el lote. Intente nuevamente.');
+      this.mostrarError('No se pudo registrar el lote. Intente nuevamente.');
       return;
     }
 
     if (error.status === 401 || error.status === 403) {
-      this.errorGeneral.set('No tiene permisos para registrar lotes.');
+      this.mostrarError('No tiene permisos para registrar lotes.');
       return;
     }
 
@@ -374,16 +408,16 @@ export class LoteFormModal {
     // vez): se regenera el codigo para que la persona pueda reintentar sin
     // recargar todo el formulario.
     if (error.status === 409 && (mensajeMin.includes('codigo') || mensajeMin.includes('lote'))) {
-      this.errorGeneral.set('Ese código de lote ya existe. Generando uno nuevo…');
+      this.mostrarError('Ese código de lote ya existe. Generando uno nuevo…');
       this.regenerarCodigo();
       return;
     }
 
     if (error.status === 400 || error.status === 409) {
-      this.errorGeneral.set(mensaje || 'No se pudo registrar el lote. Intente nuevamente.');
+      this.mostrarError(mensaje || 'No se pudo registrar el lote. Intente nuevamente.');
       return;
     }
 
-    this.errorGeneral.set('No se pudo registrar el lote. Intente nuevamente.');
+    this.mostrarError('No se pudo registrar el lote. Intente nuevamente.');
   }
 }

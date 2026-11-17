@@ -1,3 +1,5 @@
+import { Alert } from '../../../../../shared/ds/alert/alert';
+import { crearAlertaTemporal } from '../../../../../shared/ds/alert/alerta-temporal';
 import { HttpErrorResponse } from '@angular/common/http';
 import {
   Component,
@@ -22,7 +24,7 @@ import { EstadoPlanCodigo, PlanEstrategico } from '../../interfaces/plan-estrate
 import { PlanEstrategicoService } from '../../services/plan-estrategico.service';
 
 @Component({
-  imports: [Badge, Button, Checkbox, Icon, Modal],
+  imports: [Alert, Badge, Button, Checkbox, Icon, Modal],
   selector: 'app-plan-estrategico-estado-modal',
   templateUrl: './plan-estrategico-estado-modal.html',
 })
@@ -61,13 +63,24 @@ export class PlanEstrategicoEstadoModal {
     return plan ? `${plan.nombre} (${plan.codigo})` : null;
   });
 
+  private alertas = crearAlertaTemporal(() => this.errorGeneral.set(null));
+  toast = this.alertas.toast;
+  private mostrarErrorAlerta(mensaje: string | null): void {
+    if (!mensaje) {
+      this.alertas.limpiar();
+      return;
+    }
+    this.alertas.mostrar('error', mensaje);
+    this.errorGeneral.set(mensaje);
+  }
+
   constructor() {
     effect(() => {
       const estaAbierto = this.open();
       if (estaAbierto && !this.estabaAbierto) {
         this.confirmacionCierre.set(false);
         this.guardando.set(false);
-        this.errorGeneral.set(null);
+        this.mostrarErrorAlerta(null);
       }
       this.estabaAbierto = estaAbierto;
     });
@@ -91,7 +104,7 @@ export class PlanEstrategicoEstadoModal {
         : this.planService.cerrar(plan.id);
 
     this.guardando.set(true);
-    this.errorGeneral.set(null);
+    this.mostrarErrorAlerta(null);
     request
       .pipe(
         finalize(() => this.guardando.set(false)),
@@ -120,12 +133,12 @@ export class PlanEstrategicoEstadoModal {
 
   private manejarError(error: unknown): void {
     if (!(error instanceof HttpErrorResponse)) {
-      this.errorGeneral.set('No se pudo cambiar el estado. Intente nuevamente.');
+      this.mostrarErrorAlerta('No se pudo cambiar el estado. Intente nuevamente.');
       return;
     }
 
     if (error.status === 401 || error.status === 403) {
-      this.errorGeneral.set('No tiene permisos para cambiar el estado del plan.');
+      this.mostrarErrorAlerta('No tiene permisos para cambiar el estado del plan.');
       return;
     }
 
@@ -135,7 +148,7 @@ export class PlanEstrategicoEstadoModal {
       : apiError?.message
         ? [apiError.message]
         : [];
-    this.errorGeneral.set(
+    this.mostrarErrorAlerta(
       mensajes.join(' ') || 'No se pudo cambiar el estado. Intente nuevamente.',
     );
   }

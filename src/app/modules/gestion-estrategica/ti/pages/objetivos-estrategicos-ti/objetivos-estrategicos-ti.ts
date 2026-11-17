@@ -1,3 +1,5 @@
+import { Alert } from '../../../../../shared/ds/alert/alert';
+import { crearAlertaTemporal } from '../../../../../shared/ds/alert/alerta-temporal';
 import {
   AfterViewInit,
   Component,
@@ -42,6 +44,7 @@ import { ObjetivoEstrategicoTiService } from '../../services/objetivo-estrategic
 
 @Component({
   imports: [
+    Alert,
     Badge,
     Button,
     Card,
@@ -78,6 +81,19 @@ export class ObjetivosEstrategicosTiPage implements AfterViewInit {
   private objetivoTiService = inject(ObjetivoEstrategicoTiService);
   private objetivoNegocioService = inject(ObjetivoEstrategicoService);
   private destroyRef = inject(DestroyRef);
+  private alertas = crearAlertaTemporal();
+  toast = this.alertas.toast;
+  private notificarExito(
+    titulo: string,
+    entidad?: { codigo?: string; nombre?: string } | null,
+  ): void {
+    this.alertas.mostrar(
+      'success',
+      titulo,
+      entidad ? [entidad.codigo, entidad.nombre].filter(Boolean).join(' \u00b7 ') : undefined,
+    );
+  }
+
   private solicitudActual = 0;
   private perspectivasSolicitadas = false;
 
@@ -253,12 +269,21 @@ export class ObjetivosEstrategicosTiPage implements AfterViewInit {
     this.objetivoSeleccionado.set(null);
   }
 
-  objetivoGuardado(): void {
+  objetivoGuardado(objetivo?: { codigo?: string; nombre?: string }): void {
+    this.notificarExito(
+      this.modalActivo() === 'estado'
+        ? 'Estado del objetivo actualizado'
+        : this.objetivoSeleccionado()
+          ? 'Objetivo actualizado'
+          : 'Nuevo objetivo registrado',
+      objetivo ?? this.objetivoSeleccionado(),
+    );
     this.cerrarModal();
     this.cargarDatos();
   }
 
   objetivoEliminado(): void {
+    this.notificarExito('Objetivo eliminado', this.objetivoSeleccionado());
     this.cerrarModal();
     this.cargarDatos();
   }

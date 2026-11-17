@@ -3,6 +3,7 @@ import {
   AfterViewInit,
   Component,
   DestroyRef,
+  OnDestroy,
   OnInit,
   TemplateRef,
   ViewChild,
@@ -27,6 +28,7 @@ import {
   LucideTrendingUp,
 } from '@lucide/angular';
 import { finalize } from 'rxjs';
+import { Alert, AlertTone } from '../../../../../shared/ds/alert/alert';
 import { Badge, BadgeTone } from '../../../../../shared/ds/badge/badge';
 import { Button } from '../../../../../shared/ds/button/button';
 import { Card } from '../../../../../shared/ds/card/card';
@@ -77,6 +79,9 @@ const NIVEL_TONE: Record<NivelStockProducto, BadgeTone> = {
   agotado: 'danger',
 };
 
+const DEMORA_AUTOCIERRE_TOAST_MS = 4500;
+const DEMORA_SALIDA_TOAST_MS = 300;
+
 // "Stock de productos": KPIs + tabs Stock/Historial/Lotes + filtros + tabla,
 // mismo patron que stock-insumos.ts. "Registrar movimiento" abre
 // MovimientoProductoTerminadoFormModal, conectado a
@@ -87,6 +92,7 @@ const NIVEL_TONE: Record<NivelStockProducto, BadgeTone> = {
 // por el backend).
 @Component({
   imports: [
+    Alert,
     Badge,
     Button,
     Card,
@@ -109,7 +115,7 @@ const NIVEL_TONE: Record<NivelStockProducto, BadgeTone> = {
   selector: 'app-stock-productos',
   templateUrl: './stock-productos.html',
 })
-export class StockProductos implements OnInit, AfterViewInit {
+export class StockProductos implements OnInit, AfterViewInit, OnDestroy {
   private productoPresentacionService = inject(ProductoPresentacionService);
   private loteService = inject(LoteProductoTerminadoService);
   private destroyRef = inject(DestroyRef);
@@ -200,6 +206,34 @@ export class StockProductos implements OnInit, AfterViewInit {
   errorCarga = signal(false);
 
   resumen = signal<ResumenProductosTerminados>(RESUMEN_VACIO);
+
+  // Toast flotante arriba a la derecha: éxito (verde) o error de la API (rojo).
+  toast = signal<{ tone: AlertTone; title: string; description?: string } | null>(null);
+  toastVisible = signal(false);
+  private toastTimer: ReturnType<typeof setTimeout> | null = null;
+  private toastSalidaTimer: ReturnType<typeof setTimeout> | null = null;
+
+  private mostrarToast(tone: AlertTone, title: string, description?: string): void {
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    if (this.toastSalidaTimer) clearTimeout(this.toastSalidaTimer);
+
+    this.toast.set({ tone, title, description });
+    this.toastVisible.set(false);
+    requestAnimationFrame(() => requestAnimationFrame(() => this.toastVisible.set(true)));
+
+    this.toastTimer = setTimeout(() => this.cerrarToast(), DEMORA_AUTOCIERRE_TOAST_MS);
+  }
+
+  cerrarToast(): void {
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    this.toastVisible.set(false);
+    this.toastSalidaTimer = setTimeout(() => this.toast.set(null), DEMORA_SALIDA_TOAST_MS);
+  }
+
+  ngOnDestroy(): void {
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    if (this.toastSalidaTimer) clearTimeout(this.toastSalidaTimer);
+  }
 
   ngOnInit(): void {
     this.cargarProductos();
@@ -341,7 +375,8 @@ export class StockProductos implements OnInit, AfterViewInit {
     this.productoParaMovimiento.set(null);
   }
 
-  movimientoGuardado(): void {
+  movimientoGuardado(aviso: { titulo: string; mensaje: string }): void {
+    this.mostrarToast('success', aviso.titulo, aviso.mensaje);
     this.cargarMovimientosTotal();
     this.cerrarFormMovimiento();
     this.recargarTodo();
@@ -355,25 +390,34 @@ export class StockProductos implements OnInit, AfterViewInit {
     this.productoEnEdicion.set(null);
   }
 
-  productoEditado(): void {
+  productoEditado(producto: ProductoPresentacion): void {
+    this.mostrarToast(
+      'success',
+      'Stock actualizado',
+      `${producto.productoNombre} · ${etiquetaPresentacion(producto.presentacionCantidad, producto.presentacionUnidadMedida)}`,
+    );
     this.cerrarEditar();
     this.recargarTodo();
   }
 
   /** Activar/desactivar: logico (toggle de estado), sin confirmacion — mismo criterio que insumos. */
   alternarEstado(producto: ProductoPresentacion): void {
-    if (producto.estado) {
-      this.productoPresentacionService
-        .desactivar(producto.id)
-        .pipe(takeUntilDestroyed(this.destroyRef))
-        .subscribe(() => this.recargarTodo());
-      return;
-    }
+    const nombre = `${producto.productoNombre} · ${etiquetaPresentacion(producto.presentacionCantidad, producto.presentacionUnidadMedida)}`;
+    const peticion = producto.estado
+      ? this.productoPresentacionService.desactivar(producto.id)
+      : this.productoPresentacionService.activar(producto.id);
 
-    this.productoPresentacionService
-      .activar(producto.id)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => this.recargarTodo());
+    peticion.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: () => {
+        this.mostrarToast(
+          'success',
+          producto.estado ? 'Producto desactivado' : 'Producto activado',
+          nombre,
+        );
+        this.recargarTodo();
+      },
+      error: () => this.mostrarToast('error', 'No se pudo cambiar el estado. Intenta nuevamente.'),
+    });
   }
 
   nivelLabel(nivel: NivelStockProducto): string {

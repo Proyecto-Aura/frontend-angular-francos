@@ -251,4 +251,27 @@ describe('DespachoPedidos (HU-A-023, RF-A094)', () => {
     expect(fixture.componentInstance.pedidos()[0].estado).toBe('en_camino');
     expect(fixture.componentInstance.resumen().enCamino).toBe(1);
   });
+  it('muestra el aviso con codigo fuera del modal y lo oculta a los 4500 ms', () => {
+    vi.useFakeTimers();
+    try {
+      const fixture = create();
+      flushPagina(peticionPagina());
+      flushResumen();
+      fixture.componentInstance.pedidoActualizado({
+        titulo: 'Pedido entregado',
+        codigo: 'PED-000007',
+      });
+      flushPagina(peticionPagina());
+      flushResumen();
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('app-ds-alert').textContent).toContain(
+        'PED-000007',
+      );
+      vi.advanceTimersByTime(4500);
+      expect(fixture.componentInstance.toast()).toBeNull();
+      fixture.destroy();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

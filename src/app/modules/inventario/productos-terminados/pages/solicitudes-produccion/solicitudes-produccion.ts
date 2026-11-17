@@ -2,6 +2,7 @@ import {
   AfterViewInit,
   Component,
   DestroyRef,
+  OnDestroy,
   OnInit,
   TemplateRef,
   ViewChild,
@@ -21,6 +22,7 @@ import {
   LucideSearch,
 } from '@lucide/angular';
 import { finalize } from 'rxjs';
+import { Alert, AlertTone } from '../../../../../shared/ds/alert/alert';
 import { Badge, BadgeTone } from '../../../../../shared/ds/badge/badge';
 import { Button } from '../../../../../shared/ds/button/button';
 import { Card } from '../../../../../shared/ds/card/card';
@@ -67,6 +69,9 @@ const RESUMEN_VACIO: ResumenSolicitudesProduccion = {
   canceladas: 0,
 };
 
+const DEMORA_AUTOCIERRE_TOAST_MS = 4500;
+const DEMORA_SALIDA_TOAST_MS = 300;
+
 // "Solicitudes a produccion" (OFT0-261): KPIs + filtros + tabla, mismo
 // patron visual que el resto del modulo. Listar, crear, indicadores, "Ver
 // detalle" y "Editar" ya estan conectados a la API real (confirmado por el
@@ -79,6 +84,7 @@ const RESUMEN_VACIO: ResumenSolicitudesProduccion = {
 // Cancelar cambia el estado a rechazado mediante PATCH .../estado.
 @Component({
   imports: [
+    Alert,
     Badge,
     Button,
     Card,
@@ -97,7 +103,7 @@ const RESUMEN_VACIO: ResumenSolicitudesProduccion = {
   selector: 'app-solicitudes-produccion',
   templateUrl: './solicitudes-produccion.html',
 })
-export class SolicitudesProduccion implements OnInit, AfterViewInit {
+export class SolicitudesProduccion implements OnInit, AfterViewInit, OnDestroy {
   private solicitudService = inject(SolicitudProduccionService);
   private destroyRef = inject(DestroyRef);
 
@@ -144,7 +150,34 @@ export class SolicitudesProduccion implements OnInit, AfterViewInit {
   cargando = signal(true);
   errorCarga = signal(false);
   cancelandoId = signal<number | null>(null);
-  errorCancelacion = signal('');
+
+  // Toast flotante arriba a la derecha: éxito (verde) o error de la API (rojo).
+  toast = signal<{ tone: AlertTone; title: string; description?: string } | null>(null);
+  toastVisible = signal(false);
+  private toastTimer: ReturnType<typeof setTimeout> | null = null;
+  private toastSalidaTimer: ReturnType<typeof setTimeout> | null = null;
+
+  private mostrarToast(tone: AlertTone, title: string, description?: string): void {
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    if (this.toastSalidaTimer) clearTimeout(this.toastSalidaTimer);
+
+    this.toast.set({ tone, title, description });
+    this.toastVisible.set(false);
+    requestAnimationFrame(() => requestAnimationFrame(() => this.toastVisible.set(true)));
+
+    this.toastTimer = setTimeout(() => this.cerrarToast(), DEMORA_AUTOCIERRE_TOAST_MS);
+  }
+
+  cerrarToast(): void {
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    this.toastVisible.set(false);
+    this.toastSalidaTimer = setTimeout(() => this.toast.set(null), DEMORA_SALIDA_TOAST_MS);
+  }
+
+  ngOnDestroy(): void {
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    if (this.toastSalidaTimer) clearTimeout(this.toastSalidaTimer);
+  }
 
   resumen = signal<ResumenSolicitudesProduccion>(RESUMEN_VACIO);
 
@@ -257,7 +290,8 @@ export class SolicitudesProduccion implements OnInit, AfterViewInit {
     this.modalAbierto.set(false);
   }
 
-  solicitudCreada(): void {
+  solicitudCreada(solicitud: SolicitudProduccion): void {
+    this.mostrarToast('success', 'Nueva solicitud registrada', solicitud.codigo);
     this.cerrarForm();
     this.recargarTodo();
   }
@@ -277,7 +311,6 @@ export class SolicitudesProduccion implements OnInit, AfterViewInit {
   cancelarSolicitud(solicitud: SolicitudProduccion): void {
     if (!this.puedeEditar(solicitud) || this.cancelandoId() !== null) return;
     this.cancelandoId.set(solicitud.id);
-    this.errorCancelacion.set('');
     this.solicitudService
       .cancelar(solicitud.id)
       .pipe(
@@ -297,10 +330,12 @@ export class SolicitudesProduccion implements OnInit, AfterViewInit {
                 : fila,
             ),
           );
+          this.mostrarToast('success', 'Solicitud cancelada', solicitud.codigo);
           this.recargarTodo();
         },
         error: (error) => {
-          this.errorCancelacion.set(
+          this.mostrarToast(
+            'error',
             error.status === 409
               ? 'La solicitud ya no está pendiente. Se actualizará la lista.'
               : 'No se pudo cancelar la solicitud. Intenta nuevamente.',
@@ -320,7 +355,8 @@ export class SolicitudesProduccion implements OnInit, AfterViewInit {
     this.solicitudEditarId.set(null);
   }
 
-  solicitudEditada(): void {
+  solicitudEditada(codigo: string): void {
+    this.mostrarToast('success', 'Solicitud actualizada', codigo);
     this.cerrarEditar();
     this.recargarTodo();
   }

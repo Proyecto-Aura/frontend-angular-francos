@@ -395,9 +395,17 @@ describe('StockProductos', () => {
     flushPresentaciones();
 
     fixture.componentInstance.abrirRegistrarMovimiento();
-    fixture.componentInstance.movimientoGuardado();
+    fixture.componentInstance.movimientoGuardado({
+      titulo: 'Movimiento registrado',
+      mensaje: 'Pan de molde · 500 gr',
+    });
 
     expect(fixture.componentInstance.modalMovimientoAbierto()).toBe(false);
+    expect(fixture.componentInstance.toast()).toMatchObject({
+      tone: 'success',
+      title: 'Movimiento registrado',
+      description: 'Pan de molde · 500 gr',
+    });
     flushPage(expectPageRequest(1, 10));
     flushIndicadores();
   });
@@ -473,9 +481,14 @@ describe('StockProductos', () => {
 
     const [fila] = fixture.componentInstance.productos();
     fixture.componentInstance.abrirEditar(fila.producto);
-    fixture.componentInstance.productoEditado();
+    fixture.componentInstance.productoEditado(fila.producto);
 
     expect(fixture.componentInstance.productoEnEdicion()).toBeNull();
+    expect(fixture.componentInstance.toast()).toMatchObject({
+      tone: 'success',
+      title: 'Stock actualizado',
+      description: 'Pan de molde · 500 gr',
+    });
     flushPage(expectPageRequest(1, 10));
     flushIndicadores();
   });
@@ -494,6 +507,11 @@ describe('StockProductos', () => {
     expect(deleteReq.request.method).toBe('DELETE');
     deleteReq.flush(null);
 
+    expect(fixture.componentInstance.toast()).toMatchObject({
+      tone: 'success',
+      title: 'Producto desactivado',
+      description: 'Pan de molde · 500 gr',
+    });
     flushPage(expectPageRequest(1, 10));
     flushIndicadores();
   });
@@ -524,6 +542,11 @@ describe('StockProductos', () => {
       presentacion_id: 2,
     });
 
+    expect(fixture.componentInstance.toast()).toMatchObject({
+      tone: 'success',
+      title: 'Producto activado',
+      description: 'Pan de molde · 500 gr',
+    });
     flushPage(expectPageRequest(1, 10));
     flushIndicadores();
   });

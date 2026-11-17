@@ -1,3 +1,5 @@
+import { Alert } from '../../../../../shared/ds/alert/alert';
+import { crearAlertaTemporal } from '../../../../../shared/ds/alert/alerta-temporal';
 import { RouterLink } from '@angular/router';
 import {
   AfterViewInit,
@@ -60,6 +62,7 @@ type ModalIniciativa = 'form' | 'estado' | 'cancelar' | 'eliminar' | null;
 
 @Component({
   imports: [
+    Alert,
     Badge,
     Button,
     Card,
@@ -100,6 +103,19 @@ export class GestionarIniciativasTiPage implements AfterViewInit {
   private objetivoService = inject(ObjetivoEstrategicoTiService);
   private iniciativaService = inject(IniciativaTiService);
   private destroyRef = inject(DestroyRef);
+  private alertas = crearAlertaTemporal();
+  toast = this.alertas.toast;
+  private notificarExito(
+    titulo: string,
+    entidad?: { codigo?: string; nombre?: string } | null,
+  ): void {
+    this.alertas.mostrar(
+      'success',
+      titulo,
+      entidad ? [entidad.codigo, entidad.nombre].filter(Boolean).join(' \u00b7 ') : undefined,
+    );
+  }
+
   private solicitudActual = 0;
 
   readonly planSeleccionado = inject(PlanSeleccionadoService);
@@ -288,7 +304,19 @@ export class GestionarIniciativasTiPage implements AfterViewInit {
     this.objetivoIdInicial.set(null);
   }
 
-  iniciativaActualizada(): void {
+  iniciativaActualizada(iniciativa?: Iniciativa, notificar = true): void {
+    const accion = this.modalActivo();
+    const titulo =
+      accion === 'eliminar'
+        ? 'Iniciativa eliminada'
+        : accion === 'cancelar'
+          ? 'Iniciativa cancelada'
+          : accion === 'estado'
+            ? 'Estado de la iniciativa actualizado'
+            : this.iniciativaSeleccionada()
+              ? 'Iniciativa actualizada'
+              : 'Nueva iniciativa registrada';
+    if (notificar) this.notificarExito(titulo, iniciativa ?? this.iniciativaSeleccionada());
     this.cerrarModal();
     this.cargarIniciativas();
   }

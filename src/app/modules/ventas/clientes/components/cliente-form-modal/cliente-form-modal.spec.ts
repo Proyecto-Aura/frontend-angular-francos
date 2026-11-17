@@ -80,7 +80,7 @@ describe('ClienteFormModal', () => {
   let fixture: ComponentFixture<ClienteFormModal>;
   let component: ClienteFormModal;
   let httpMock: HttpTestingController;
-  let avisos: string[];
+  let avisos: { titulo: string; mensaje: string }[];
   let cierres: number;
 
   function abrir(cliente: Cliente | null = null): void {
@@ -150,7 +150,7 @@ describe('ClienteFormModal', () => {
     expect(component.modoEdicion()).toBe(false);
     expect(component.f().numeroDocumento).toBe('');
     expect(component.f().categoria).toBe('minorista');
-    expect(component.errores()).toEqual([]);
+    expect(component.toast()).toBeNull();
   });
 
   it('loads the client to edit', () => {
@@ -257,9 +257,10 @@ describe('ClienteFormModal', () => {
       .expectOne(`${UBIGEO_BASE}/departamentos`)
       .flush({}, { status: 500, statusText: 'Server Error' });
 
-    expect(component.errorGeneral()).toBe(
-      'No se pudo cargar la lista de ubicaciones. Cierre e intente nuevamente.',
-    );
+    expect(component.toast()).toMatchObject({
+      tone: 'error',
+      title: 'No se pudo cargar la lista de ubicaciones. Cierre e intente nuevamente.',
+    });
   });
 
   it('shows the format hint of the chosen document type', () => {
@@ -385,8 +386,12 @@ describe('ClienteFormModal', () => {
 
     component.guardar();
 
-    expect(component.errores()).toContain('número de documento');
-    expect(component.errores()).toContain('correo');
+    expect(component.toast()).toMatchObject({
+      tone: 'warning',
+      title: 'Revisa los datos del formulario',
+    });
+    expect(component.toast()?.description).toContain('número de documento');
+    expect(component.toast()?.description).toContain('correo');
     expect(avisos).toEqual([]);
     expect(cierres).toBe(0);
     httpMock.expectNone(REGISTRO_URL);
@@ -411,9 +416,7 @@ describe('ClienteFormModal', () => {
     });
 
     expect(component.guardando()).toBe(false);
-    expect(avisos).toEqual([
-      'Cliente registrado · cuenta 45288977 creada con credenciales iniciales para ana@correo.com.',
-    ]);
+    expect(avisos).toEqual([{ titulo: 'Nuevo cliente registrado', mensaje: 'Ana Vega Torres' }]);
     expect(cierres).toBe(1);
   });
 
@@ -428,7 +431,7 @@ describe('ClienteFormModal', () => {
     expect(req.request.body).toMatchObject({ telefono: '955555555' });
     req.flush(makeClienteDto({ telefono: '955555555' }));
 
-    expect(avisos).toEqual(['Cliente Ana Vega Torres actualizado.']);
+    expect(avisos).toEqual([{ titulo: 'Cliente actualizado', mensaje: 'Ana Vega Torres' }]);
     expect(cierres).toBe(1);
   });
 
@@ -444,7 +447,10 @@ describe('ClienteFormModal', () => {
         { status: 409, statusText: 'Conflict' },
       );
 
-    expect(component.errorGeneral()).toBe('Existe una persona con ese mismo numero de documento');
+    expect(component.toast()).toMatchObject({
+      tone: 'error',
+      title: 'Existe una persona con ese mismo numero de documento',
+    });
     expect(component.guardando()).toBe(false);
     expect(avisos).toEqual([]);
     expect(cierres).toBe(0);
@@ -462,9 +468,10 @@ describe('ClienteFormModal', () => {
         { status: 400, statusText: 'Bad Request' },
       );
 
-    expect(component.errorGeneral()).toBe(
-      'telefono debe contener 9 digitos El correo no es válido',
-    );
+    expect(component.toast()).toMatchObject({
+      tone: 'error',
+      title: 'telefono debe contener 9 digitos El correo no es válido',
+    });
   });
 
   it('explains missing permissions (403)', () => {
@@ -474,7 +481,10 @@ describe('ClienteFormModal', () => {
     component.guardar();
     httpMock.expectOne(REGISTRO_URL).flush({}, { status: 403, statusText: 'Forbidden' });
 
-    expect(component.errorGeneral()).toBe('No tiene permisos para gestionar clientes.');
+    expect(component.toast()).toMatchObject({
+      tone: 'error',
+      title: 'No tiene permisos para gestionar clientes.',
+    });
   });
 
   it('shows a generic message on unexpected errors', () => {
@@ -484,7 +494,10 @@ describe('ClienteFormModal', () => {
     component.guardar();
     httpMock.expectOne(REGISTRO_URL).flush({}, { status: 500, statusText: 'Server Error' });
 
-    expect(component.errorGeneral()).toBe('No se pudo guardar el cliente. Intente nuevamente.');
+    expect(component.toast()).toMatchObject({
+      tone: 'error',
+      title: 'No se pudo guardar el cliente. Intente nuevamente.',
+    });
   });
 
   it('closes without saving', () => {

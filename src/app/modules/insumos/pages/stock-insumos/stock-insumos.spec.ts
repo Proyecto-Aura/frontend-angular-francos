@@ -298,7 +298,11 @@ describe('StockInsumos', () => {
     flushIndicadores();
 
     fixture.componentInstance.abrirRegistrarLote();
-    fixture.componentInstance.loteGuardado();
+    fixture.componentInstance.loteGuardado({
+      codigoLote: 'FR-LT-001',
+      insumoNombre: 'Harina de trigo',
+    });
+    expect(fixture.componentInstance.toast()?.description).toBe('FR-LT-001 \u00b7 Harina de trigo');
 
     expect(fixture.componentInstance.modalLoteAbierto()).toBe(false);
     flushPage(expectPageRequest(1, 10));
@@ -387,5 +391,21 @@ describe('StockInsumos', () => {
 
     fixture.componentInstance.cambiarTab('stock');
     expect(fixture.componentInstance.activeTab()).toBe('stock');
+  });
+  it('muestra el error al fallar la desactivacion y permite cerrar la alerta', () => {
+    const fixture = create();
+    flushPage(expectPageRequest(1, 10));
+    flushIndicadores();
+    fixture.componentInstance.alternarEstado(makeInsumo());
+    httpMock
+      .expectOne((r) => r.method === 'DELETE')
+      .flush({}, { status: 500, statusText: 'Server error' });
+    expect(fixture.componentInstance.toast()?.tone).toBe('error');
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('app-ds-alert').textContent).toContain(
+      'No se pudo cambiar el estado',
+    );
+    fixture.componentInstance.cerrarToast();
+    expect(fixture.componentInstance.toast()).toBeNull();
   });
 });

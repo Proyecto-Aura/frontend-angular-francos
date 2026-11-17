@@ -1,3 +1,4 @@
+import { Alert, AlertTone } from '../../../../../shared/ds/alert/alert';
 import { HttpErrorResponse } from '@angular/common/http';
 import {
   Component,
@@ -46,7 +47,7 @@ import {
 // para vincular esta solicitud de insumos a una solicitud de producción
 // en proceso puntual — pedido explicito del usuario.
 @Component({
-  imports: [Button, Combobox, Field, Icon, IconButton, Input, Modal],
+  imports: [Alert, Button, Combobox, Field, Icon, IconButton, Input, Modal],
   selector: 'app-solicitud-insumo-form-modal',
   templateUrl: './solicitud-insumo-form-modal.html',
 })
@@ -102,7 +103,26 @@ export class SolicitudInsumoFormModal {
   errorGeneral = signal<string | null>(null);
   guardando = signal(false);
 
+  toast = signal<{ tone: AlertTone; title: string; description?: string } | null>(null);
+  private alertaTimer: ReturnType<typeof setTimeout> | null = null;
+  private limpiarAlerta(): void {
+    if (this.alertaTimer) clearTimeout(this.alertaTimer);
+    this.alertaTimer = null;
+    this.errorGeneral.set(null);
+    this.toast.set(null);
+  }
+  private mostrarAviso(tone: AlertTone, title: string, description?: string): void {
+    this.limpiarAlerta();
+    this.toast.set({ tone, title, description });
+    this.alertaTimer = setTimeout(() => this.limpiarAlerta(), 4500);
+  }
+  private mostrarError(mensaje: string): void {
+    this.mostrarAviso('error', mensaje);
+    this.errorGeneral.set(mensaje);
+  }
+
   constructor() {
+    this.destroyRef.onDestroy(() => this.limpiarAlerta());
     effect(() => {
       const estaAbierto = this.open();
       if (estaAbierto && !this.estabaAbierto) {
@@ -175,9 +195,17 @@ export class SolicitudInsumoFormModal {
     };
     const errores = validarSolicitudInsumoForm(form);
     this.errores.set(errores);
-    this.errorGeneral.set(null);
+    this.limpiarAlerta();
 
-    if (Object.keys(errores).length > 0 || this.generandoCodigo() || !this.codigoPreview()) {
+    if (Object.keys(errores).length > 0) {
+      this.mostrarAviso(
+        'warning',
+        'Faltan campos por completar',
+        'Revisa los campos marcados antes de guardar.',
+      );
+      return;
+    }
+    if (this.generandoCodigo() || !this.codigoPreview()) {
       return;
     }
 
@@ -241,18 +269,18 @@ export class SolicitudInsumoFormModal {
     this.codigoPreview.set('');
     this.solicitudProduccionId.set('');
     this.errores.set({});
-    this.errorGeneral.set(null);
+    this.limpiarAlerta();
     this.guardando.set(false);
   }
 
   private manejarError(error: unknown): void {
     if (!(error instanceof HttpErrorResponse)) {
-      this.errorGeneral.set('No se pudo crear la solicitud. Intente nuevamente.');
+      this.mostrarError('No se pudo crear la solicitud. Intente nuevamente.');
       return;
     }
 
     if (error.status === 401 || error.status === 403) {
-      this.errorGeneral.set('No tiene permisos para crear solicitudes.');
+      this.mostrarError('No tiene permisos para crear solicitudes.');
       return;
     }
 
@@ -266,16 +294,16 @@ export class SolicitudInsumoFormModal {
     const mensajeMin = mensaje.toLocaleLowerCase('es');
 
     if (error.status === 409 && mensajeMin.includes('codigo')) {
-      this.errorGeneral.set('Ese código de solicitud ya existe. Generando uno nuevo…');
+      this.mostrarError('Ese código de solicitud ya existe. Generando uno nuevo…');
       this.regenerarCodigo();
       return;
     }
 
     if (error.status === 400 || error.status === 409) {
-      this.errorGeneral.set(mensaje || 'No se pudo crear la solicitud. Intente nuevamente.');
+      this.mostrarError(mensaje || 'No se pudo crear la solicitud. Intente nuevamente.');
       return;
     }
 
-    this.errorGeneral.set('No se pudo crear la solicitud. Intente nuevamente.');
+    this.mostrarError('No se pudo crear la solicitud. Intente nuevamente.');
   }
 }

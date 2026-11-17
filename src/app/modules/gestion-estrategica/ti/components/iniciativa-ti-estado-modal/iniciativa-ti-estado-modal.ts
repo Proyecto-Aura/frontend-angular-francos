@@ -1,3 +1,5 @@
+import { Alert } from '../../../../../shared/ds/alert/alert';
+import { crearAlertaTemporal } from '../../../../../shared/ds/alert/alerta-temporal';
 import { HttpErrorResponse } from '@angular/common/http';
 import {
   Component,
@@ -25,7 +27,7 @@ import {
 } from '../../../negocio/components/iniciativa-form-modal/iniciativa.reglas';
 
 @Component({
-  imports: [Badge, Button, Icon, Modal],
+  imports: [Alert, Badge, Button, Icon, Modal],
   selector: 'app-iniciativa-ti-estado-modal',
   templateUrl: './iniciativa-ti-estado-modal.html',
 })
@@ -38,7 +40,7 @@ export class IniciativaTiEstadoModal {
   open = input(false);
   iniciativa = input<Iniciativa | null>(null);
   closed = output<void>();
-  changed = output<void>();
+  changed = output<boolean>();
 
   readonly LucideArrowRight = LucideArrowRight;
   readonly guardando = signal(false);
@@ -53,12 +55,23 @@ export class IniciativaTiEstadoModal {
   readonly tonoActual = computed(() => tonoEstado(this.iniciativa()?.estadoCodigo ?? 'PENDIENTE'));
   readonly tonoSiguiente = computed(() => tonoEstado(this.siguiente() ?? 'PENDIENTE'));
 
+  private alertas = crearAlertaTemporal(() => this.errorGeneral.set(null));
+  toast = this.alertas.toast;
+  private mostrarErrorAlerta(mensaje: string | null): void {
+    if (!mensaje) {
+      this.alertas.limpiar();
+      return;
+    }
+    this.alertas.mostrar('error', mensaje);
+    this.errorGeneral.set(mensaje);
+  }
+
   constructor() {
     effect(() => {
       const estaAbierto = this.open();
       if (estaAbierto && !this.estabaAbierto) {
         this.guardando.set(false);
-        this.errorGeneral.set(null);
+        this.mostrarErrorAlerta(null);
         this.recargarAlCerrar = false;
       }
       this.estabaAbierto = estaAbierto;
@@ -68,7 +81,7 @@ export class IniciativaTiEstadoModal {
   cerrar(): void {
     if (this.recargarAlCerrar) {
       this.recargarAlCerrar = false;
-      this.changed.emit();
+      this.changed.emit(false);
     }
     this.closed.emit();
   }
@@ -79,7 +92,7 @@ export class IniciativaTiEstadoModal {
     if (!iniciativa || !siguiente || this.guardando()) return;
 
     this.guardando.set(true);
-    this.errorGeneral.set(null);
+    this.mostrarErrorAlerta(null);
     this.iniciativaService
       .cambiarEstado(iniciativa.id, siguiente)
       .pipe(
@@ -88,7 +101,7 @@ export class IniciativaTiEstadoModal {
       )
       .subscribe({
         next: () => {
-          this.changed.emit();
+          this.changed.emit(true);
           this.closed.emit();
         },
         error: (error: unknown) => this.manejarError(error),
@@ -97,19 +110,19 @@ export class IniciativaTiEstadoModal {
 
   private manejarError(error: unknown): void {
     if (!(error instanceof HttpErrorResponse)) {
-      this.errorGeneral.set('No se pudo actualizar el estado. Intente nuevamente.');
+      this.mostrarErrorAlerta('No se pudo actualizar el estado. Intente nuevamente.');
       return;
     }
     const mensaje = mensajeApi(error);
     if (error.status === 404) {
-      this.errorGeneral.set('La iniciativa ya no existe.');
+      this.mostrarErrorAlerta('La iniciativa ya no existe.');
       this.recargarAlCerrar = true;
     } else if (error.status === 409) {
-      this.errorGeneral.set(mensaje || 'No se pudo actualizar el estado. Intente nuevamente.');
+      this.mostrarErrorAlerta(mensaje || 'No se pudo actualizar el estado. Intente nuevamente.');
     } else if (error.status === 401 || error.status === 403) {
-      this.errorGeneral.set('No tiene permisos para gestionar iniciativas.');
+      this.mostrarErrorAlerta('No tiene permisos para gestionar iniciativas.');
     } else {
-      this.errorGeneral.set('No se pudo actualizar el estado. Intente nuevamente.');
+      this.mostrarErrorAlerta('No se pudo actualizar el estado. Intente nuevamente.');
     }
   }
 }

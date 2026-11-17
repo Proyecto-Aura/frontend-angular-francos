@@ -140,10 +140,13 @@
       }
     </app-ds-field>
 
-    @if (errorGeneral()) {
-      <div class="rounded-lg bg-destructive/10 px-3.5 py-3 text-ds-sm text-destructive">
-        {{ errorGeneral() }}
-      </div>
+    @if (toast(); as t) {
+      <app-ds-alert
+        [tone]="t.tone"
+        [title]="t.title"
+        [description]="t.description ?? null"
+        [closable]="false"
+      />
     }
   </div>
 

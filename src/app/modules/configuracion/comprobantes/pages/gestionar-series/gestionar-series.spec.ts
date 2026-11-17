@@ -352,7 +352,11 @@ describe('GestionarSeries', () => {
       .flush({ ...F002, estado: true });
     fixture.detectChanges();
 
-    expect(el.textContent).toContain('Serie F002 activada');
+    expect(fixture.componentInstance.toast()).toMatchObject({
+      tone: 'success',
+      title: 'Serie activada',
+      description: 'F002',
+    });
     listados()[0].flush(makePaginaSeriesDto([F001, { ...F002, estado: true }]));
   });
 

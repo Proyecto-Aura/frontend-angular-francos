@@ -351,8 +351,8 @@ describe('PedidoPrepararDetalleModal', () => {
 
     fixture.componentInstance.actualizarCantidadPreparada(1, '8');
 
-    let actualizadoEmitido = false;
-    fixture.componentInstance.actualizado.subscribe(() => (actualizadoEmitido = true));
+    let actualizadoEmitido: { titulo: string; mensaje: string } | null = null;
+    fixture.componentInstance.actualizado.subscribe((e) => (actualizadoEmitido = e));
     let cerrado = false;
     fixture.componentInstance.closed.subscribe(() => (cerrado = true));
     fixture.componentInstance.avanzarEstado();
@@ -367,7 +367,10 @@ describe('PedidoPrepararDetalleModal', () => {
     // Al confirmar con exito ya no queda nada mas que ajustar: el modal se
     // cierra solo (un segundo click sobre el mismo pedido ya transicionado
     // hubiera fallado si se dejaba abierto).
-    expect(actualizadoEmitido).toBe(true);
+    expect(actualizadoEmitido).toEqual({
+      titulo: 'Pedido listo para entrega',
+      mensaje: 'PED-001042',
+    });
     expect(cerrado).toBe(true);
     expect(fixture.componentInstance.pedido()).toBeNull();
   });
@@ -386,7 +389,7 @@ describe('PedidoPrepararDetalleModal', () => {
       .expectOne(`${PEDIDOS_PREPARAR_BASE}/1042/pendiente-entrega`)
       .flush('conflict', { status: 409, statusText: 'Conflict' });
 
-    expect(fixture.componentInstance.errorAvance()).toContain('No hay stock suficiente');
+    expect(fixture.componentInstance.toast()?.title).toContain('No hay stock suficiente');
     // No se dispara un GET de recarga: no queremos perder lo que el
     // operario esta editando por un conflicto de stock.
     httpMock.expectNone(`${PEDIDOS_PREPARAR_BASE}/1042`);
@@ -406,7 +409,7 @@ describe('PedidoPrepararDetalleModal', () => {
       .expectOne(`${PEDIDOS_PREPARAR_BASE}/1042/pendiente-entrega`)
       .flush('bad request', { status: 400, statusText: 'Bad Request' });
 
-    expect(fixture.componentInstance.errorAvance()).toContain('no coinciden');
+    expect(fixture.componentInstance.toast()?.title).toContain('no coinciden');
   });
 
   it('emits closed and clears its state on cerrar()', () => {

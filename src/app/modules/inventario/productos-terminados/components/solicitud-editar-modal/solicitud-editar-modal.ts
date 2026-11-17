@@ -12,6 +12,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { LucideCheck, LucidePencil, LucidePlus, LucideTrash2 } from '@lucide/angular';
 import { Observable, Subscription, finalize, forkJoin } from 'rxjs';
+import { Alert } from '../../../../../shared/ds/alert/alert';
 import { Button } from '../../../../../shared/ds/button/button';
 import { Combobox } from '../../../../../shared/ds/combobox/combobox';
 import { Field } from '../../../../../shared/ds/field/field';
@@ -58,7 +59,7 @@ import {
 // se deshabilita para esas filas; solo las filas nuevas pueden elegir
 // producto libremente.
 @Component({
-  imports: [Button, Combobox, Field, Icon, IconButton, Input, Modal],
+  imports: [Alert, Button, Combobox, Field, Icon, IconButton, Input, Modal],
   selector: 'app-solicitud-editar-modal',
   templateUrl: './solicitud-editar-modal.html',
 })
@@ -78,7 +79,7 @@ export class SolicitudEditarModal {
   /** null = cerrado. */
   solicitudId = input<number | null>(null);
   closed = output<void>();
-  saved = output<void>();
+  saved = output<string>();
 
   readonly LucideCheck = LucideCheck;
   readonly LucidePencil = LucidePencil;
@@ -256,7 +257,7 @@ export class SolicitudEditarModal {
       )
       .subscribe({
         next: () => {
-          this.saved.emit();
+          this.saved.emit(this.codigo());
           this.closed.emit();
         },
         error: (error: unknown) => this.manejarError(error),

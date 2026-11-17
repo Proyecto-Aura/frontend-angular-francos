@@ -133,7 +133,7 @@ describe('DatosEmpresa', () => {
     fixture.detectChanges();
 
     expect(el.querySelector('[role="status"]')?.textContent).toContain(
-      'Los datos de la empresa se guardaron correctamente.',
+      'Datos de la empresa actualizados',
     );
     expect(boton('Guardar cambios').disabled).toBe(true);
   });
@@ -216,5 +216,25 @@ describe('DatosEmpresa', () => {
     fixture.detectChanges();
 
     expect(el.textContent).toContain('Sin logo');
+  });
+  it('oculta la alerta de campos incompletos a los 4500 ms sin ocultar los errores de campo', () => {
+    vi.useFakeTimers();
+    try {
+      crear('sin-empresa');
+      fixture.componentInstance.guardar();
+      fixture.detectChanges();
+      expect(fixture.componentInstance.toast()?.tone).toBe('warning');
+      expect(el.querySelector('app-ds-alert')?.textContent).toContain(
+        'Faltan campos por completar',
+      );
+      expect(el.querySelector('app-ds-alert button')).toBeNull();
+      vi.advanceTimersByTime(4500);
+      fixture.detectChanges();
+      expect(el.querySelector('app-ds-alert')).toBeNull();
+      expect(fixture.componentInstance.intentoGuardar()).toBe(true);
+      fixture.destroy();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

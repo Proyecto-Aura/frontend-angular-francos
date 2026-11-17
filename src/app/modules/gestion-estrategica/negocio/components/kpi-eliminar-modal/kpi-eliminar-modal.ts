@@ -1,3 +1,5 @@
+import { Alert } from '../../../../../shared/ds/alert/alert';
+import { crearAlertaTemporal } from '../../../../../shared/ds/alert/alerta-temporal';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, DestroyRef, effect, inject, input, output, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -9,7 +11,7 @@ import { Kpi } from '../../interfaces/kpi.interface';
 import { KpiService } from '../../services/kpi.service';
 
 @Component({
-  imports: [Button, Modal],
+  imports: [Alert, Button, Modal],
   selector: 'app-kpi-eliminar-modal',
   templateUrl: './kpi-eliminar-modal.html',
 })
@@ -22,17 +24,28 @@ export class KpiEliminarModal {
   open = input(false);
   kpi = input<Kpi | null>(null);
   closed = output<void>();
-  deleted = output<void>();
+  deleted = output<boolean>();
 
   readonly eliminando = signal(false);
   readonly errorGeneral = signal<string | null>(null);
+
+  private alertas = crearAlertaTemporal(() => this.errorGeneral.set(null));
+  toast = this.alertas.toast;
+  private mostrarErrorAlerta(mensaje: string | null): void {
+    if (!mensaje) {
+      this.alertas.limpiar();
+      return;
+    }
+    this.alertas.mostrar('error', mensaje);
+    this.errorGeneral.set(mensaje);
+  }
 
   constructor() {
     effect(() => {
       const estaAbierto = this.open();
       if (estaAbierto && !this.estabaAbierto) {
         this.eliminando.set(false);
-        this.errorGeneral.set(null);
+        this.mostrarErrorAlerta(null);
         this.recargarAlCerrar = false;
       }
       this.estabaAbierto = estaAbierto;
@@ -42,7 +55,7 @@ export class KpiEliminarModal {
   cerrar(): void {
     if (this.recargarAlCerrar) {
       this.recargarAlCerrar = false;
-      this.deleted.emit();
+      this.deleted.emit(false);
     }
     this.closed.emit();
   }
@@ -52,7 +65,7 @@ export class KpiEliminarModal {
     if (!kpi || this.eliminando()) return;
 
     this.eliminando.set(true);
-    this.errorGeneral.set(null);
+    this.mostrarErrorAlerta(null);
     this.kpiService
       .eliminar(kpi.id)
       .pipe(
@@ -61,7 +74,7 @@ export class KpiEliminarModal {
       )
       .subscribe({
         next: () => {
-          this.deleted.emit();
+          this.deleted.emit(true);
           this.closed.emit();
         },
         error: (error: unknown) => this.manejarError(error),
@@ -70,7 +83,7 @@ export class KpiEliminarModal {
 
   private manejarError(error: unknown): void {
     if (!(error instanceof HttpErrorResponse)) {
-      this.errorGeneral.set('No se pudo eliminar el KPI. Intente nuevamente.');
+      this.mostrarErrorAlerta('No se pudo eliminar el KPI. Intente nuevamente.');
       return;
     }
 
@@ -83,18 +96,18 @@ export class KpiEliminarModal {
     const mensaje = mensajes.join(' ');
 
     if (error.status === 404) {
-      this.errorGeneral.set('El KPI ya no existe.');
+      this.mostrarErrorAlerta('El KPI ya no existe.');
       this.recargarAlCerrar = true;
       return;
     }
     if (error.status === 409) {
-      this.errorGeneral.set(mensaje || 'No se pudo eliminar el KPI. Intente nuevamente.');
+      this.mostrarErrorAlerta(mensaje || 'No se pudo eliminar el KPI. Intente nuevamente.');
       return;
     }
     if (error.status === 401 || error.status === 403) {
-      this.errorGeneral.set('No tiene permisos para gestionar KPIs.');
+      this.mostrarErrorAlerta('No tiene permisos para gestionar KPIs.');
       return;
     }
-    this.errorGeneral.set('No se pudo eliminar el KPI. Intente nuevamente.');
+    this.mostrarErrorAlerta('No se pudo eliminar el KPI. Intente nuevamente.');
   }
 }

@@ -59,8 +59,8 @@
         <p class="text-ds-sm text-muted-foreground">{{ ayuda }}</p>
       }
 
-      @if (errorAvance()) {
-        <p role="alert" class="text-ds-sm text-destructive">{{ errorAvance() }}</p>
+      @if (toast(); as t) {
+        <app-ds-alert [tone]="t.tone" [title]="t.title" [closable]="false" />
       }
     </div>
   }

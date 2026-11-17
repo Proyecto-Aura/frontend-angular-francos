@@ -2,6 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Signal, WritableSignal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { AlertTone } from '../../../../../shared/ds/alert/alert';
 import { PedidoFila, ResultadoGuardado } from '../../interfaces/pedido.interface';
 import { API, makeResumenDto, page as pagina } from '../../testing/pedidos.fixtures';
 import { GestionPedidos } from './gestion-pedidos';
@@ -13,7 +14,7 @@ interface GestionPedidosApi {
   rangoInvalido: Signal<boolean>;
   formAbierto: Signal<boolean>;
   pedidoDetalleId: Signal<number | null>;
-  aviso: Signal<ResultadoGuardado>;
+  toast: Signal<{ tone: AlertTone; title: string; description?: string } | null>;
   setEstado(v: string): void;
   setOrigen(v: string): void;
   setDesde(v: string): void;
@@ -119,8 +120,21 @@ describe('GestionPedidos', () => {
 
     pagina$.pedidoRegistrado({ tono: 'ok', mensaje: 'Pedido PED-000009 registrado' });
 
-    expect(pagina$.aviso().mensaje).toBe('Pedido PED-000009 registrado');
+    expect(pagina$.toast()).toMatchObject({ tone: 'success', title: 'Pedido PED-000009 registrado' });
     esperarListado().flush(pagina([makeResumenDto({ id: 9, codigo: 'PED-000009' })]));
+  });
+
+  it('shows the bold title and the code below it when the notice carries one', () => {
+    esperarListado().flush(pagina([]));
+
+    pagina$.pedidoRegistrado({ tono: 'ok', titulo: 'Nuevo pedido registrado', mensaje: 'PED-000066' });
+
+    expect(pagina$.toast()).toMatchObject({
+      tone: 'success',
+      title: 'Nuevo pedido registrado',
+      description: 'PED-000066',
+    });
+    esperarListado().flush(pagina([makeResumenDto({ id: 66, codigo: 'PED-000066' })]));
   });
 
   it('offers a retry when the list fails to load', () => {
@@ -137,12 +151,13 @@ describe('GestionPedidos', () => {
 
     pagina$.estadoCambiado({
       tono: 'ok',
-      mensaje: 'Pedido PED-000001 pasó a En espera de inventario · visible para Inventario.',
+      mensaje: 'Pedido PED-000001 pasó a En espera de inventario.',
     });
 
-    expect(pagina$.aviso().mensaje).toBe(
-      'Pedido PED-000001 pasó a En espera de inventario · visible para Inventario.',
-    );
+    expect(pagina$.toast()).toMatchObject({
+      tone: 'success',
+      title: 'Pedido PED-000001 pasó a En espera de inventario.',
+    });
     esperarListado().flush(pagina([]));
   });
 
@@ -151,7 +166,7 @@ describe('GestionPedidos', () => {
 
     pagina$.estadoCambiado({ tono: 'error', mensaje: 'No se pudo pasar el pedido' });
 
-    expect(pagina$.aviso().tono).toBe('error');
+    expect(pagina$.toast()?.tone).toBe('error');
     httpMock.expectNone((r) => r.url === `${API}/pedidos`);
   });
 });

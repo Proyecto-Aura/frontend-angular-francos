@@ -19,7 +19,7 @@ import {
 } from '@lucide/angular';
 import { finalize } from 'rxjs';
 
-import { AvisoBanner } from '../../../../ventas/catalogo/components/aviso-banner/aviso-banner';
+import { Alert, AlertTone } from '../../../../../shared/ds/alert/alert';
 import { Badge, BadgeTone } from '../../../../../shared/ds/badge/badge';
 import { Breadcrumb, BreadcrumbItem } from '../../../../../shared/ds/breadcrumb/breadcrumb';
 import { Button } from '../../../../../shared/ds/button/button';
@@ -82,7 +82,7 @@ const COLOR_BARRA: Record<EstadoSerie, string> = {
 
 @Component({
   imports: [
-    AvisoBanner,
+    Alert,
     Badge,
     Breadcrumb,
     Button,
@@ -103,6 +103,22 @@ const COLOR_BARRA: Record<EstadoSerie, string> = {
 export class GestionarSeries implements OnInit, AfterViewInit {
   private seriesService = inject(SeriesComprobanteService);
   private destroyRef = inject(DestroyRef);
+  constructor() {
+    this.destroyRef.onDestroy(() => this.cerrarToast());
+  }
+
+  toast = signal<{ tone: AlertTone; title: string; description?: string } | null>(null);
+  private toastTimer: ReturnType<typeof setTimeout> | null = null;
+  cerrarToast(): void {
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    this.toastTimer = null;
+    this.toast.set(null);
+  }
+  private mostrarToast(tone: AlertTone, title: string, description?: string): void {
+    this.cerrarToast();
+    this.toast.set({ tone, title, description });
+    this.toastTimer = setTimeout(() => this.cerrarToast(), 4500);
+  }
 
   @ViewChild('serieCell', { static: true }) serieCellTpl!: TemplateRef<RowCtx>;
   @ViewChild('rangoCell', { static: true }) rangoCellTpl!: TemplateRef<RowCtx>;
@@ -300,12 +316,15 @@ export class GestionarSeries implements OnInit, AfterViewInit {
       modo === 'nueva'
         ? `Serie ${serie.codigo} creada correctamente`
         : `Serie ${serie.codigo} actualizada`,
+      'ok',
+      modo === 'nueva' ? 'Nueva serie registrada' : 'Serie actualizada',
+      serie.codigo,
     );
     this.cargar();
   }
 
   protected alDesactivar(serie: SerieComprobante): void {
-    this.mostrarAviso(`Serie ${serie.codigo} desactivada`);
+    this.mostrarAviso(`Serie ${serie.codigo} desactivada`, 'ok', 'Serie desactivada', serie.codigo);
     this.cargar();
   }
 
@@ -315,7 +334,12 @@ export class GestionarSeries implements OnInit, AfterViewInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (activada) => {
-          this.mostrarAviso(`Serie ${activada.codigo} activada`);
+          this.mostrarAviso(
+            `Serie ${activada.codigo} activada`,
+            'ok',
+            'Serie activada',
+            activada.codigo,
+          );
           this.cargar();
         },
         error: (error: unknown) =>
@@ -326,11 +350,18 @@ export class GestionarSeries implements OnInit, AfterViewInit {
       });
   }
 
-  protected mostrarAviso(mensaje: string, tono: 'ok' | 'error' = 'ok'): void {
+  protected mostrarAviso(
+    mensaje: string,
+    tono: 'ok' | 'error' = 'ok',
+    titulo = mensaje,
+    descripcion?: string,
+  ): void {
     this.aviso.set({ mensaje, tono });
+    this.mostrarToast(tono === 'ok' ? 'success' : 'error', titulo, descripcion);
   }
 
   protected cerrarAviso(): void {
+    this.cerrarToast();
     this.aviso.set({ mensaje: '', tono: 'ok' });
   }
 }

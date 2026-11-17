@@ -1,3 +1,5 @@
+import { Alert } from '../../../../../shared/ds/alert/alert';
+import { crearAlertaTemporal } from '../../../../../shared/ds/alert/alerta-temporal';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, DestroyRef, effect, inject, input, output, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -9,7 +11,7 @@ import { DocumentoEstrategico } from '../../interfaces/documento-estrategico.int
 import { DocumentoEstrategicoService } from '../../services/documento-estrategico.service';
 
 @Component({
-  imports: [Button, Modal],
+  imports: [Alert, Button, Modal],
   selector: 'app-documento-estrategico-eliminar-modal',
   templateUrl: './documento-estrategico-eliminar-modal.html',
 })
@@ -26,12 +28,23 @@ export class DocumentoEstrategicoEliminarModal {
   readonly eliminando = signal(false);
   readonly errorGeneral = signal<string | null>(null);
 
+  private alertas = crearAlertaTemporal(() => this.errorGeneral.set(null));
+  toast = this.alertas.toast;
+  private mostrarErrorAlerta(mensaje: string | null): void {
+    if (!mensaje) {
+      this.alertas.limpiar();
+      return;
+    }
+    this.alertas.mostrar('error', mensaje);
+    this.errorGeneral.set(mensaje);
+  }
+
   constructor() {
     effect(() => {
       const estaAbierto = this.open();
       if (estaAbierto && !this.estabaAbierto) {
         this.eliminando.set(false);
-        this.errorGeneral.set(null);
+        this.mostrarErrorAlerta(null);
       }
       this.estabaAbierto = estaAbierto;
     });
@@ -46,7 +59,7 @@ export class DocumentoEstrategicoEliminarModal {
     if (!documento) return;
 
     this.eliminando.set(true);
-    this.errorGeneral.set(null);
+    this.mostrarErrorAlerta(null);
     this.documentoService
       .eliminar(documento.id)
       .pipe(
@@ -64,11 +77,11 @@ export class DocumentoEstrategicoEliminarModal {
 
   private manejarError(error: unknown): void {
     if (!(error instanceof HttpErrorResponse)) {
-      this.errorGeneral.set('No se pudo eliminar el documento. Intente nuevamente.');
+      this.mostrarErrorAlerta('No se pudo eliminar el documento. Intente nuevamente.');
       return;
     }
     if (error.status === 401 || error.status === 403) {
-      this.errorGeneral.set('No tiene permisos para gestionar documentos estratégicos.');
+      this.mostrarErrorAlerta('No tiene permisos para gestionar documentos estratégicos.');
       return;
     }
     if (error.status === 409) {
@@ -76,9 +89,9 @@ export class DocumentoEstrategicoEliminarModal {
       const mensaje = Array.isArray(apiError?.message)
         ? apiError.message.join(' ')
         : (apiError?.message ?? '');
-      this.errorGeneral.set(mensaje || 'No se pudo eliminar el documento. Intente nuevamente.');
+      this.mostrarErrorAlerta(mensaje || 'No se pudo eliminar el documento. Intente nuevamente.');
       return;
     }
-    this.errorGeneral.set('No se pudo eliminar el documento. Intente nuevamente.');
+    this.mostrarErrorAlerta('No se pudo eliminar el documento. Intente nuevamente.');
   }
 }

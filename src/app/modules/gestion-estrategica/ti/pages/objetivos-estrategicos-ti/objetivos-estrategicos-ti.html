@@ -1,3 +1,13 @@
+@if (toast(); as t) {
+  <div class="fixed top-6 right-6 z-50 w-full max-w-md">
+    <app-ds-alert
+      [tone]="t.tone"
+      [title]="t.title"
+      [description]="t.description ?? null"
+      [closable]="false"
+    />
+  </div>
+}
 <div class="flex min-h-full flex-col">
   <div class="flex flex-col gap-4 p-(--page-padding)">
     @if (planSeleccionado.cargando()) {
@@ -192,14 +202,14 @@
       [objetivosNegocio]="objetivosNegocio()"
       [perspectivaInicialId]="perspectivaSeleccionadaId()"
       (closed)="cerrarModal()"
-      (saved)="objetivoGuardado()"
+      (saved)="objetivoGuardado($event)"
     />
 
     <app-objetivo-estrategico-ti-estado-modal
       [open]="modalActivo() === 'estado'"
       [objetivo]="objetivoSeleccionado()"
       (closed)="cerrarModal()"
-      (saved)="objetivoGuardado()"
+      (saved)="objetivoGuardado($event)"
     />
 
     <app-objetivo-estrategico-ti-eliminar-modal

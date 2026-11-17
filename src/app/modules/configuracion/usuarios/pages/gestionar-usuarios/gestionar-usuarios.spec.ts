@@ -267,7 +267,11 @@ describe('GestionarUsuarios', () => {
       .flush(makeUsuarioDto({ id: 'u-pedro', nombres: 'Pedro', estado: true }));
     fixture.detectChanges();
 
-    expect(el.textContent).toContain('Usuario Pedro Quispe Huaman reactivado');
+    expect(fixture.componentInstance.toast()).toMatchObject({
+      tone: 'success',
+      title: 'Usuario reactivado',
+      description: 'Pedro Quispe Huaman',
+    });
     listados()[0].flush(makePaginaDto([ADMIN, LUCIA, PEDRO]));
   });
 

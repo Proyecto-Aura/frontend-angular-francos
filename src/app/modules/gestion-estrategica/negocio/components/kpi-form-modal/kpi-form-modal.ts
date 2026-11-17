@@ -1,3 +1,5 @@
+import { Alert } from '../../../../../shared/ds/alert/alert';
+import { crearAlertaTemporal } from '../../../../../shared/ds/alert/alerta-temporal';
 import { HttpErrorResponse } from '@angular/common/http';
 import {
   Component,
@@ -43,7 +45,7 @@ interface ErroresGeneralesForm {
 }
 
 @Component({
-  imports: [Badge, Button, Field, Icon, Input, Modal, Select, Textarea],
+  imports: [Alert, Badge, Button, Field, Icon, Input, Modal, Select, Textarea],
   selector: 'app-kpi-form-modal',
   templateUrl: './kpi-form-modal.html',
 })
@@ -127,6 +129,26 @@ export class KpiFormModal {
       : 'Sin definir';
   });
 
+  private alertas = crearAlertaTemporal(() => this.errorGeneral.set(null));
+  toast = this.alertas.toast;
+  private mostrarErrorAlerta(mensaje: string | null): void {
+    if (!mensaje) {
+      this.alertas.limpiar();
+      return;
+    }
+    this.alertas.mostrar('error', mensaje);
+    this.errorGeneral.set(mensaje);
+  }
+  private advertirCampos(): void {
+    const mensaje = this.errorGeneral();
+    this.alertas.mostrar(
+      'warning',
+      'Faltan campos por completar',
+      'Revisa los campos marcados antes de guardar.',
+    );
+    this.errorGeneral.set(mensaje);
+  }
+
   constructor() {
     effect(() => {
       const estaAbierto = this.open();
@@ -178,13 +200,14 @@ export class KpiFormModal {
     const erroresMetas = validarFilasMetas(form.metas);
     this.errores.set(errores);
     this.erroresMetas.set(erroresMetas);
-    this.errorGeneral.set(erroresMetas.general);
+    this.mostrarErrorAlerta(erroresMetas.general);
 
     if (
       Object.keys(errores).length > 0 ||
       Object.keys(erroresMetas.porAnio).length > 0 ||
       erroresMetas.general
     ) {
+      this.advertirCampos();
       return;
     }
 
@@ -236,7 +259,7 @@ export class KpiFormModal {
     );
     this.errores.set({});
     this.erroresMetas.set({ porAnio: {}, general: null });
-    this.errorGeneral.set(null);
+    this.mostrarErrorAlerta(null);
     this.guardando.set(false);
   }
 
@@ -258,7 +281,7 @@ export class KpiFormModal {
         error: () => {
           this.frecuencias.set([]);
           this.unidades.set([]);
-          this.errorGeneral.set('No se pudieron cargar las frecuencias y unidades de medida.');
+          this.mostrarErrorAlerta('No se pudieron cargar las frecuencias y unidades de medida.');
         },
       });
   }
@@ -295,7 +318,7 @@ export class KpiFormModal {
 
   private manejarError(error: unknown): void {
     if (!(error instanceof HttpErrorResponse)) {
-      this.errorGeneral.set('No se pudo guardar el KPI. Intente nuevamente.');
+      this.mostrarErrorAlerta('No se pudo guardar el KPI. Intente nuevamente.');
       return;
     }
 
@@ -316,17 +339,17 @@ export class KpiFormModal {
       return;
     }
     if (error.status === 409) {
-      this.errorGeneral.set(mensaje || 'No se pudo guardar el KPI. Intente nuevamente.');
+      this.mostrarErrorAlerta(mensaje || 'No se pudo guardar el KPI. Intente nuevamente.');
       return;
     }
     if (error.status === 400) {
-      this.errorGeneral.set(mensaje || 'No se pudo guardar el KPI. Intente nuevamente.');
+      this.mostrarErrorAlerta(mensaje || 'No se pudo guardar el KPI. Intente nuevamente.');
       return;
     }
     if (error.status === 401 || error.status === 403) {
-      this.errorGeneral.set('No tiene permisos para gestionar KPIs.');
+      this.mostrarErrorAlerta('No tiene permisos para gestionar KPIs.');
       return;
     }
-    this.errorGeneral.set('No se pudo guardar el KPI. Intente nuevamente.');
+    this.mostrarErrorAlerta('No se pudo guardar el KPI. Intente nuevamente.');
   }
 }

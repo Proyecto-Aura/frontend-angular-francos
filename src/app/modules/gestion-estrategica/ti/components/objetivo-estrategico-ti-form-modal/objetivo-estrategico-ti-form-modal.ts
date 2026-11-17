@@ -1,3 +1,5 @@
+import { Alert } from '../../../../../shared/ds/alert/alert';
+import { crearAlertaTemporal } from '../../../../../shared/ds/alert/alerta-temporal';
 import { HttpErrorResponse } from '@angular/common/http';
 import {
   Component,
@@ -40,7 +42,7 @@ import {
 } from './objetivo-estrategico-ti-form.validaciones';
 
 @Component({
-  imports: [Button, Checkbox, Field, Icon, Input, Modal, Select, Textarea],
+  imports: [Alert, Button, Checkbox, Field, Icon, Input, Modal, Select, Textarea],
   selector: 'app-objetivo-estrategico-ti-form-modal',
   templateUrl: './objetivo-estrategico-ti-form-modal.html',
 })
@@ -127,6 +129,26 @@ export class ObjetivoEstrategicoTiFormModal {
       this.objetivosRelacionablesFiltrados().length === 0,
   );
 
+  private alertas = crearAlertaTemporal(() => this.errorGeneral.set(null));
+  toast = this.alertas.toast;
+  private mostrarErrorAlerta(mensaje: string | null): void {
+    if (!mensaje) {
+      this.alertas.limpiar();
+      return;
+    }
+    this.alertas.mostrar('error', mensaje);
+    this.errorGeneral.set(mensaje);
+  }
+  private advertirCampos(): void {
+    const mensaje = this.errorGeneral();
+    this.alertas.mostrar(
+      'warning',
+      'Faltan campos por completar',
+      'Revisa los campos marcados antes de guardar.',
+    );
+    this.errorGeneral.set(mensaje);
+  }
+
   constructor() {
     effect(() => {
       const estaAbierto = this.open();
@@ -164,14 +186,17 @@ export class ObjetivoEstrategicoTiFormModal {
     const errores = validarObjetivoTiForm(form);
     this.errores.set(errores);
     this.errorRelaciones.set(null);
-    this.errorGeneral.set(null);
+    this.mostrarErrorAlerta(null);
 
-    if (Object.keys(errores).length > 0) return;
+    if (Object.keys(errores).length > 0) {
+      this.advertirCampos();
+      return;
+    }
 
     const objetivo = this.objetivo();
     const planId = this.planId();
     if (!objetivo && planId === null) {
-      this.errorGeneral.set('No se pudo guardar el objetivo. Intente nuevamente.');
+      this.mostrarErrorAlerta('No se pudo guardar el objetivo. Intente nuevamente.');
       return;
     }
 
@@ -219,7 +244,7 @@ export class ObjetivoEstrategicoTiFormModal {
     this.busquedaRelacion.set('');
     this.errores.set({});
     this.errorRelaciones.set(null);
-    this.errorGeneral.set(null);
+    this.mostrarErrorAlerta(null);
     this.guardando.set(false);
   }
 
@@ -249,7 +274,7 @@ export class ObjetivoEstrategicoTiFormModal {
 
   private manejarError(error: unknown): void {
     if (!(error instanceof HttpErrorResponse)) {
-      this.errorGeneral.set('No se pudo guardar el objetivo. Intente nuevamente.');
+      this.mostrarErrorAlerta('No se pudo guardar el objetivo. Intente nuevamente.');
       return;
     }
 
@@ -289,20 +314,20 @@ export class ObjetivoEstrategicoTiFormModal {
     }
 
     if (error.status === 409 && mensajeNormalizado.includes('borrador')) {
-      this.errorGeneral.set(mensaje);
+      this.mostrarErrorAlerta(mensaje);
       return;
     }
 
     if (error.status === 400) {
-      this.errorGeneral.set(mensaje || 'No se pudo guardar el objetivo. Intente nuevamente.');
+      this.mostrarErrorAlerta(mensaje || 'No se pudo guardar el objetivo. Intente nuevamente.');
       return;
     }
 
     if (error.status === 401 || error.status === 403) {
-      this.errorGeneral.set('No tiene permisos para gestionar objetivos estratégicos de TI.');
+      this.mostrarErrorAlerta('No tiene permisos para gestionar objetivos estratégicos de TI.');
       return;
     }
 
-    this.errorGeneral.set('No se pudo guardar el objetivo. Intente nuevamente.');
+    this.mostrarErrorAlerta('No se pudo guardar el objetivo. Intente nuevamente.');
   }
 }

@@ -1,3 +1,4 @@
+import { Alert, AlertTone } from '../../../../../shared/ds/alert/alert';
 import { HttpErrorResponse } from '@angular/common/http';
 import {
   Component,
@@ -40,7 +41,7 @@ export interface UsuarioGuardado {
 }
 
 @Component({
-  imports: [Button, Field, Input, Modal, Select, Switch],
+  imports: [Alert, Button, Field, Input, Modal, Select, Switch],
   selector: 'app-usuario-form-modal',
   templateUrl: './usuario-form-modal.html',
 })
@@ -73,7 +74,26 @@ export class UsuarioFormModal {
     ...this.erroresServidor(),
   }));
 
+  toast = signal<{ tone: AlertTone; title: string; description?: string } | null>(null);
+  private alertaTimer: ReturnType<typeof setTimeout> | null = null;
+  private limpiarAlerta(): void {
+    if (this.alertaTimer) clearTimeout(this.alertaTimer);
+    this.alertaTimer = null;
+    this.errorGeneral.set('');
+    this.toast.set(null);
+  }
+  private mostrarAlerta(tone: AlertTone, title: string, description?: string): void {
+    this.limpiarAlerta();
+    this.toast.set({ tone, title, description });
+    this.alertaTimer = setTimeout(() => this.limpiarAlerta(), 4500);
+  }
+  private mostrarMensajeError(mensaje: string): void {
+    this.mostrarAlerta('error', mensaje);
+    this.errorGeneral.set(mensaje);
+  }
+
   constructor() {
+    this.destroyRef.onDestroy(() => this.limpiarAlerta());
     effect(() => {
       const estaAbierto = this.open();
       if (estaAbierto && !this.estabaAbierto) this.prepararFormulario();
@@ -86,7 +106,7 @@ export class UsuarioFormModal {
     this.form.set(usuario ? usuarioFormDe(usuario) : { ...USUARIO_FORM_VACIO });
     this.intentoGuardar.set(false);
     this.guardando.set(false);
-    this.errorGeneral.set('');
+    this.limpiarAlerta();
     this.erroresServidor.set({});
   }
 
@@ -122,10 +142,17 @@ export class UsuarioFormModal {
 
   protected guardar(): void {
     this.intentoGuardar.set(true);
-    this.errorGeneral.set('');
+    this.limpiarAlerta();
     const form = this.form();
     const modo = this.modo();
-    if (Object.keys(validarUsuario(form, modo)).length > 0) return;
+    if (Object.keys(validarUsuario(form, modo)).length > 0) {
+      this.mostrarAlerta(
+        'warning',
+        'Faltan campos por completar',
+        'Revisa los campos marcados antes de guardar.',
+      );
+      return;
+    }
 
     const original = this.usuario();
     const peticion = original
@@ -158,8 +185,9 @@ export class UsuarioFormModal {
 
     if (conflicto) {
       this.erroresServidor.update((actual) => ({ ...actual, [conflicto.campo]: conflicto.texto }));
+      this.mostrarMensajeError(mensaje);
       return;
     }
-    this.errorGeneral.set(mensaje);
+    this.mostrarMensajeError(mensaje);
   }
 }

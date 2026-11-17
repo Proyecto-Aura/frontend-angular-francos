@@ -1,3 +1,4 @@
+import { Alert } from '../../../../shared/ds/alert/alert';
 import { HttpErrorResponse } from '@angular/common/http';
 import {
   Component,
@@ -60,7 +61,7 @@ export interface DesgloseFefo {
 // "Solicitud" (OFT0-257, pedido explicito del usuario, mismo patron que el
 // campo "Pedido" de MovimientoProductoTerminadoFormModal).
 @Component({
-  imports: [Button, Combobox, Field, Icon, IconButton, Input, Modal, Select],
+  imports: [Alert, Button, Combobox, Field, Icon, IconButton, Input, Modal, Select],
   selector: 'app-movimiento-form-modal',
   templateUrl: './movimiento-form-modal.html',
 })
@@ -146,10 +147,33 @@ export class MovimientoFormModal {
   cantidadInsumosEnMovimiento = computed(() => this.filas().filter((fila) => fila.insumoId).length);
 
   errores = signal<MovimientoFormErrores>({});
+  advertencia = signal(false);
   errorGeneral = signal<string | null>(null);
   guardando = signal(false);
 
+  private alertaTimer: ReturnType<typeof setTimeout> | null = null;
+
+  private limpiarAlerta(): void {
+    if (this.alertaTimer) clearTimeout(this.alertaTimer);
+    this.alertaTimer = null;
+    this.errorGeneral.set(null);
+    this.advertencia.set(false);
+  }
+
+  private mostrarAdvertencia(): void {
+    this.limpiarAlerta();
+    this.advertencia.set(true);
+    this.alertaTimer = setTimeout(() => this.limpiarAlerta(), 4500);
+  }
+
+  private mostrarError(mensaje: string): void {
+    this.limpiarAlerta();
+    this.errorGeneral.set(mensaje);
+    this.alertaTimer = setTimeout(() => this.limpiarAlerta(), 4500);
+  }
+
   constructor() {
+    this.destroyRef.onDestroy(() => this.limpiarAlerta());
     effect(() => {
       const estaAbierto = this.open();
       if (estaAbierto && !this.estabaAbierto) {
@@ -189,7 +213,7 @@ export class MovimientoFormModal {
     // hallazgo de Codex que ya se corrigio para Pedidos).
     this.cargaSolicitudSub?.unsubscribe();
     this.solicitudBuscada.set(valor);
-    this.errorGeneral.set(null);
+    this.limpiarAlerta();
 
     if (!valor) {
       this.solicitud.set(null);
@@ -226,7 +250,7 @@ export class MovimientoFormModal {
         error: () => {
           this.solicitud.set(null);
           this.limpiarFilasDeSolicitud();
-          this.errorGeneral.set('No se pudo cargar la solicitud. Intenta nuevamente.');
+          this.mostrarError('No se pudo cargar la solicitud. Intenta nuevamente.');
         },
       });
   }
@@ -480,9 +504,12 @@ export class MovimientoFormModal {
     }
 
     this.errores.set(errores);
-    this.errorGeneral.set(null);
+    this.limpiarAlerta();
 
-    if (Object.keys(errores).length > 0) return;
+    if (Object.keys(errores).length > 0) {
+      this.mostrarAdvertencia();
+      return;
+    }
 
     this.guardando.set(true);
     const razon = form.motivoGeneral;
@@ -547,7 +574,7 @@ export class MovimientoFormModal {
       return;
     }
 
-    this.errorGeneral.set(null);
+    this.limpiarAlerta();
     this.guardando.set(true);
 
     // Las filas se crearon con id = detalle.id de la solicitud (ver
@@ -581,18 +608,18 @@ export class MovimientoFormModal {
 
   private manejarErrorSolicitud(error: unknown): void {
     if (!(error instanceof HttpErrorResponse)) {
-      this.errorGeneral.set('No se pudo registrar la entrega. Intenta nuevamente.');
+      this.mostrarError('No se pudo registrar la entrega. Intenta nuevamente.');
       return;
     }
 
     if (error.status === 401 || error.status === 403) {
-      this.errorGeneral.set('No tiene permisos para confirmar la entrega de esta solicitud.');
+      this.mostrarError('No tiene permisos para confirmar la entrega de esta solicitud.');
       return;
     }
 
     // 409 aca significa stock insuficiente en alguna linea (no se registra
     // nada) — mismo criterio que solicitud-insumo-detalle-modal.
-    this.errorGeneral.set(
+    this.mostrarError(
       error.status === 409
         ? 'No hay stock suficiente para alguna línea. Ajusta las cantidades e intenta de nuevo.'
         : error.status === 400
@@ -678,7 +705,7 @@ export class MovimientoFormModal {
     this.lotesPorInsumo.set({});
     this.cargandoLotesDe.set(new Set());
     this.errores.set({});
-    this.errorGeneral.set(null);
+    this.limpiarAlerta();
     this.guardando.set(false);
 
     if (preseleccionado) this.cargarLotesDeInsumo(String(preseleccionado.id));
@@ -694,12 +721,12 @@ export class MovimientoFormModal {
 
   private manejarError(error: unknown): void {
     if (!(error instanceof HttpErrorResponse)) {
-      this.errorGeneral.set('No se pudo registrar el movimiento. Intente nuevamente.');
+      this.mostrarError('No se pudo registrar el movimiento. Intente nuevamente.');
       return;
     }
 
     if (error.status === 401 || error.status === 403) {
-      this.errorGeneral.set('No tiene permisos para registrar movimientos.');
+      this.mostrarError('No tiene permisos para registrar movimientos.');
       return;
     }
 
@@ -715,10 +742,10 @@ export class MovimientoFormModal {
     // "Lote no encontrado (lote_insumo_id=99)") — se muestra tal cual, no
     // hay forma de mapearlo de vuelta a una fila puntual del form.
     if (error.status === 400 || error.status === 404 || error.status === 409) {
-      this.errorGeneral.set(mensaje || 'No se pudo registrar el movimiento. Intente nuevamente.');
+      this.mostrarError(mensaje || 'No se pudo registrar el movimiento. Intente nuevamente.');
       return;
     }
 
-    this.errorGeneral.set('No se pudo registrar el movimiento. Intente nuevamente.');
+    this.mostrarError('No se pudo registrar el movimiento. Intente nuevamente.');
   }
 }

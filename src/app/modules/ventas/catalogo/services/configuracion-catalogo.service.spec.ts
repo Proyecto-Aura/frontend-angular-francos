@@ -225,9 +225,7 @@ describe('ConfiguracionCatalogoService', () => {
         descripcion: 'Productos.',
         estado: 'Activo',
       });
-      expect(aviso).toBe(
-        'Categoría Panadería registrada · disponible en los selectores de producto.',
-      );
+      expect(aviso).toBe('Categoría Panadería registrada.');
       expect(TestBed.inject(CatalogoService).categoriaOpciones()).toHaveLength(8);
     });
 
@@ -289,9 +287,7 @@ describe('ConfiguracionCatalogoService', () => {
 
       expect(service.presentacionesCfg()).toHaveLength(5);
       expect(service.presentacionesCfg()[4].nombre).toBe('750 gr');
-      expect(aviso).toBe(
-        'Presentación 750 gr registrada · disponible en los selectores de producto.',
-      );
+      expect(aviso).toBe('Presentación 750 gr registrada.');
       expect(TestBed.inject(CatalogoService).presentacionOpciones()).toHaveLength(5);
     });
 
@@ -348,9 +344,7 @@ describe('ConfiguracionCatalogoService', () => {
       req.flush({ ...CATEGORIAS_CFG_DTO[0], estado: false });
 
       expect(service.categoriasCfg()[0].estado).toBe('Inactivo');
-      expect(aviso).toBe(
-        'Categoría Chifles desactivada · ya no aparece en nuevos registros y se mantiene en los productos existentes.',
-      );
+      expect(aviso).toBe('Categoría Chifles desactivada.');
       expect(TestBed.inject(CatalogoService).categoriaOpciones()[0].activa).toBe(false);
     });
 
