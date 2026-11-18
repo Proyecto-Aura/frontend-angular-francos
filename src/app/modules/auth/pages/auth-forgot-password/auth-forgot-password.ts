@@ -3,6 +3,7 @@ import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { email, form, FormField, FormRoot, maxLength, required } from '@angular/forms/signals';
 import { AuthInput } from '../../components/auth-input/auth-input';
+import { Alert } from '../../../../shared/ds/alert/alert';
 import { Button } from '../../../../shared/ds/button/button';
 import { apiErrorMessage } from '../../../../shared/utils/api-error';
 import { AuthService } from '../../services/auth.service';
@@ -10,7 +11,7 @@ import { AuthService } from '../../services/auth.service';
 const FORGOT_ERROR_FALLBACK = 'No pudimos enviar el enlace. Inténtalo de nuevo en unos minutos.';
 
 @Component({
-  imports: [AuthInput, Button, FormField, FormRoot, RouterLink],
+  imports: [Alert, AuthInput, Button, FormField, FormRoot, RouterLink],
   selector: 'app-auth-forgot-password',
   templateUrl: './auth-forgot-password.html',
   host: { class: 'contents' },

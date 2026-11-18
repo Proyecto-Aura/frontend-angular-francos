@@ -1,15 +1,21 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, OnDestroy, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Alert, AlertTone } from '../../../../shared/ds/alert/alert';
 import { AuthService } from '../../../auth/services/auth.service';
 
+// Tiempo para que se alcance a ver el toast antes de salir de esta pantalla.
+const DEMORA_ANTES_DE_NAVEGAR_MS = 1200;
+const DEMORA_AUTOCIERRE_TOAST_MS = 4500;
+const DEMORA_SALIDA_TOAST_MS = 300;
+
 @Component({
-  imports: [],
+  imports: [Alert],
   selector: 'app-home-perfil',
   templateUrl: './home-perfil.html',
   host: { class: 'contents' },
 })
-export class HomePerfil {
+export class HomePerfil implements OnDestroy {
   private router = inject(Router);
   private authService = inject(AuthService);
 
@@ -28,6 +34,33 @@ export class HomePerfil {
       .toUpperCase(),
   );
 
+  toast = signal<{ tone: AlertTone; title: string; description?: string } | null>(null);
+  toastVisible = signal(false);
+  private toastTimer: ReturnType<typeof setTimeout> | null = null;
+  private toastSalidaTimer: ReturnType<typeof setTimeout> | null = null;
+
+  private mostrarToast(tone: AlertTone, title: string, description?: string): void {
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    if (this.toastSalidaTimer) clearTimeout(this.toastSalidaTimer);
+
+    this.toast.set({ tone, title, description });
+    this.toastVisible.set(false);
+    requestAnimationFrame(() => requestAnimationFrame(() => this.toastVisible.set(true)));
+
+    this.toastTimer = setTimeout(() => this.cerrarToast(), DEMORA_AUTOCIERRE_TOAST_MS);
+  }
+
+  cerrarToast(): void {
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    this.toastVisible.set(false);
+    this.toastSalidaTimer = setTimeout(() => this.toast.set(null), DEMORA_SALIDA_TOAST_MS);
+  }
+
+  ngOnDestroy(): void {
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    if (this.toastSalidaTimer) clearTimeout(this.toastSalidaTimer);
+  }
+
   constructor() {
     this.authService
       .getCurrentUser()
@@ -43,10 +76,20 @@ export class HomePerfil {
 
   onSubmit() {
     this.authService.logout().subscribe({
-      complete: () => this.router.navigateByUrl('/auth'),
-      // si el logout en el backend falla igual limpiamos el lado del front y
-      // mandamos a login; no tiene sentido dejar al usuario atascado
-      error: () => this.router.navigateByUrl('/auth'),
+      complete: () => {
+        this.mostrarToast('success', 'Cerrando sesión', 'Hasta pronto.');
+        setTimeout(() => this.router.navigateByUrl('/auth'), DEMORA_ANTES_DE_NAVEGAR_MS);
+      },
+      // Si el logout en el backend falla igual limpiamos el lado del front y
+      // mandamos a login: no tiene sentido dejar al usuario atascado.
+      error: () => {
+        this.mostrarToast(
+          'warning',
+          'No se pudo cerrar sesión en el servidor',
+          'Se cerró tu sesión local de todas formas.',
+        );
+        setTimeout(() => this.router.navigateByUrl('/auth'), DEMORA_ANTES_DE_NAVEGAR_MS);
+      },
     });
   }
 

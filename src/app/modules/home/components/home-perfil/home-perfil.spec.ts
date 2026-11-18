@@ -103,28 +103,52 @@ describe('HomePerfil', () => {
     expect(fixture.componentInstance.userName()).toBe('Usuario');
   });
 
-  it('onSubmit calls the backend logout and navigates to /auth once it completes', () => {
-    const fixture = TestBed.createComponent(HomePerfil);
-    fixture.detectChanges();
-    httpMock.expectOne(ME_URL).flush(makeMe());
+  it('shows a "Cerrando sesión" toast and navigates to /auth shortly after it completes', () => {
+    vi.useFakeTimers();
+    try {
+      const fixture = TestBed.createComponent(HomePerfil);
+      fixture.detectChanges();
+      httpMock.expectOne(ME_URL).flush(makeMe());
 
-    fixture.componentInstance.onSubmit();
-    const req = httpMock.expectOne(LOGOUT_URL);
-    expect(req.request.withCredentials).toBe(true);
-    req.flush(null);
+      fixture.componentInstance.onSubmit();
+      const req = httpMock.expectOne(LOGOUT_URL);
+      expect(req.request.withCredentials).toBe(true);
+      req.flush(null);
 
-    expect(router.navigateByUrl).toHaveBeenCalledWith('/auth');
+      expect(fixture.componentInstance.toast()).toMatchObject({
+        tone: 'success',
+        title: 'Cerrando sesión',
+      });
+      expect(router.navigateByUrl).not.toHaveBeenCalled();
+
+      vi.advanceTimersByTime(1200);
+      expect(router.navigateByUrl).toHaveBeenCalledWith('/auth');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
-  it('still navigates to /auth even if the backend logout call fails', () => {
-    const fixture = TestBed.createComponent(HomePerfil);
-    fixture.detectChanges();
-    httpMock.expectOne(ME_URL).flush(makeMe());
+  it('shows a warning toast and still navigates to /auth shortly after, if the backend logout call fails', () => {
+    vi.useFakeTimers();
+    try {
+      const fixture = TestBed.createComponent(HomePerfil);
+      fixture.detectChanges();
+      httpMock.expectOne(ME_URL).flush(makeMe());
 
-    fixture.componentInstance.onSubmit();
-    httpMock.expectOne(LOGOUT_URL).flush('error', { status: 500, statusText: 'Server Error' });
+      fixture.componentInstance.onSubmit();
+      httpMock.expectOne(LOGOUT_URL).flush('error', { status: 500, statusText: 'Server Error' });
 
-    expect(router.navigateByUrl).toHaveBeenCalledWith('/auth');
+      expect(fixture.componentInstance.toast()).toMatchObject({
+        tone: 'warning',
+        title: 'No se pudo cerrar sesión en el servidor',
+      });
+      expect(router.navigateByUrl).not.toHaveBeenCalled();
+
+      vi.advanceTimersByTime(1200);
+      expect(router.navigateByUrl).toHaveBeenCalledWith('/auth');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('"Cambiar contraseña" navega a /auth/forgot-password', () => {
