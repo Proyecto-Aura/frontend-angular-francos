@@ -169,7 +169,7 @@ export class GestionarUsuarios implements OnInit, AfterViewInit {
     { key: 'email', header: 'Email', muted: true },
     { key: 'rol', header: 'Rol', width: '150px' },
     { key: 'estado', header: 'Estado', width: '120px' },
-    { key: 'creado', header: 'Creado', width: '130px', muted: true },
+    { key: 'creado', header: 'Fecha de ingreso', width: '150px', muted: true },
     { key: 'acciones', header: 'Acciones', width: '90px', align: 'right' },
   ]);
 

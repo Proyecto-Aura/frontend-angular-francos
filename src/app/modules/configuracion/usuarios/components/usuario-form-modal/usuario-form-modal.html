@@ -119,6 +119,62 @@
       />
     </app-ds-field>
 
+    @if (modo() === 'nuevo') {
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <app-ds-field
+          label="Cargo"
+          [required]="true"
+          htmlFor="u-cargo"
+          [error]="errores().cargo ?? null"
+        >
+          <app-ds-input
+            id="u-cargo"
+            size="lg"
+            placeholder="Vendedor"
+            [value]="form().cargo"
+            (valueChange)="cambiar('cargo', $event)"
+            [invalid]="!!errores().cargo"
+          />
+        </app-ds-field>
+        <app-ds-field label="Área" htmlFor="u-area" [error]="errores().area ?? null">
+          <app-ds-input
+            id="u-area"
+            size="lg"
+            placeholder="Ventas"
+            [value]="form().area"
+            (valueChange)="cambiar('area', $event)"
+            [invalid]="!!errores().area"
+          />
+        </app-ds-field>
+      </div>
+
+      <app-ds-field
+        label="Fecha de ingreso"
+        htmlFor="u-fecha-ingreso"
+        hint="Se registra con la fecha de hoy"
+      >
+        <app-ds-input
+          id="u-fecha-ingreso"
+          type="date"
+          size="lg"
+          [value]="form().fechaIngreso"
+          (valueChange)="cambiar('fechaIngreso', $event)"
+          [disabled]="true"
+        />
+      </app-ds-field>
+    }
+
+    @if (modo() === 'nuevo') {
+      <app-ds-button
+        variant="ghost"
+        size="sm"
+        class="self-start"
+        (clicked)="autogenerarCredenciales()"
+      >
+        Autogenerar usuario y contraseña
+      </app-ds-button>
+    }
+
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
       <app-ds-field
         label="Username"
@@ -145,13 +201,24 @@
       >
         <app-ds-input
           id="u-contrasena"
-          type="password"
+          [type]="passwordVisible() ? 'text' : 'password'"
           size="lg"
           placeholder="••••••••"
           [value]="form().contrasena"
           (valueChange)="cambiar('contrasena', $event)"
           [invalid]="!!errores().contrasena"
-        />
+          [hasSuffix]="true"
+        >
+          <button
+            suffix
+            type="button"
+            class="pointer-events-auto text-muted-foreground hover:text-foreground"
+            [attr.aria-label]="passwordVisible() ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+            (click)="togglePasswordVisible()"
+          >
+            <app-ds-icon [img]="ojoIcono()" [size]="18" />
+          </button>
+        </app-ds-input>
       </app-ds-field>
     </div>
 

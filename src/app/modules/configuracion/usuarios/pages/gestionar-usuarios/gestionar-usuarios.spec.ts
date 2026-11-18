@@ -91,6 +91,25 @@ describe('GestionarUsuarios', () => {
     expect(texto).toContain('Inactivo');
   });
 
+  it('la columna "Fecha de ingreso" muestra la fecha del empleado, no la de creación de la cuenta', () => {
+    const formato = new Intl.DateTimeFormat('es-PE', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    });
+    crear([
+      makeUsuarioDto({
+        fecha_ingreso: '2026-01-15',
+        created_at: '2026-09-01T12:00:00.000Z',
+      }),
+    ]);
+
+    const texto = el.textContent ?? '';
+    expect(texto).toContain('Fecha de ingreso');
+    expect(texto).toContain(formato.format(new Date(2026, 0, 15)));
+    expect(texto).not.toContain(formato.format(new Date('2026-09-01T12:00:00.000Z')));
+  });
+
   it('muestra el total de usuarios en la pestaña "Usuarios"', () => {
     crear([LUCIA, ADMIN], 2);
 

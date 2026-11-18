@@ -22,6 +22,7 @@ function formValido(overrides: Partial<UsuarioForm> = {}): UsuarioForm {
     username: 'lquispe',
     contrasena: 'Clave1234',
     rolIds: ['2'],
+    cargo: 'Vendedor',
     ...overrides,
   };
 }
@@ -43,7 +44,20 @@ describe('validarUsuario', () => {
       username: 'Username inválido',
       contrasena: 'Ingresar una contraseña',
       rolIds: 'Seleccionar al menos un rol',
+      cargo: 'Ingresar el cargo',
     });
+  });
+
+  it('exige el cargo solo al crear, con máximo 100 caracteres, y area es opcional', () => {
+    expect(validarUsuario(formValido({ cargo: '' }), 'nuevo').cargo).toBe('Ingresar el cargo');
+    expect(validarUsuario(formValido({ cargo: 'a'.repeat(101) }), 'nuevo').cargo).toBe(
+      'Máximo 100 caracteres',
+    );
+    expect(validarUsuario(formValido({ cargo: '' }), 'editar').cargo).toBeUndefined();
+    expect(validarUsuario(formValido({ area: '' }), 'nuevo').area).toBeUndefined();
+    expect(validarUsuario(formValido({ area: 'a'.repeat(101) }), 'nuevo').area).toBe(
+      'Máximo 100 caracteres',
+    );
   });
 
   it('valida el formato del documento según su tipo', () => {
