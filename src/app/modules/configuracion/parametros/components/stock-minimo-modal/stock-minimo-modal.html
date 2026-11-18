@@ -1,0 +1,74 @@
+<app-ds-modal
+  [open]="open()"
+  title="Editar stock de alerta"
+  [description]="descripcion()"
+  [hasFooter]="true"
+  [width]="480"
+  (closed)="cerrar()"
+>
+  <div class="flex flex-col gap-4">
+    @if (errorGeneral()) {
+      <div
+        role="alert"
+        class="rounded-lg bg-destructive/10 px-3.5 py-3 text-ds-sm text-destructive"
+      >
+        {{ errorGeneral() }}
+      </div>
+    }
+
+    <div class="flex items-center justify-between rounded-lg bg-muted px-3.5 py-3">
+      <span class="text-ds-sm text-muted-foreground">Stock actual</span>
+      <span class="text-ds-base font-medium tabular-nums">{{ stockActual() }}</span>
+    </div>
+
+    <app-ds-field
+      label="Stock mínimo"
+      [required]="true"
+      htmlFor="sm-minimo"
+      hint="Se genera alerta cuando el stock baja de este valor"
+      [error]="errores().minimo ?? null"
+    >
+      <app-ds-input
+        id="sm-minimo"
+        size="lg"
+        placeholder="0"
+        [value]="minimo()"
+        (valueChange)="minimo.set($event)"
+        [invalid]="!!errores().minimo"
+      />
+    </app-ds-field>
+
+    <app-ds-field
+      label="Stock máximo"
+      [required]="maximoObligatorio()"
+      htmlFor="sm-maximo"
+      [hint]="
+        maximoObligatorio() ? 'Mayor o igual al stock mínimo' : 'Opcional. Vacío si no aplica'
+      "
+      [error]="errores().maximo ?? null"
+    >
+      <app-ds-input
+        id="sm-maximo"
+        size="lg"
+        [placeholder]="maximoObligatorio() ? '0' : 'Sin máximo'"
+        [value]="maximo()"
+        (valueChange)="maximo.set($event)"
+        [invalid]="!!errores().maximo"
+      />
+    </app-ds-field>
+
+    <div class="flex items-center justify-between">
+      <span class="text-ds-sm text-muted-foreground">Nivel con estos valores</span>
+      <app-ds-badge [tone]="tonoNivel()" [dot]="true">{{ etiquetaNivel() }}</app-ds-badge>
+    </div>
+  </div>
+
+  <span footer class="flex gap-2">
+    <app-ds-button variant="secondary" [disabled]="guardando()" (clicked)="cerrar()">
+      Cancelar
+    </app-ds-button>
+    <app-ds-button [disabled]="guardando()" (clicked)="guardar()">
+      {{ guardando() ? 'Guardando…' : 'Guardar cambios' }}
+    </app-ds-button>
+  </span>
+</app-ds-modal>
