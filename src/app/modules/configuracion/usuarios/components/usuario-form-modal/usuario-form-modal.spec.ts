@@ -51,6 +51,7 @@ describe('UsuarioFormModal', () => {
     escribir('u-apellido-materno', 'Huaman');
     escribir('u-numero-documento', '45678912');
     escribir('u-email', 'Lucia@Francos.test');
+    escribir('u-cargo', 'Vendedor');
     escribir('u-username', 'lquispe');
     escribir('u-contrasena', 'Clave1234');
     alternarRol('Ventas');
@@ -106,6 +107,9 @@ describe('UsuarioFormModal', () => {
       expect(el.textContent).toContain('Nuevo usuario');
       expect(el.querySelector('input#u-email')).not.toBeNull();
       expect(el.querySelector('input#u-numero-documento')).not.toBeNull();
+      expect(el.querySelector('input#u-cargo')).not.toBeNull();
+      expect(el.querySelector('input#u-area')).not.toBeNull();
+      expect(el.querySelector('input#u-fecha-ingreso')).not.toBeNull();
       expect(el.textContent).toContain('Puede ingresar al sistema');
     });
 
@@ -140,6 +144,7 @@ describe('UsuarioFormModal', () => {
       expect(el.textContent).toContain('Email inválido');
       expect(el.textContent).toContain('Ingresar una contraseña');
       expect(el.textContent).toContain('Seleccionar al menos un rol');
+      expect(el.textContent).toContain('Ingresar el cargo');
       http.expectNone(USUARIOS_URL);
     });
 
@@ -157,6 +162,7 @@ describe('UsuarioFormModal', () => {
         username: 'lquispe',
         rol_ids: [2],
         estado: true,
+        cargo: 'Vendedor',
       });
       req.flush(makeUsuarioDto());
 
@@ -164,6 +170,64 @@ describe('UsuarioFormModal', () => {
       expect(guardados[0].modo).toBe('nuevo');
       expect(guardados[0].usuario.nombreCompleto).toBe('Lucia Quispe Huaman');
       expect(cierres).toBe(1);
+    });
+
+    it('"Autogenerar" pone el username con el documento y una contraseña segura visible', () => {
+      abrir();
+      escribir('u-numero-documento', '45678912');
+
+      boton('Autogenerar usuario y contraseña').click();
+      fixture.detectChanges();
+
+      expect(el.querySelector<HTMLInputElement>('input#u-username')!.value).toBe('45678912');
+      const campoContrasena = el.querySelector<HTMLInputElement>('input#u-contrasena')!;
+      expect(campoContrasena.type).toBe('text');
+      expect(campoContrasena.value).toHaveLength(12);
+    });
+
+    it('el ojito muestra y oculta la contraseña', () => {
+      abrir();
+      escribir('u-contrasena', 'Clave1234');
+      const campo = el.querySelector<HTMLInputElement>('input#u-contrasena')!;
+      expect(campo.type).toBe('password');
+
+      el.querySelector<HTMLButtonElement>('button[aria-label="Mostrar contraseña"]')!.click();
+      fixture.detectChanges();
+      expect(campo.type).toBe('text');
+
+      el.querySelector<HTMLButtonElement>('button[aria-label="Ocultar contraseña"]')!.click();
+      fixture.detectChanges();
+      expect(campo.type).toBe('password');
+    });
+
+    it('el campo fecha de ingreso se autocompleta con hoy y no se puede editar', () => {
+      abrir();
+
+      const campo = el.querySelector<HTMLInputElement>('input#u-fecha-ingreso')!;
+      expect(campo.disabled).toBe(true);
+      expect(campo.value).not.toBe('');
+    });
+
+    it('manda area solo si se llena; fecha_ingreso siempre va con la fecha de hoy', () => {
+      abrir();
+      llenarNuevo();
+
+      boton('Crear usuario').click();
+      const req = http.expectOne({ method: 'POST', url: USUARIOS_URL });
+      expect(req.request.body).not.toHaveProperty('area');
+      expect(req.request.body.fecha_ingreso).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      req.flush(makeUsuarioDto());
+    });
+
+    it('al llenar área, la manda al backend', () => {
+      abrir();
+      llenarNuevo();
+      escribir('u-area', 'Ventas');
+
+      boton('Crear usuario').click();
+      const req = http.expectOne({ method: 'POST', url: USUARIOS_URL });
+      expect(req.request.body).toMatchObject({ area: 'Ventas' });
+      req.flush(makeUsuarioDto());
     });
 
     it('marca "Email ya registrado" junto al campo cuando el backend responde 409', () => {
@@ -270,6 +334,7 @@ describe('UsuarioFormModal', () => {
       expect(el.querySelector<HTMLSelectElement>('select#u-tipo-documento')!.disabled).toBe(true);
       expect(el.textContent).toContain('Dejar vacío para mantener la actual');
       expect(el.textContent).not.toContain('Puede ingresar al sistema');
+      expect(el.querySelector('input#u-cargo')).toBeNull();
     });
 
     it('guardar sin tocar nada no llama al backend y cierra', () => {

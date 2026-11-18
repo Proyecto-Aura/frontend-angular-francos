@@ -14,7 +14,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Observable, finalize, of, switchMap } from 'rxjs';
-import { LucideUpload } from '@lucide/angular';
+import { LucideEye, LucideEyeClosed, LucideUpload } from '@lucide/angular';
 
 import { Button } from '../../../../../shared/ds/button/button';
 import { Field } from '../../../../../shared/ds/field/field';
@@ -45,6 +45,25 @@ export interface UsuarioGuardado {
   modo: 'nuevo' | 'editar';
 }
 
+/** Fecha local (no UTC: toISOString() se adelanta de día en las tardes/noches en Perú). */
+function fechaDeHoy(): string {
+  const hoy = new Date();
+  const mes = String(hoy.getMonth() + 1).padStart(2, '0');
+  const dia = String(hoy.getDate()).padStart(2, '0');
+  return `${hoy.getFullYear()}-${mes}-${dia}`;
+}
+
+// Sin 0/O/1/l/I para que no se confundan al transcribirla a mano.
+const CARACTERES_CONTRASENA = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%';
+
+function generarContrasenaSegura(longitud = 12): string {
+  const valores = new Uint32Array(longitud);
+  crypto.getRandomValues(valores);
+  return Array.from(valores, (v) => CARACTERES_CONTRASENA[v % CARACTERES_CONTRASENA.length]).join(
+    '',
+  );
+}
+
 @Component({
   imports: [Alert, Button, Field, Icon, Input, Modal, Select, Switch],
   selector: 'app-usuario-form-modal',
@@ -56,6 +75,11 @@ export class UsuarioFormModal {
   private estabaAbierto = false;
 
   protected readonly LucideUpload = LucideUpload;
+
+  passwordVisible = signal(false);
+  protected readonly ojoIcono = computed(() =>
+    this.passwordVisible() ? LucideEyeClosed : LucideEye,
+  );
 
   open = input(false);
   /** null = crear un usuario nuevo. */
@@ -127,11 +151,14 @@ export class UsuarioFormModal {
 
   private prepararFormulario(): void {
     const usuario = this.usuario();
-    this.form.set(usuario ? usuarioFormDe(usuario) : { ...USUARIO_FORM_VACIO });
+    this.form.set(
+      usuario ? usuarioFormDe(usuario) : { ...USUARIO_FORM_VACIO, fechaIngreso: fechaDeHoy() },
+    );
     this.intentoGuardar.set(false);
     this.guardando.set(false);
     this.limpiarAlerta();
     this.erroresServidor.set({});
+    this.passwordVisible.set(false);
 
     this.liberarPrevia();
     this.fotoGuardada.set(usuario?.fotoUrl ?? null);
@@ -193,6 +220,18 @@ export class UsuarioFormModal {
 
   protected cambiarTipoDocumento(valor: string): void {
     this.cambiar('tipoDocumento', valor as TipoDocumentoDto);
+  }
+
+  protected togglePasswordVisible(): void {
+    this.passwordVisible.update((v) => !v);
+  }
+
+  /** Usuario a partir del documento (ya validado con su formato) y una contraseña aleatoria. */
+  protected autogenerarCredenciales(): void {
+    const documento = this.form().numeroDocumento.trim();
+    if (documento) this.cambiar('username', documento.toLowerCase());
+    this.cambiar('contrasena', generarContrasenaSegura());
+    this.passwordVisible.set(true);
   }
 
   protected tieneRol(rolId: number): boolean {
