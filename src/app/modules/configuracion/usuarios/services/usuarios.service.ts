@@ -99,4 +99,16 @@ export class UsuariosService {
       .patch<UsuarioInternoDto>(`${USUARIOS_URL}/${id}/activate`, {})
       .pipe(map(toUsuario));
   }
+
+  subirFoto(id: string, archivo: File): Observable<Usuario> {
+    const cuerpo = new FormData();
+    cuerpo.append('foto', archivo);
+    return this.http
+      .post<UsuarioInternoDto>(`${USUARIOS_URL}/${id}/foto`, cuerpo)
+      .pipe(map(toUsuario));
+  }
+
+  quitarFoto(id: string): Observable<Usuario> {
+    return this.http.delete<UsuarioInternoDto>(`${USUARIOS_URL}/${id}/foto`).pipe(map(toUsuario));
+  }
 }

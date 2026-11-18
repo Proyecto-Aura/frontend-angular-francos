@@ -32,6 +32,7 @@ export function toUsuario(dto: UsuarioInternoDto): Usuario {
     username: dto.username,
     activo: dto.estado,
     roles: dto.roles.map((rol) => ({ id: rol.id, nombre: rol.nombre })),
+    fotoUrl: dto.foto_url,
     creado: FORMATO_FECHA.format(new Date(dto.created_at)),
   };
 }

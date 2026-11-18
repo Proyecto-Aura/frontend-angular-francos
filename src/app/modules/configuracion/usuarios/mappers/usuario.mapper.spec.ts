@@ -31,8 +31,14 @@ describe('usuario.mapper', () => {
       nombreCompleto: 'Lucia Quispe Huaman',
       activo: false,
       roles: [{ id: 2, nombre: 'ventas' }],
+      fotoUrl: null,
     });
     expect(usuario.creado).toContain('2026');
+  });
+
+  it('toUsuario mapea foto_url tal cual', () => {
+    const url = 'http://localhost:9000/francos-media/usuarios/a.png';
+    expect(toUsuario(makeUsuarioDto({ foto_url: url })).fotoUrl).toBe(url);
   });
 
   it('toPaginaUsuarios usa total y total_pages del backend (mínimo 1 página)', () => {

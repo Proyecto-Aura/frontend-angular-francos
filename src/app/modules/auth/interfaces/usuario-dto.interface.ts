@@ -41,6 +41,7 @@ export interface MeResponseDto {
   email: string;
   username: string;
   roles: string[];
+  foto_url: string | null;
 }
 
 // POST /api/v1/auth/forgot-password — público. Responde siempre 200 con el mismo

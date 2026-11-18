@@ -175,6 +175,28 @@ describe('UsuariosService', () => {
     });
   });
 
+  it('subirFoto() manda la foto en un FormData al endpoint /foto', () => {
+    const archivo = new File(['x'], 'foto.png', { type: 'image/png' });
+    let fotoUrl: string | null = null;
+    service.subirFoto('u-1', archivo).subscribe((u) => (fotoUrl = u.fotoUrl));
+
+    const req = http.expectOne({ method: 'POST', url: `${URL}/u-1/foto` });
+    expect(req.request.body instanceof FormData).toBe(true);
+    expect((req.request.body as FormData).get('foto')).toBe(archivo);
+    req.flush(makeUsuarioDto({ foto_url: 'http://localhost:9000/francos-media/usuarios/a.png' }));
+
+    expect(fotoUrl).toBe('http://localhost:9000/francos-media/usuarios/a.png');
+  });
+
+  it('quitarFoto() usa DELETE /foto', () => {
+    let fotoUrl: string | null = 'algo';
+    service.quitarFoto('u-1').subscribe((u) => (fotoUrl = u.fotoUrl));
+
+    http.expectOne({ method: 'DELETE', url: `${URL}/u-1/foto` }).flush(makeUsuarioDto());
+
+    expect(fotoUrl).toBeNull();
+  });
+
   it('desactivar() usa DELETE y reactivar() usa PATCH /activate', () => {
     let activo: boolean | undefined;
     service.desactivar('u-1').subscribe((u) => (activo = u.activo));

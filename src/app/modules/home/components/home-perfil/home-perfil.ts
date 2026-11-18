@@ -1,4 +1,4 @@
-import { Component, inject, input, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AuthService } from '../../../auth/services/auth.service';
@@ -15,14 +15,28 @@ export class HomePerfil {
 
   // Mismo nombre que se ve mientras responde /auth/me.
   userName = signal('Usuario');
-  avatarUrl = input<string | null>(null);
+  avatarUrl = signal<string | null>(null);
+
+  // Mismo cálculo de iniciales que app-ds-avatar, para cuando no hay foto.
+  initials = computed(() =>
+    this.userName()
+      .split(' ')
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((w) => w[0])
+      .join('')
+      .toUpperCase(),
+  );
 
   constructor() {
     this.authService
       .getCurrentUser()
       .pipe(takeUntilDestroyed())
       .subscribe({
-        next: (me) => this.userName.set(me.nombre_completo),
+        next: (me) => {
+          this.userName.set(me.nombre_completo);
+          this.avatarUrl.set(me.foto_url);
+        },
         error: () => undefined,
       });
   }
@@ -34,5 +48,9 @@ export class HomePerfil {
       // mandamos a login; no tiene sentido dejar al usuario atascado
       error: () => this.router.navigateByUrl('/auth'),
     });
+  }
+
+  irACambiarContrasena() {
+    this.router.navigateByUrl('/auth/forgot-password');
   }
 }

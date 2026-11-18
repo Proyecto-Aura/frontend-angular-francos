@@ -1,10 +1,6 @@
 <header class="flex items-center justify-between border-b border-gray-200 bg-white px-6 py-3">
   <div class="flex items-center gap-3">
-    <span class="h-9 w-9 shrink-0 overflow-hidden rounded-full bg-gray-200">
-      @if (avatarUrl()) {
-        <img [src]="avatarUrl()" alt="" class="h-full w-full object-cover" />
-      }
-    </span>
+    <app-ds-avatar [name]="userName()" [src]="avatarUrl()" size="md" />
     <div class="leading-tight">
       <p class="text-sm font-semibold text-gray-900">{{ userName() }}</p>
       <p class="text-xs text-gray-500">{{ userRole() }}</p>

@@ -25,6 +25,7 @@ function makeMeResponse(overrides: Partial<MeResponseDto> = {}): MeResponseDto {
     email: 'admin@francos.test',
     username: 'admin',
     roles: ['admin'],
+    foto_url: null,
     ...overrides,
   };
 }
