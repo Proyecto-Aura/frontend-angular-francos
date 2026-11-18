@@ -3,7 +3,7 @@
   [title]="modo() === 'nuevo' ? 'Nuevo usuario' : 'Editar usuario'"
   [hasFooter]="true"
   hint="Los campos con * son obligatorios"
-  [width]="640"
+  [width]="820"
   (closed)="cerrar()"
 >
   <div class="flex flex-col gap-4">
@@ -155,32 +155,76 @@
       </app-ds-field>
     </div>
 
-    <app-ds-field label="Roles" [required]="true" [error]="errores().rolIds ?? null">
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-[minmax(0,1fr)_320px]">
       <div class="flex flex-col gap-3">
-        @for (rol of roles(); track rol.id) {
-          <app-ds-switch
-            [label]="rol.etiqueta"
-            [checked]="tieneRol(rol.id)"
-            (checkedChange)="alternarRol(rol.id, $event)"
-          />
+        <app-ds-field label="Roles" [required]="true" [error]="errores().rolIds ?? null">
+          <div class="flex flex-col gap-3">
+            @for (rol of roles(); track rol.id) {
+              <app-ds-switch
+                [label]="rol.etiqueta"
+                [checked]="tieneRol(rol.id)"
+                (checkedChange)="alternarRol(rol.id, $event)"
+              />
+            }
+          </div>
+        </app-ds-field>
+
+        @if (modo() === 'nuevo') {
+          <div class="flex flex-col gap-1">
+            <app-ds-switch
+              label="Activo"
+              [checked]="form().activo"
+              (checkedChange)="cambiar('activo', $event)"
+            />
+            <p class="text-ds-sm text-muted-foreground">
+              {{
+                form().activo
+                  ? 'Puede ingresar al sistema'
+                  : 'No podrá ingresar hasta ser reactivado'
+              }}
+            </p>
+          </div>
         }
       </div>
-    </app-ds-field>
 
-    @if (modo() === 'nuevo') {
-      <div class="flex flex-col gap-1">
-        <app-ds-switch
-          label="Activo"
-          [checked]="form().activo"
-          (checkedChange)="cambiar('activo', $event)"
+      <div class="flex flex-col gap-3">
+        <span class="text-ds-sm font-medium text-foreground">Foto</span>
+        <div
+          class="flex h-[320px] items-center justify-center overflow-hidden rounded-lg border border-dashed border-border bg-muted"
+        >
+          @if (fotoVisible(); as url) {
+            <img [src]="url" alt="Foto del usuario" class="h-full w-full object-cover" />
+          } @else {
+            <span class="px-2 text-center text-ds-xs text-muted-foreground">Sin foto</span>
+          }
+        </div>
+
+        <div class="flex flex-col gap-1">
+          <app-ds-button variant="secondary" size="sm" (clicked)="elegirFoto()">
+            <span icon><app-ds-icon [img]="LucideUpload" [size]="14" /></span>
+            {{ fotoVisible() ? 'Cambiar foto' : 'Subir foto' }}
+          </app-ds-button>
+          @if (fotoVisible()) {
+            <app-ds-button variant="ghost" size="sm" (clicked)="quitarFotoSeleccion()">
+              Quitar
+            </app-ds-button>
+          }
+        </div>
+        @if (fotoError()) {
+          <p role="alert" class="text-ds-xs text-destructive">{{ fotoError() }}</p>
+        } @else if (modo() === 'nuevo') {
+          <p class="text-ds-xs text-muted-foreground">Opcional, se puede agregar después</p>
+        }
+        <input
+          #selectorArchivo
+          type="file"
+          class="hidden"
+          accept="image/png,image/jpeg"
+          aria-label="Seleccionar foto del usuario"
+          (change)="alElegirArchivo($event)"
         />
-        <p class="text-ds-sm text-muted-foreground">
-          {{
-            form().activo ? 'Puede ingresar al sistema' : 'No podrá ingresar hasta ser reactivado'
-          }}
-        </p>
       </div>
-    }
+    </div>
   </div>
 
   <span footer class="flex gap-2">

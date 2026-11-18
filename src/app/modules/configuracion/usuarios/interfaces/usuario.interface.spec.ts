@@ -5,6 +5,7 @@ import {
   etiquetaDeRol,
   mismosRoles,
   usuarioFormDe,
+  validarFoto,
   validarUsuario,
 } from './usuario.interface';
 import { toUsuario } from '../mappers/usuario.mapper';
@@ -149,6 +150,25 @@ describe('usuarioFormDe', () => {
       contrasena: '',
       rolIds: ['2', '4'],
     });
+  });
+});
+
+describe('validarFoto', () => {
+  it('acepta PNG y JPG de hasta 1 MB', () => {
+    expect(validarFoto({ type: 'image/png', size: 1024 * 1024 })).toBeNull();
+    expect(validarFoto({ type: 'image/jpeg', size: 10 })).toBeNull();
+  });
+
+  it('rechaza otros formatos', () => {
+    expect(validarFoto({ type: 'image/webp', size: 10 })).toBe(
+      'Formato no admitido. Usar PNG o JPG',
+    );
+  });
+
+  it('rechaza más de 1 MB', () => {
+    expect(validarFoto({ type: 'image/png', size: 1024 * 1024 + 1 })).toBe(
+      'El archivo supera 1 MB',
+    );
   });
 });
 

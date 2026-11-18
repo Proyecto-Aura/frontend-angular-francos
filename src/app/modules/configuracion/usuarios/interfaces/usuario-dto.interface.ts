@@ -20,6 +20,7 @@ export interface UsuarioInternoDto {
   email_verificado: boolean;
   debe_cambiar_contrasena: boolean;
   roles: RolResumenDto[];
+  foto_url: string | null;
   created_at: string;
   updated_at: string;
 }

@@ -7,7 +7,7 @@ import { toRol, toUsuario } from '../../mappers/usuario.mapper';
 import { makeRolDto, makeUsuarioDto } from '../../testing/usuario-fixtures';
 import { UsuarioFormModal, UsuarioGuardado } from './usuario-form-modal';
 
-const URL = `${environment.apiUrl}/usuarios`;
+const USUARIOS_URL = `${environment.apiUrl}/usuarios`;
 const ROLES: Rol[] = [
   toRol(makeRolDto({ id: 1, nombre: 'admin' })),
   toRol(makeRolDto({ id: 2, nombre: 'ventas' })),
@@ -55,6 +55,26 @@ describe('UsuarioFormModal', () => {
     escribir('u-contrasena', 'Clave1234');
     alternarRol('Ventas');
   };
+  const subirArchivo = (archivo: File) => {
+    const selector = el.querySelector<HTMLInputElement>('input[type="file"]')!;
+    Object.defineProperty(selector, 'files', { value: [archivo], configurable: true });
+    selector.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+  };
+  /** La previa de la foto usa URL.createObjectURL; vi.unstubAllGlobals() en afterEach la limpia. */
+  const stubObjectUrl = () => {
+    vi.stubGlobal(
+      'URL',
+      class extends globalThis.URL {
+        static override createObjectURL(): string {
+          return 'blob:previa';
+        }
+        static override revokeObjectURL(): void {
+          /* La prueba no crea una URL real. */
+        }
+      },
+    );
+  };
 
   beforeEach(() => {
     TestBed.configureTestingModule({
@@ -70,7 +90,14 @@ describe('UsuarioFormModal', () => {
     fixture.componentInstance.closed.subscribe(() => cierres++);
   });
 
-  afterEach(() => http.verify());
+  afterEach(() => {
+    try {
+      http.verify();
+    } finally {
+      fixture.destroy();
+      vi.unstubAllGlobals();
+    }
+  });
 
   describe('nuevo usuario', () => {
     it('muestra el título y los campos del alta, con el switch Activo', () => {
@@ -113,7 +140,7 @@ describe('UsuarioFormModal', () => {
       expect(el.textContent).toContain('Email inválido');
       expect(el.textContent).toContain('Ingresar una contraseña');
       expect(el.textContent).toContain('Seleccionar al menos un rol');
-      http.expectNone(URL);
+      http.expectNone(USUARIOS_URL);
     });
 
     it('crea el usuario, avisa al padre y cierra el modal', () => {
@@ -121,7 +148,7 @@ describe('UsuarioFormModal', () => {
       llenarNuevo();
 
       boton('Crear usuario').click();
-      const req = http.expectOne({ method: 'POST', url: URL });
+      const req = http.expectOne({ method: 'POST', url: USUARIOS_URL });
       expect(req.request.body).toMatchObject({
         nombres: 'Lucia',
         email: 'lucia@francos.test',
@@ -145,7 +172,7 @@ describe('UsuarioFormModal', () => {
 
       boton('Crear usuario').click();
       http
-        .expectOne({ method: 'POST', url: URL })
+        .expectOne({ method: 'POST', url: USUARIOS_URL })
         .flush(
           { message: 'Existe un usuario con ese mismo email' },
           { status: 409, statusText: 'Conflict' },
@@ -162,7 +189,7 @@ describe('UsuarioFormModal', () => {
       llenarNuevo();
       boton('Crear usuario').click();
       http
-        .expectOne({ method: 'POST', url: URL })
+        .expectOne({ method: 'POST', url: USUARIOS_URL })
         .flush(
           { message: 'Ya existe un usuario con ese nombre de usuario' },
           { status: 409, statusText: 'Conflict' },
@@ -181,12 +208,40 @@ describe('UsuarioFormModal', () => {
 
       boton('Crear usuario').click();
       http
-        .expectOne({ method: 'POST', url: URL })
+        .expectOne({ method: 'POST', url: USUARIOS_URL })
         .flush({ message: 'Rol no asignable' }, { status: 400, statusText: 'Bad Request' });
       fixture.detectChanges();
 
       expect(el.querySelector('[role="alert"]')?.textContent).toContain('Rol no asignable');
       expect(boton('Crear usuario').disabled).toBe(false);
+    });
+
+    it('permite elegir una foto desde el alta, como opcional', () => {
+      abrir();
+
+      expect(boton('Subir foto')).toBeDefined();
+      expect(el.textContent).toContain('Opcional, se puede agregar después');
+    });
+
+    it('crea el usuario con una foto y la sube con el id ya creado', () => {
+      abrir();
+      llenarNuevo();
+      stubObjectUrl();
+      const archivo = new File(['x'], 'foto.png', { type: 'image/png' });
+      subirArchivo(archivo);
+      expect(boton('Cambiar foto')).toBeDefined();
+
+      boton('Crear usuario').click();
+      http.expectOne({ method: 'POST', url: USUARIOS_URL }).flush(makeUsuarioDto({ id: 'u-9' }));
+
+      const subida = http.expectOne({ method: 'POST', url: `${USUARIOS_URL}/u-9/foto` });
+      expect((subida.request.body as FormData).get('foto')).toBe(archivo);
+      subida.flush(
+        makeUsuarioDto({ id: 'u-9', foto_url: 'http://localhost:9000/francos-media/a.png' }),
+      );
+
+      expect(guardados).toHaveLength(1);
+      expect(cierres).toBe(1);
     });
 
     it('al volver a abrir el modal el formulario está limpio', () => {
@@ -222,7 +277,7 @@ describe('UsuarioFormModal', () => {
 
       boton('Guardar cambios').click();
 
-      http.expectNone(`${URL}/u-1`);
+      http.expectNone(`${USUARIOS_URL}/u-1`);
       expect(guardados[0].modo).toBe('editar');
       expect(cierres).toBe(1);
     });
@@ -234,8 +289,8 @@ describe('UsuarioFormModal', () => {
 
       boton('Guardar cambios').click();
 
-      http.expectNone({ method: 'PATCH', url: `${URL}/u-1` });
-      const req = http.expectOne({ method: 'PUT', url: `${URL}/u-1/roles` });
+      http.expectNone({ method: 'PATCH', url: `${USUARIOS_URL}/u-1` });
+      const req = http.expectOne({ method: 'PUT', url: `${USUARIOS_URL}/u-1/roles` });
       expect(req.request.body).toEqual({ rol_ids: [4] });
       req.flush(makeUsuarioDto({ roles: [{ id: 4, nombre: 'inventario' }] }));
       expect(guardados).toHaveLength(1);
@@ -247,7 +302,7 @@ describe('UsuarioFormModal', () => {
 
       boton('Guardar cambios').click();
 
-      const req = http.expectOne({ method: 'PUT', url: `${URL}/u-1/roles` });
+      const req = http.expectOne({ method: 'PUT', url: `${USUARIOS_URL}/u-1/roles` });
       expect(req.request.body.rol_ids.sort()).toEqual([2, 4]);
     });
 
@@ -258,7 +313,7 @@ describe('UsuarioFormModal', () => {
 
       boton('Guardar cambios').click();
 
-      http.expectNone({ method: 'PUT', url: `${URL}/u-1/roles` });
+      http.expectNone({ method: 'PUT', url: `${USUARIOS_URL}/u-1/roles` });
     });
 
     it('si cambia un dato, manda solo ese dato en el PATCH', () => {
@@ -267,7 +322,7 @@ describe('UsuarioFormModal', () => {
 
       boton('Guardar cambios').click();
 
-      const req = http.expectOne({ method: 'PATCH', url: `${URL}/u-1` });
+      const req = http.expectOne({ method: 'PATCH', url: `${USUARIOS_URL}/u-1` });
       expect(req.request.body).toEqual({ nombres: 'Lucía' });
       req.flush(makeUsuarioDto({ nombres: 'Lucía' }));
     });
@@ -280,7 +335,67 @@ describe('UsuarioFormModal', () => {
       fixture.detectChanges();
 
       expect(el.textContent).toContain('Mínimo 8 caracteres');
-      http.expectNone(`${URL}/u-1`);
+      http.expectNone(`${USUARIOS_URL}/u-1`);
+    });
+
+    describe('foto', () => {
+      it('ofrece "Subir foto" cuando el usuario no tiene una', () => {
+        abrir(usuario);
+
+        expect(boton('Subir foto')).toBeDefined();
+        expect(el.textContent).not.toContain('Quitar');
+      });
+
+      it('rechaza una foto que no es PNG/JPG o supera 1 MB', () => {
+        abrir(usuario);
+
+        subirArchivo(new File(['x'], 'foto.gif', { type: 'image/gif' }));
+        expect(el.querySelector('[role="alert"]')?.textContent).toContain(
+          'Formato no admitido. Usar PNG o JPG',
+        );
+
+        subirArchivo(
+          new File([new Uint8Array(1024 * 1024 + 1)], 'foto.png', { type: 'image/png' }),
+        );
+        expect(el.querySelector('[role="alert"]')?.textContent).toContain('El archivo supera 1 MB');
+      });
+
+      it('al guardar con una foto nueva, guarda los datos y luego la sube', () => {
+        abrir(usuario);
+        stubObjectUrl();
+        const archivo = new File(['x'], 'foto.png', { type: 'image/png' });
+        subirArchivo(archivo);
+        expect(boton('Cambiar foto')).toBeDefined();
+
+        boton('Guardar cambios').click();
+        // No se tocó ningún otro campo: usuarios.service.editar() no llama al backend.
+        http.expectNone({ method: 'PATCH', url: `${USUARIOS_URL}/u-1` });
+        const subida = http.expectOne({ method: 'POST', url: `${USUARIOS_URL}/u-1/foto` });
+        expect((subida.request.body as FormData).get('foto')).toBe(archivo);
+        subida.flush(
+          makeUsuarioDto({ foto_url: 'http://localhost:9000/francos-media/usuarios/a.png' }),
+        );
+
+        expect(guardados).toHaveLength(1);
+        expect(cierres).toBe(1);
+      });
+
+      it('"Quitar" pide DELETE de la foto al guardar', () => {
+        abrir(toUsuario(makeUsuarioDto({ foto_url: 'http://localhost:9000/x/foto.png' })));
+
+        expect(boton('Quitar')).toBeDefined();
+        boton('Quitar').click();
+        fixture.detectChanges();
+        expect(boton('Subir foto')).toBeDefined();
+
+        boton('Guardar cambios').click();
+        http.expectNone({ method: 'PATCH', url: `${USUARIOS_URL}/u-1` });
+        http
+          .expectOne({ method: 'DELETE', url: `${USUARIOS_URL}/u-1/foto` })
+          .flush(makeUsuarioDto({ foto_url: null }));
+
+        expect(guardados).toHaveLength(1);
+      });
     });
   });
 

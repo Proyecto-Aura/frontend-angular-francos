@@ -23,7 +23,7 @@
     <div class="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(260px,1fr)_minmax(0,2fr)]">
       <app-ds-card title="Cuenta">
         <div class="flex flex-col items-center gap-3 text-center">
-          <app-ds-avatar [name]="datos.nombre_completo" size="lg" />
+          <app-ds-avatar [name]="datos.nombre_completo" [src]="datos.foto_url" size="lg" />
           <div>
             <p class="font-semibold text-foreground">{{ datos.nombre_completo }}</p>
             <p class="text-ds-sm text-muted-foreground">&#64;{{ datos.username }}</p>

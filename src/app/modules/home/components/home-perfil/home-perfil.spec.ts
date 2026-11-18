@@ -18,6 +18,7 @@ function makeMe(overrides: Partial<MeResponseDto> = {}): MeResponseDto {
     email: 'admin@francos.test',
     username: 'admin',
     roles: ['admin'],
+    foto_url: null,
     ...overrides,
   };
 }
@@ -55,6 +56,45 @@ describe('HomePerfil', () => {
     expect(fixture.componentInstance.userName()).toBe('Juan Perez');
   });
 
+  it('sets avatarUrl from the foto_url that /auth/me responds', () => {
+    const fixture = TestBed.createComponent(HomePerfil);
+    fixture.detectChanges();
+    const url = 'http://localhost:9000/francos-media/usuarios/a.png';
+    httpMock.expectOne(ME_URL).flush(makeMe({ foto_url: url }));
+
+    expect(fixture.componentInstance.avatarUrl()).toBe(url);
+  });
+
+  it('keeps avatarUrl null when /auth/me responds with no photo', () => {
+    const fixture = TestBed.createComponent(HomePerfil);
+    fixture.detectChanges();
+    httpMock.expectOne(ME_URL).flush(makeMe());
+
+    expect(fixture.componentInstance.avatarUrl()).toBeNull();
+  });
+
+  it('shows the initials when there is no photo', () => {
+    const fixture = TestBed.createComponent(HomePerfil);
+    fixture.detectChanges();
+    httpMock.expectOne(ME_URL).flush(makeMe({ nombre_completo: 'Lucia Quispe' }));
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.rounded-full img')).toBeNull();
+    expect(el.textContent).toContain('LQ');
+  });
+
+  it('shows the photo instead of initials once avatarUrl is set', () => {
+    const fixture = TestBed.createComponent(HomePerfil);
+    fixture.detectChanges();
+    const url = 'http://localhost:9000/francos-media/usuarios/a.png';
+    httpMock.expectOne(ME_URL).flush(makeMe({ foto_url: url }));
+    fixture.detectChanges();
+
+    const img = (fixture.nativeElement as HTMLElement).querySelector('.rounded-full img');
+    expect(img?.getAttribute('src')).toBe(url);
+  });
+
   it('keeps the placeholder userName if /auth/me fails', () => {
     const fixture = TestBed.createComponent(HomePerfil);
     fixture.detectChanges();
@@ -85,5 +125,19 @@ describe('HomePerfil', () => {
     httpMock.expectOne(LOGOUT_URL).flush('error', { status: 500, statusText: 'Server Error' });
 
     expect(router.navigateByUrl).toHaveBeenCalledWith('/auth');
+  });
+
+  it('"Cambiar contraseña" navega a /auth/forgot-password', () => {
+    const fixture = TestBed.createComponent(HomePerfil);
+    fixture.detectChanges();
+    httpMock.expectOne(ME_URL).flush(makeMe());
+
+    const el = fixture.nativeElement as HTMLElement;
+    const boton = Array.from(el.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('Cambiar contraseña'),
+    )!;
+    boton.click();
+
+    expect(router.navigateByUrl).toHaveBeenCalledWith('/auth/forgot-password');
   });
 });

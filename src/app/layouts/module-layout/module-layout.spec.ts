@@ -21,6 +21,7 @@ function makeMe(overrides: Partial<MeResponseDto> = {}): MeResponseDto {
     email: 'admin@francos.test',
     username: 'admin',
     roles: ['admin'],
+    foto_url: null,
     ...overrides,
   };
 }
@@ -262,5 +263,20 @@ describe('ModuleLayout', () => {
 
     expect(fixture.componentInstance.userName()).toBe('Usuario');
     expect(fixture.componentInstance.userRole()).toBe('');
+  });
+
+  it('sets avatarUrl from the foto_url that /auth/me responds', () => {
+    const fixture = create({});
+    const url = 'http://localhost:9000/francos-media/usuarios/a.png';
+    httpMock.expectOne(ME_URL).flush(makeMe({ foto_url: url }));
+
+    expect(fixture.componentInstance.avatarUrl()).toBe(url);
+  });
+
+  it('keeps avatarUrl null when /auth/me responds with no photo', () => {
+    const fixture = create({});
+    httpMock.expectOne(ME_URL).flush(makeMe());
+
+    expect(fixture.componentInstance.avatarUrl()).toBeNull();
   });
 });

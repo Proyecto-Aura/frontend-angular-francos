@@ -18,6 +18,7 @@ export interface Usuario {
   username: string;
   activo: boolean;
   roles: RolResumen[];
+  fotoUrl: string | null;
   creado: string;
 }
 
@@ -85,6 +86,18 @@ export interface UsuarioForm {
 }
 
 export type UsuarioErrores = Partial<Record<keyof UsuarioForm, string>>;
+
+export const FOTO_TAMANO_MAXIMO = 1024 * 1024;
+export const FOTO_TIPOS_PERMITIDOS = ['image/png', 'image/jpeg'];
+
+/** Mensaje de error del archivo de foto, o null si es válido (mismas reglas que el logo). */
+export function validarFoto(archivo: { type: string; size: number }): string | null {
+  if (!FOTO_TIPOS_PERMITIDOS.includes(archivo.type)) {
+    return 'Formato no admitido. Usar PNG o JPG';
+  }
+  if (archivo.size > FOTO_TAMANO_MAXIMO) return 'El archivo supera 1 MB';
+  return null;
+}
 
 export const USUARIO_FORM_VACIO: UsuarioForm = {
   nombres: '',
