@@ -1,0 +1,70 @@
+<app-ds-modal
+  [open]="open()"
+  [title]="'Editar: ' + (plantilla()?.nombre ?? '')"
+  [hasFooter]="true"
+  hint="Los campos con * son obligatorios"
+  [width]="640"
+  (closed)="cerrar()"
+>
+  @if (plantilla(); as p) {
+    <div class="flex flex-col gap-4">
+      @if (toast(); as t) {
+        <app-ds-alert
+          [tone]="t.tone"
+          [title]="t.title"
+          [description]="t.description ?? null"
+          [closable]="false"
+        />
+      }
+
+      <div class="flex flex-col gap-1 rounded-lg bg-muted p-3">
+        <span class="text-ds-sm font-medium text-foreground">{{ p.destinatario }}</span>
+        <span class="text-ds-xs text-muted-foreground">
+          Variables disponibles:
+          @for (variable of p.variables; track variable; let last = $last) {
+            <code class="text-ds-xs">{{ '{{' + variable + '}}' }}</code>{{ last ? '' : ' · ' }}
+          }
+        </span>
+      </div>
+
+      <app-ds-field
+        label="Asunto"
+        [required]="true"
+        htmlFor="plantilla-asunto"
+        [error]="errores().asunto ?? null"
+      >
+        <app-ds-input
+          id="plantilla-asunto"
+          size="lg"
+          [value]="form().asunto"
+          (valueChange)="cambiar('asunto', $event)"
+          [invalid]="!!errores().asunto"
+        />
+      </app-ds-field>
+
+      <app-ds-field
+        label="Cuerpo del correo"
+        [required]="true"
+        htmlFor="plantilla-cuerpo"
+        [error]="errores().cuerpo ?? null"
+      >
+        <app-ds-textarea
+          id="plantilla-cuerpo"
+          [rows]="8"
+          [value]="form().cuerpo"
+          (valueChange)="cambiar('cuerpo', $event)"
+          [invalid]="!!errores().cuerpo"
+        />
+      </app-ds-field>
+    </div>
+  }
+
+  <span footer class="flex gap-2">
+    <app-ds-button variant="secondary" [disabled]="guardando()" (clicked)="cerrar()">
+      Cancelar
+    </app-ds-button>
+    <app-ds-button [disabled]="guardando()" (clicked)="guardar()">
+      {{ guardando() ? 'Guardando…' : 'Guardar cambios' }}
+    </app-ds-button>
+  </span>
+</app-ds-modal>

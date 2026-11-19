@@ -18,6 +18,7 @@ function makeMe(overrides: Partial<MeResponseDto> = {}): MeResponseDto {
     email: 'admin@francos.test',
     username: 'admin',
     roles: ['admin'],
+    foto_url: null,
     ...overrides,
   };
 }
@@ -55,6 +56,45 @@ describe('HomePerfil', () => {
     expect(fixture.componentInstance.userName()).toBe('Juan Perez');
   });
 
+  it('sets avatarUrl from the foto_url that /auth/me responds', () => {
+    const fixture = TestBed.createComponent(HomePerfil);
+    fixture.detectChanges();
+    const url = 'http://localhost:9000/francos-media/usuarios/a.png';
+    httpMock.expectOne(ME_URL).flush(makeMe({ foto_url: url }));
+
+    expect(fixture.componentInstance.avatarUrl()).toBe(url);
+  });
+
+  it('keeps avatarUrl null when /auth/me responds with no photo', () => {
+    const fixture = TestBed.createComponent(HomePerfil);
+    fixture.detectChanges();
+    httpMock.expectOne(ME_URL).flush(makeMe());
+
+    expect(fixture.componentInstance.avatarUrl()).toBeNull();
+  });
+
+  it('shows the initials when there is no photo', () => {
+    const fixture = TestBed.createComponent(HomePerfil);
+    fixture.detectChanges();
+    httpMock.expectOne(ME_URL).flush(makeMe({ nombre_completo: 'Lucia Quispe' }));
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.rounded-full img')).toBeNull();
+    expect(el.textContent).toContain('LQ');
+  });
+
+  it('shows the photo instead of initials once avatarUrl is set', () => {
+    const fixture = TestBed.createComponent(HomePerfil);
+    fixture.detectChanges();
+    const url = 'http://localhost:9000/francos-media/usuarios/a.png';
+    httpMock.expectOne(ME_URL).flush(makeMe({ foto_url: url }));
+    fixture.detectChanges();
+
+    const img = (fixture.nativeElement as HTMLElement).querySelector('.rounded-full img');
+    expect(img?.getAttribute('src')).toBe(url);
+  });
+
   it('keeps the placeholder userName if /auth/me fails', () => {
     const fixture = TestBed.createComponent(HomePerfil);
     fixture.detectChanges();
@@ -63,27 +103,65 @@ describe('HomePerfil', () => {
     expect(fixture.componentInstance.userName()).toBe('Usuario');
   });
 
-  it('onSubmit calls the backend logout and navigates to /auth once it completes', () => {
-    const fixture = TestBed.createComponent(HomePerfil);
-    fixture.detectChanges();
-    httpMock.expectOne(ME_URL).flush(makeMe());
+  it('shows a "Cerrando sesión" toast and navigates to /auth shortly after it completes', () => {
+    vi.useFakeTimers();
+    try {
+      const fixture = TestBed.createComponent(HomePerfil);
+      fixture.detectChanges();
+      httpMock.expectOne(ME_URL).flush(makeMe());
 
-    fixture.componentInstance.onSubmit();
-    const req = httpMock.expectOne(LOGOUT_URL);
-    expect(req.request.withCredentials).toBe(true);
-    req.flush(null);
+      fixture.componentInstance.onSubmit();
+      const req = httpMock.expectOne(LOGOUT_URL);
+      expect(req.request.withCredentials).toBe(true);
+      req.flush(null);
 
-    expect(router.navigateByUrl).toHaveBeenCalledWith('/auth');
+      expect(fixture.componentInstance.toast()).toMatchObject({
+        tone: 'success',
+        title: 'Cerrando sesión',
+      });
+      expect(router.navigateByUrl).not.toHaveBeenCalled();
+
+      vi.advanceTimersByTime(1200);
+      expect(router.navigateByUrl).toHaveBeenCalledWith('/auth');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
-  it('still navigates to /auth even if the backend logout call fails', () => {
+  it('shows a warning toast and still navigates to /auth shortly after, if the backend logout call fails', () => {
+    vi.useFakeTimers();
+    try {
+      const fixture = TestBed.createComponent(HomePerfil);
+      fixture.detectChanges();
+      httpMock.expectOne(ME_URL).flush(makeMe());
+
+      fixture.componentInstance.onSubmit();
+      httpMock.expectOne(LOGOUT_URL).flush('error', { status: 500, statusText: 'Server Error' });
+
+      expect(fixture.componentInstance.toast()).toMatchObject({
+        tone: 'warning',
+        title: 'No se pudo cerrar sesión en el servidor',
+      });
+      expect(router.navigateByUrl).not.toHaveBeenCalled();
+
+      vi.advanceTimersByTime(1200);
+      expect(router.navigateByUrl).toHaveBeenCalledWith('/auth');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('"Cambiar contraseña" navega a /auth/forgot-password', () => {
     const fixture = TestBed.createComponent(HomePerfil);
     fixture.detectChanges();
     httpMock.expectOne(ME_URL).flush(makeMe());
 
-    fixture.componentInstance.onSubmit();
-    httpMock.expectOne(LOGOUT_URL).flush('error', { status: 500, statusText: 'Server Error' });
+    const el = fixture.nativeElement as HTMLElement;
+    const boton = Array.from(el.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('Cambiar contraseña'),
+    )!;
+    boton.click();
 
-    expect(router.navigateByUrl).toHaveBeenCalledWith('/auth');
+    expect(router.navigateByUrl).toHaveBeenCalledWith('/auth/forgot-password');
   });
 });

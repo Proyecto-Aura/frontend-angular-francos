@@ -5,6 +5,7 @@ import {
   etiquetaDeRol,
   mismosRoles,
   usuarioFormDe,
+  validarFoto,
   validarUsuario,
 } from './usuario.interface';
 import { toUsuario } from '../mappers/usuario.mapper';
@@ -21,6 +22,7 @@ function formValido(overrides: Partial<UsuarioForm> = {}): UsuarioForm {
     username: 'lquispe',
     contrasena: 'Clave1234',
     rolIds: ['2'],
+    cargo: 'Vendedor',
     ...overrides,
   };
 }
@@ -42,7 +44,20 @@ describe('validarUsuario', () => {
       username: 'Username inválido',
       contrasena: 'Ingresar una contraseña',
       rolIds: 'Seleccionar al menos un rol',
+      cargo: 'Ingresar el cargo',
     });
+  });
+
+  it('exige el cargo solo al crear, con máximo 100 caracteres, y area es opcional', () => {
+    expect(validarUsuario(formValido({ cargo: '' }), 'nuevo').cargo).toBe('Ingresar el cargo');
+    expect(validarUsuario(formValido({ cargo: 'a'.repeat(101) }), 'nuevo').cargo).toBe(
+      'Máximo 100 caracteres',
+    );
+    expect(validarUsuario(formValido({ cargo: '' }), 'editar').cargo).toBeUndefined();
+    expect(validarUsuario(formValido({ area: '' }), 'nuevo').area).toBeUndefined();
+    expect(validarUsuario(formValido({ area: 'a'.repeat(101) }), 'nuevo').area).toBe(
+      'Máximo 100 caracteres',
+    );
   });
 
   it('valida el formato del documento según su tipo', () => {
@@ -149,6 +164,25 @@ describe('usuarioFormDe', () => {
       contrasena: '',
       rolIds: ['2', '4'],
     });
+  });
+});
+
+describe('validarFoto', () => {
+  it('acepta PNG y JPG de hasta 1 MB', () => {
+    expect(validarFoto({ type: 'image/png', size: 1024 * 1024 })).toBeNull();
+    expect(validarFoto({ type: 'image/jpeg', size: 10 })).toBeNull();
+  });
+
+  it('rechaza otros formatos', () => {
+    expect(validarFoto({ type: 'image/webp', size: 10 })).toBe(
+      'Formato no admitido. Usar PNG o JPG',
+    );
+  });
+
+  it('rechaza más de 1 MB', () => {
+    expect(validarFoto({ type: 'image/png', size: 1024 * 1024 + 1 })).toBe(
+      'El archivo supera 1 MB',
+    );
   });
 });
 

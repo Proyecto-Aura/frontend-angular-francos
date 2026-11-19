@@ -43,6 +43,22 @@ export const CONFIGURACION_ROUTES: Routes = [
           ),
       },
       {
+        path: 'parametros-inventario',
+        canActivate: [permisoGuard],
+        loadComponent: () =>
+          import('./parametros/pages/parametros-inventario/parametros-inventario').then(
+            (c) => c.ParametrosInventario,
+          ),
+      },
+      {
+        path: 'notificaciones',
+        canActivate: [permisoGuard],
+        loadComponent: () =>
+          import('./notificaciones/pages/gestionar-notificaciones/gestionar-notificaciones').then(
+            (c) => c.GestionarNotificaciones,
+          ),
+      },
+      {
         // Pantalla del propio usuario: no es un permiso de menú, basta con estar logueado.
         path: 'perfil',
         loadComponent: () =>

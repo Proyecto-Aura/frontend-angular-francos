@@ -18,6 +18,10 @@ export interface Usuario {
   username: string;
   activo: boolean;
   roles: RolResumen[];
+  fotoUrl: string | null;
+  cargo: string | null;
+  area: string | null;
+  fechaIngreso: string | null;
   creado: string;
 }
 
@@ -82,9 +86,25 @@ export interface UsuarioForm {
   /** ids de los roles, como texto porque así los maneja el switch de cada uno. */
   rolIds: string[];
   activo: boolean;
+  /** Datos del empleado: solo se piden y se mandan al crear. */
+  cargo: string;
+  area: string;
+  fechaIngreso: string;
 }
 
 export type UsuarioErrores = Partial<Record<keyof UsuarioForm, string>>;
+
+export const FOTO_TAMANO_MAXIMO = 1024 * 1024;
+export const FOTO_TIPOS_PERMITIDOS = ['image/png', 'image/jpeg'];
+
+/** Mensaje de error del archivo de foto, o null si es válido (mismas reglas que el logo). */
+export function validarFoto(archivo: { type: string; size: number }): string | null {
+  if (!FOTO_TIPOS_PERMITIDOS.includes(archivo.type)) {
+    return 'Formato no admitido. Usar PNG o JPG';
+  }
+  if (archivo.size > FOTO_TAMANO_MAXIMO) return 'El archivo supera 1 MB';
+  return null;
+}
 
 export const USUARIO_FORM_VACIO: UsuarioForm = {
   nombres: '',
@@ -97,6 +117,9 @@ export const USUARIO_FORM_VACIO: UsuarioForm = {
   contrasena: '',
   rolIds: [],
   activo: true,
+  cargo: '',
+  area: '',
+  fechaIngreso: '',
 };
 
 // Mismas reglas que el backend (create-usuario-interno.dto.ts).
@@ -127,6 +150,9 @@ export function usuarioFormDe(usuario: Usuario): UsuarioForm {
     contrasena: '',
     rolIds: usuario.roles.map((rol) => String(rol.id)),
     activo: usuario.activo,
+    cargo: usuario.cargo ?? '',
+    area: usuario.area ?? '',
+    fechaIngreso: usuario.fechaIngreso ?? '',
   };
 }
 
@@ -181,6 +207,11 @@ export function validarUsuario(form: UsuarioForm, modo: 'nuevo' | 'editar'): Usu
 
     const email = form.email.trim();
     if (!EMAIL_PATRON.test(email) || email.length > 150) errores.email = 'Email inválido';
+
+    if (!form.cargo.trim()) errores.cargo = 'Ingresar el cargo';
+    else if (form.cargo.trim().length > 100) errores.cargo = 'Máximo 100 caracteres';
+
+    if (form.area.trim().length > 100) errores.area = 'Máximo 100 caracteres';
   }
 
   if (!USERNAME_PATRON.test(form.username.trim())) errores.username = 'Username inválido';

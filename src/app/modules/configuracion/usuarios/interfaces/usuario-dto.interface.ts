@@ -20,6 +20,11 @@ export interface UsuarioInternoDto {
   email_verificado: boolean;
   debe_cambiar_contrasena: boolean;
   roles: RolResumenDto[];
+  foto_url: string | null;
+  // Datos del empleado vinculado; null en usuarios creados antes de este campo.
+  cargo: string | null;
+  area: string | null;
+  fecha_ingreso: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -58,6 +63,10 @@ export interface CrearUsuarioRequestDto {
   contrasena: string;
   estado: boolean;
   rol_ids: number[];
+  // Crean el empleado vinculado; la edición de estos 3 campos no existe todavía.
+  cargo: string;
+  area?: string;
+  fecha_ingreso?: string;
 }
 
 export interface ActualizarUsuarioRequestDto {

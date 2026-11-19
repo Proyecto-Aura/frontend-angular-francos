@@ -1,0 +1,36 @@
+<app-ds-card
+  title="Email (SMTP)"
+  subtitle="Avisos enviados al correo de clientes y usuarios internos"
+>
+  <div class="flex flex-col gap-4">
+    <div class="flex items-start justify-between gap-4">
+      <div class="flex flex-col gap-0.5">
+        <span class="text-ds-base font-medium text-foreground">Canal activo</span>
+        <span class="text-ds-sm text-muted-foreground"
+          >Los correos se envían a través del servidor SMTP</span
+        >
+      </div>
+      <app-ds-switch
+        [checked]="activo()"
+        label="Canal de email activo"
+        class="[&_.text-ds-base]:sr-only"
+        (checkedChange)="activoChange.emit($event)"
+      />
+    </div>
+
+    <dl class="flex flex-col gap-3 border-t border-border pt-4">
+      <div class="flex items-center justify-between gap-4">
+        <dt class="text-ds-sm text-muted-foreground">Remitente</dt>
+        <dd class="text-ds-sm font-medium text-foreground">{{ remitente() || '—' }}</dd>
+      </div>
+      <div class="flex items-center justify-between gap-4">
+        <dt class="text-ds-sm text-muted-foreground">Servidor SMTP</dt>
+        <dd class="text-ds-sm font-medium text-foreground">{{ servidorSmtp() || '—' }}</dd>
+      </div>
+      <div class="flex items-center justify-between gap-4">
+        <dt class="text-ds-sm text-muted-foreground">Seguridad</dt>
+        <dd class="text-ds-sm font-medium text-foreground">{{ seguridad() || '—' }}</dd>
+      </div>
+    </dl>
+  </div>
+</app-ds-card>

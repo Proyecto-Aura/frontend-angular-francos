@@ -30,6 +30,7 @@ export class ModuleLayout {
   // header vacio un instante.
   userName = signal('Usuario');
   userRole = signal('');
+  avatarUrl = signal<string | null>(null);
 
   constructor() {
     // Independiente del menu dinamico: el header debe mostrar al usuario
@@ -41,6 +42,7 @@ export class ModuleLayout {
         next: (me) => {
           this.userName.set(me.nombre_completo);
           this.userRole.set(me.roles[0] ? capitalize(me.roles[0]) : '');
+          this.avatarUrl.set(me.foto_url);
         },
         error: () => undefined,
       });

@@ -93,4 +93,20 @@ describe('AuthForgotPassword', () => {
       'No pudimos enviar el enlace. Inténtalo de nuevo en unos minutos.',
     );
   });
+
+  it('shows the error in the shared app-ds-alert', async () => {
+    const fixture = create();
+    const component = fixture.componentInstance;
+    component.forgotModel.set({ email: 'ana@francos.test' });
+
+    const submission = submit(component.forgotForm);
+    httpMock
+      .expectOne(FORGOT_URL)
+      .flush({ message: ['email must be an email'] }, { status: 400, statusText: 'Bad Request' });
+    await submission;
+    fixture.detectChanges();
+
+    const alerta = fixture.nativeElement.querySelector('[role="alert"]');
+    expect(alerta?.textContent).toContain('No pudimos enviar el enlace');
+  });
 });

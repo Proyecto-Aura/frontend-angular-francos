@@ -1,0 +1,76 @@
+<div class="flex flex-col gap-5">
+  <app-ds-tabs [tabs]="pestanas" [activeId]="tipo()" (changed)="cambiarTipo($event)" />
+
+  <app-aviso-banner [texto]="aviso().mensaje" [tono]="aviso().tono" (closed)="cerrarAviso()" />
+
+  <app-ds-filter-bar [hasSearch]="true">
+    <app-ds-input
+      search
+      [value]="busqueda()"
+      (valueChange)="cambiarBusqueda($event)"
+      [placeholder]="placeholderBusqueda()"
+      [hasIcon]="true"
+    >
+      <span icon><app-ds-icon [img]="LucideSearch" [size]="16" /></span>
+    </app-ds-input>
+    <div filters class="w-[200px]">
+      <app-ds-select
+        [value]="nivelFiltro()"
+        (valueChange)="cambiarNivel($event)"
+        [options]="opcionesNivel"
+      />
+    </div>
+  </app-ds-filter-bar>
+
+  @if (cargando()) {
+    <p
+      class="rounded-lg border border-border bg-card p-8 text-center text-ds-base text-muted-foreground"
+    >
+      Cargando stock…
+    </p>
+  } @else if (errorCarga()) {
+    <div
+      class="flex flex-col items-center gap-3 rounded-lg border border-border bg-card p-8 text-center"
+    >
+      <p class="text-ds-base text-muted-foreground">{{ errorCarga() }}</p>
+      <app-ds-button variant="secondary" (clicked)="cargar()">Reintentar</app-ds-button>
+    </div>
+  } @else {
+    <p class="text-ds-sm text-muted-foreground">{{ etiquetaResultado() }}</p>
+    <app-ds-data-table [columns]="columns()" [rows]="filas()" empty="Sin resultados" />
+    <app-ds-pagination
+      [page]="pagina()"
+      [pageCount]="totalPaginas()"
+      [total]="total()"
+      [pageSize]="tamanioPagina"
+      (changed)="cambiarPagina($event)"
+    />
+    <p class="text-ds-sm text-muted-foreground">
+      Niveles: Agotado (stock en 0), Bajo (menor al mínimo), Normal y Alto (más del 90% del máximo).
+      {{ notaTipo() }}
+    </p>
+  }
+</div>
+
+<app-stock-minimo-modal
+  [open]="!!itemEnEdicion()"
+  [item]="itemEnEdicion()"
+  (closed)="itemEnEdicion.set(null)"
+  (saved)="alGuardar($event)"
+/>
+
+<ng-template #itemCell let-f>
+  <app-ds-cell-stack [primary]="f.nombre" [secondary]="f.sku + ' · ' + f.detalle" />
+</ng-template>
+
+<ng-template #nivelCell let-f>
+  <app-ds-badge [tone]="tonoNivel(f.nivel)" [dot]="true">
+    {{ etiquetaNivel(f.nivel) }}
+  </app-ds-badge>
+</ng-template>
+
+<ng-template #accionesCell let-f>
+  <app-ds-icon-button [label]="'Editar stock de alerta de ' + f.nombre" (clicked)="editar(f)">
+    <app-ds-icon [img]="LucidePencil" [size]="16" />
+  </app-ds-icon-button>
+</ng-template>

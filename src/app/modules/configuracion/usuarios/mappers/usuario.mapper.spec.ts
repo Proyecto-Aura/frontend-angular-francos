@@ -31,8 +31,29 @@ describe('usuario.mapper', () => {
       nombreCompleto: 'Lucia Quispe Huaman',
       activo: false,
       roles: [{ id: 2, nombre: 'ventas' }],
+      fotoUrl: null,
     });
     expect(usuario.creado).toContain('2026');
+  });
+
+  it('toUsuario mapea foto_url tal cual', () => {
+    const url = 'http://localhost:9000/francos-media/usuarios/a.png';
+    expect(toUsuario(makeUsuarioDto({ foto_url: url })).fotoUrl).toBe(url);
+  });
+
+  it('toUsuario nunca truena con una fecha vacía o inválida, y cae a created_at', () => {
+    // "" no es null/undefined: antes esto rompía el formateo de toda la página.
+    expect(() => toUsuario(makeUsuarioDto({ fecha_ingreso: '' }))).not.toThrow();
+    expect(toUsuario(makeUsuarioDto({ fecha_ingreso: '' })).creado).toContain('2026');
+
+    expect(() => toUsuario(makeUsuarioDto({ fecha_ingreso: 'no-es-una-fecha' }))).not.toThrow();
+    expect(toUsuario(makeUsuarioDto({ fecha_ingreso: 'no-es-una-fecha' })).creado).toContain(
+      '2026',
+    );
+
+    expect(toUsuario(makeUsuarioDto({ fecha_ingreso: null, created_at: 'tampoco' })).creado).toBe(
+      '—',
+    );
   });
 
   it('toPaginaUsuarios usa total y total_pages del backend (mínimo 1 página)', () => {
@@ -67,7 +88,21 @@ describe('usuario.mapper', () => {
       contrasena: 'Clave1234',
       estado: false,
       rol_ids: [2],
+      cargo: '',
     });
+  });
+
+  it('toCrearUsuarioRequest manda cargo, y area/fecha_ingreso solo si se llenaron', () => {
+    expect(toCrearUsuarioRequest({ ...form, cargo: ' Vendedor ' })).toMatchObject({
+      cargo: 'Vendedor',
+    });
+    expect(toCrearUsuarioRequest({ ...form, cargo: 'Vendedor' })).not.toHaveProperty('area');
+    expect(toCrearUsuarioRequest({ ...form, cargo: 'Vendedor', area: ' Ventas ' })).toMatchObject({
+      area: 'Ventas',
+    });
+    expect(
+      toCrearUsuarioRequest({ ...form, cargo: 'Vendedor', fechaIngreso: '2026-11-18' }),
+    ).toMatchObject({ fecha_ingreso: '2026-11-18' });
   });
 
   it('toActualizarUsuarioRequest manda solo lo que cambió', () => {
@@ -90,5 +125,18 @@ describe('usuario.mapper', () => {
         contrasena: 'Nueva1234',
       }),
     ).toEqual({ nombres: 'Lucía María', contrasena: 'Nueva1234' });
+  });
+  it('conserva el dia calendario de fecha_ingreso al mostrarlo en la zona local', () => {
+    const usuario = toUsuario(
+      makeUsuarioDto({ fecha_ingreso: '2026-01-15', created_at: '2026-09-01T12:00:00.000Z' }),
+    );
+    expect(usuario.creado).toBe('15 ene. 2026');
+  });
+
+  it('usa created_at cuando el usuario no tiene fecha de ingreso', () => {
+    const usuario = toUsuario(
+      makeUsuarioDto({ fecha_ingreso: null, created_at: '2026-09-01T12:00:00.000Z' }),
+    );
+    expect(usuario.creado).toBe('01 set. 2026');
   });
 });
