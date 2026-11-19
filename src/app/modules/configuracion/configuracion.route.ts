@@ -51,6 +51,14 @@ export const CONFIGURACION_ROUTES: Routes = [
           ),
       },
       {
+        path: 'notificaciones',
+        canActivate: [permisoGuard],
+        loadComponent: () =>
+          import('./notificaciones/pages/gestionar-notificaciones/gestionar-notificaciones').then(
+            (c) => c.GestionarNotificaciones,
+          ),
+      },
+      {
         // Pantalla del propio usuario: no es un permiso de menú, basta con estar logueado.
         path: 'perfil',
         loadComponent: () =>

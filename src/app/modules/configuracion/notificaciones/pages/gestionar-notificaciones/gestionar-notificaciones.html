@@ -1,0 +1,95 @@
+@if (toast(); as t) {
+  <div class="fixed top-6 right-6 z-50 w-full max-w-md">
+    <app-ds-alert
+      [tone]="t.tone"
+      [title]="t.title"
+      [description]="t.description ?? null"
+      [closable]="false"
+    />
+  </div>
+}
+
+<div class="flex flex-col gap-5 p-(--page-padding)">
+  <app-ds-breadcrumb [items]="migas" />
+
+  <div>
+    <h1 class="text-ds-2xl font-semibold text-foreground">
+      Gestionar parámetros de notificaciones
+    </h1>
+    <p class="mt-1 text-ds-base text-muted-foreground">Canales de envío y plantillas de correo</p>
+  </div>
+
+  <app-ds-tabs [tabs]="pestanas()" [activeId]="pestana()" (changed)="cambiarPestana($event)" />
+
+  @if (cargando()) {
+    <p
+      class="rounded-lg border border-border bg-card p-8 text-center text-ds-base text-muted-foreground"
+    >
+      Cargando parámetros de notificaciones…
+    </p>
+  } @else if (errorCarga()) {
+    <div
+      class="flex flex-col items-center gap-3 rounded-lg border border-border bg-card p-8 text-center"
+    >
+      <p class="text-ds-base text-muted-foreground">{{ errorCarga() }}</p>
+      <app-ds-button variant="secondary" (clicked)="cargar()">Reintentar</app-ds-button>
+    </div>
+  } @else {
+    @if (pestana() === 'canales') {
+      <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        @if (email(); as canal) {
+          <app-canal-email-card
+            [activo]="canal.activo"
+            [remitente]="canal.remitente"
+            [servidorSmtp]="canal.servidorSmtp"
+            [seguridad]="canal.seguridad"
+            (activoChange)="cambiarCanalEmail($event)"
+          />
+        }
+        @if (portal(); as canal) {
+          <app-canal-portal-card
+            [activo]="canal.activo"
+            [destinatarios]="canal.destinatarios"
+            (activoChange)="cambiarCanalPortal($event)"
+          />
+        }
+      </div>
+    } @else {
+      <app-ds-data-table
+        [columns]="columns()"
+        [rows]="plantillas()"
+        empty="Sin plantillas de correo"
+      />
+    }
+  }
+</div>
+
+<ng-template #notificacionCell let-p>
+  <app-ds-cell-stack [primary]="p.nombre" [secondary]="p.asunto" />
+</ng-template>
+
+<ng-template #variablesCell let-p>
+  <span class="text-ds-sm text-muted-foreground">
+    @for (variable of p.variables; track variable; let last = $last) {
+      <code class="text-ds-xs">{{ '{{' + variable + '}}' }}</code>{{ last ? '' : ' · ' }}
+    }
+  </span>
+</ng-template>
+
+<ng-template #accionesCell let-p>
+  <app-ds-icon-button
+    [label]="'Editar ' + p.nombre"
+    variant="secondary"
+    size="sm"
+    (clicked)="editarPlantilla(p)"
+  >
+    <app-ds-icon [img]="LucidePencil" [size]="16" />
+  </app-ds-icon-button>
+</ng-template>
+
+<app-plantilla-editar-modal
+  [plantilla]="plantillaEnEdicion()"
+  [open]="!!plantillaEnEdicion()"
+  (closed)="cerrarEdicion()"
+  (saved)="plantillaGuardada($event)"
+/>
