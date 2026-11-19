@@ -1,5 +1,6 @@
 import { resolveLucideIcon } from './lucide-icon-map';
 import {
+  LucideBell,
   LucideBoxes,
   LucideBuilding2,
   LucideHandshake,
@@ -32,6 +33,10 @@ describe('resolveLucideIcon', () => {
 
   it('resolves the sliders-horizontal icon used by Parámetros de ventas', () => {
     expect(resolveLucideIcon('sliders-horizontal')).toBe(LucideSlidersHorizontal);
+  });
+
+  it('resolves the bell icon used by Notificaciones', () => {
+    expect(resolveLucideIcon('bell')).toBe(LucideBell);
   });
 
   it('returns undefined for an unknown name instead of throwing', () => {
